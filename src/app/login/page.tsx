@@ -23,18 +23,18 @@ export default async function LoginPage({
         <CardHeader className="text-center space-y-3">
           <CardTitle className="flex justify-center mb-2">
             <Link href="/">
-              <Image src="/images/logo.png" alt="Jimi.coach Logo" width={220} height={60} className="object-contain hover:opacity-80 transition-opacity dark:invert" />
+              <Image src="/images/logo.png" alt="Jimi.coach Logo" width={220} height={60} className="object-contain hover:opacity-80 transition-opacity" />
             </Link>
           </CardTitle>
           <CardDescription className="text-base">
-            ¡Tu plataforma exclusiva de entrenamiento CrossFit! 🏋️‍♀️✨
+            Tu plataforma de entrenamiento CrossFit
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Iniciar Sesión 🔓</TabsTrigger>
-              <TabsTrigger value="register">Registrarse 📝</TabsTrigger>
+              <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+              <TabsTrigger value="register">Registrarse</TabsTrigger>
             </TabsList>
             
             {message && <div className="mb-4 p-4 text-sm text-green-800 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800 font-medium">{message}</div>}
@@ -49,7 +49,7 @@ export default async function LoginPage({
                   <Input id="password" name="password" type="password" required />
                 </div>
                 {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-                <Button className="w-full text-md font-bold h-11" type="submit">Entrar 🚀</Button>
+                <Button className="w-full text-md font-bold h-11" type="submit">Entrar</Button>
               </form>
             </TabsContent>
 
@@ -69,7 +69,7 @@ export default async function LoginPage({
                 </div>
                 {/* Role is automatically set to 'athlete' in the backend */}
                 {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-                <Button className="w-full text-md font-bold h-11" type="submit">Crear cuenta ✨</Button>
+                <Button className="w-full text-md font-bold h-11" type="submit">Crear cuenta</Button>
               </form>
             </TabsContent>
           </Tabs>

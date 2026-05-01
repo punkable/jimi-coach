@@ -10,10 +10,10 @@ export default function LandingPage() {
       <nav className="border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-6xl">
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/images/logo.png" alt="Jimi.coach Logo" width={140} height={40} className="object-contain dark:invert" />
+            <Image src="/images/logo.png" alt="Jimi.coach Logo" width={140} height={40} className="object-contain" />
           </Link>
           <Link href="/login">
-            <Button variant="outline" className="font-medium hover:bg-primary hover:text-primary-foreground transition-colors">Iniciar Sesión 🏋️‍♂️</Button>
+            <Button variant="outline" className="font-medium hover:bg-primary hover:text-primary-foreground transition-colors">Iniciar Sesión</Button>
           </Link>
         </div>
       </nav>
@@ -32,13 +32,13 @@ export default function LandingPage() {
           <h1 className="text-5xl md:text-7xl font-black tracking-tight text-foreground drop-shadow-sm">
             Entrenamiento de élite, <br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
-              resultados reales. 🔥
+              resultados reales.
             </span>
           </h1>
           
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Jimi.coach es tu casa de entrenamiento CrossFit. 
-            Recibe tu planificación estructurada, registra tu esfuerzo real (RPE) y sube videos para obtener feedback técnico directo del Coach Jimi. 💪✨
+            Recibe tu planificación estructurada, registra tu esfuerzo real (RPE) y sube videos para obtener feedback técnico directo del Coach Jimi.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
@@ -56,21 +56,21 @@ export default function LandingPage() {
             <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4 text-primary">
               <Target className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Planificación Inteligente 🧠</h3>
+            <h3 className="text-xl font-bold mb-2">Planificación Inteligente</h3>
             <p className="text-muted-foreground">Mesociclos estructurados por semanas para asegurar que tu progresión nunca se detenga.</p>
           </div>
           <div className="p-6 rounded-2xl glass border border-border/50 hover:border-primary/50 transition-colors shadow-lg">
             <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4 text-primary">
               <Video className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Análisis de Video 📹</h3>
+            <h3 className="text-xl font-bold mb-2">Análisis de Video</h3>
             <p className="text-muted-foreground">Sube enlaces de tus levantamientos pesados y recibe correcciones técnicas directas para mejorar tu forma.</p>
           </div>
           <div className="p-6 rounded-2xl glass border border-border/50 hover:border-primary/50 transition-colors shadow-lg">
             <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center mb-4 text-primary">
               <TrendingUp className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Tracking de Esfuerzo 📈</h3>
+            <h3 className="text-xl font-bold mb-2">Tracking de Esfuerzo</h3>
             <p className="text-muted-foreground">Registra tu RPE diario y mantén un historial de tu progreso para ajustar las cargas perfectamente.</p>
           </div>
         </div>
@@ -79,7 +79,7 @@ export default function LandingPage() {
       {/* WhatsApp CTA */}
       <section className="border-t border-border/50 bg-secondary/30 py-16 text-center px-4 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#25D366]/5" />
-        <h2 className="text-2xl font-bold mb-6 relative z-10">¿Tienes alguna duda que aclarar con el Coach Jimi? 🤔</h2>
+        <h2 className="text-2xl font-bold mb-6 relative z-10">¿Tienes alguna duda que aclarar con el Coach Jimi?</h2>
         <a href="http://wa.me/56972878295" target="_blank" rel="noopener noreferrer" className="relative z-10 inline-block">
           <Button size="lg" className="bg-[#25D366] hover:bg-[#128C7E] text-white gap-2 font-bold h-14 px-8 shadow-[0_0_20px_rgba(37,211,102,0.3)] hover:shadow-[0_0_30px_rgba(37,211,102,0.5)] hover:scale-105 transition-all">
             <MessageCircle className="w-5 h-5" />

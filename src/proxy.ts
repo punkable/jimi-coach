@@ -33,8 +33,9 @@ export async function proxy(request: NextRequest) {
 
   // Define unprotected routes
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login') || request.nextUrl.pathname.startsWith('/signup')
+  const isPublicRoute = request.nextUrl.pathname === '/' || isAuthRoute
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isPublicRoute) {
     // If no user and not on login/signup, redirect to login
     const url = request.nextUrl.clone()
     url.pathname = '/login'
