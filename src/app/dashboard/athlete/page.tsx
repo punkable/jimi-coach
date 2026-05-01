@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Flame, Dumbbell, Calendar as CalendarIcon, PlayCircle } from 'lucide-react'
+import { Flame, Dumbbell, Calendar as CalendarIcon, PlayCircle, AlertCircle, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 
@@ -26,6 +26,42 @@ export default async function AthleteDashboard() {
 
   const activeAssignment = assignments?.[0]
   const plan = activeAssignment?.workout_plans
+
+  // Plan verification logic
+  const hasActivePlan = profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo"
+  const hasClassesLeft = profile?.total_classes === 0 || (profile?.classes_used < profile?.total_classes)
+  const canTrain = hasActivePlan && hasClassesLeft
+
+  if (!canTrain) {
+    return (
+      <div className="p-4 md:p-8 space-y-8 max-w-md md:max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[80vh] text-center">
+        <Image src="/images/logo.png" alt="Jimi.coach Logo" width={140} height={40} className="object-contain mb-8 opacity-50" />
+        
+        <div className="relative w-48 h-48 mb-6 bg-primary/5 rounded-full flex items-center justify-center border-4 border-primary/20">
+          <AlertCircle className="w-24 h-24 text-primary opacity-80" />
+        </div>
+        
+        <h1 className="text-3xl font-black tracking-tight uppercase">Entrenamiento Pausado</h1>
+        
+        <p className="text-muted-foreground mt-2 max-w-sm">
+          {!hasActivePlan 
+            ? "El coach aún no te ha asignado un plan de entrenamiento activo o tu mensualidad no ha sido configurada."
+            : "Te has quedado sin clases disponibles en tu plan actual. Es momento de renovar."}
+        </p>
+
+        <p className="text-sm font-bold mt-4 text-primary/80">
+          Si crees que esto es un error, por favor comunícate con Jimi.
+        </p>
+
+        <a href="http://wa.me/56972878295" target="_blank" rel="noopener noreferrer" className="mt-8">
+          <Button className="font-bold uppercase tracking-widest h-14 px-8 bg-[#25D366] hover:bg-[#20b858] text-white">
+            <MessageSquare className="w-5 h-5 mr-2" />
+            Contactar al Coach
+          </Button>
+        </a>
+      </div>
+    )
+  }
 
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-md md:max-w-4xl mx-auto">

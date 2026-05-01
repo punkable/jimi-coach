@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { Users, Library, Calendar, LayoutDashboard, Settings, Dumbbell, LogOut, Video } from 'lucide-react'
+import { Users, Library, Calendar, LayoutDashboard, Settings, Dumbbell, LogOut, Video, Crown, Trash2, HelpCircle } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
 export default function CoachLayout({
@@ -27,6 +27,10 @@ export default function CoachLayout({
             <Users className="h-5 w-5" />
             Alumnos
           </Link>
+          <Link href="/dashboard/coach/memberships" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+            <Crown className="h-5 w-5" />
+            Planes & Modalidades
+          </Link>
           <Link href="/dashboard/coach/reviews" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
             <Video className="h-5 w-5" />
             Revisiones
@@ -41,6 +45,14 @@ export default function CoachLayout({
           </Link>
         </nav>
         <div className="p-4 border-t border-border space-y-2">
+          <Link href="/dashboard/coach/help" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+            <HelpCircle className="h-5 w-5" />
+            Ayuda y Guías
+          </Link>
+          <Link href="/dashboard/coach/trash" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
+            <Trash2 className="h-5 w-5" />
+            Papelera
+          </Link>
           <Link href="/dashboard/coach/settings" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary/50 text-muted-foreground hover:text-foreground transition-colors">
             <Settings className="h-5 w-5" />
             Ajustes

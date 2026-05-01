@@ -8,15 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Flame, Plus, Minus, Save, Loader2 } from 'lucide-react'
 import { updateAthleteSubscription } from '../actions'
 
-const PLAN_OPTIONS = [
-  "Sin Plan Activo",
-  "Level Up - Small Groups",
-  "Semi-Presencial",
-  "Presencial Full",
-  "Plan Personalizado"
-]
-
-export default function SubscriptionManager({ profile }: { profile: any }) {
+export default function SubscriptionManager({ profile, memberships }: { profile: any, memberships: any[] }) {
   const [plan, setPlan] = useState(profile?.subscription_plan || "Sin Plan Activo")
   const [totalClasses, setTotalClasses] = useState(profile?.total_classes || 0)
   const [classesUsed, setClassesUsed] = useState(profile?.classes_used || 0)
@@ -52,13 +44,20 @@ export default function SubscriptionManager({ profile }: { profile: any }) {
         
         <div className="space-y-2">
           <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Plan Contratado</label>
-          <Select value={plan} onValueChange={setPlan}>
+          <Select value={plan} onValueChange={(val) => {
+            setPlan(val)
+            const selectedMembership = memberships.find(m => m.name === val)
+            if (selectedMembership && totalClasses === 0) {
+              setTotalClasses(selectedMembership.default_classes)
+            }
+          }}>
             <SelectTrigger className="w-full bg-background/50 border-white/10 font-bold uppercase">
               <SelectValue placeholder="Selecciona un plan" />
             </SelectTrigger>
             <SelectContent>
-              {PLAN_OPTIONS.map(opt => (
-                <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+              <SelectItem value="Sin Plan Activo">Sin Plan Activo</SelectItem>
+              {memberships.map(opt => (
+                <SelectItem key={opt.id} value={opt.name}>{opt.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>

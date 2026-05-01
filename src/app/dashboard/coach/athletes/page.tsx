@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { Plus, Settings, Trash2 } from 'lucide-react'
 import Link from 'next/link'
+import { deleteAthlete } from './actions'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default async function AthletesPage() {
   const supabase = await createClient()
@@ -13,6 +15,7 @@ export default async function AthletesPage() {
     .from('profiles')
     .select('*')
     .eq('role', 'athlete')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   return (
@@ -54,10 +57,27 @@ export default async function AthletesPage() {
                     <TableCell className="font-medium">{athlete.full_name || 'Sin nombre'}</TableCell>
                     <TableCell>{athlete.email}</TableCell>
                     <TableCell>{new Date(athlete.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right flex items-center justify-end gap-2">
                       <Link href={`/dashboard/coach/athletes/${athlete.id}`}>
-                        <Button variant="outline" size="sm" className="hover:bg-primary hover:text-primary-foreground">Ver Perfil</Button>
+                        <Button variant="outline" size="sm" className="hover:bg-primary hover:text-primary-foreground gap-2">
+                          <Settings className="w-4 h-4" /> Gestionar
+                        </Button>
                       </Link>
+                      <form action={async () => {
+                        'use server'
+                        await deleteAthlete(athlete.id)
+                      }}>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Button variant="ghost" size="icon" type="submit" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs">Archivar alumno</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </form>
                     </TableCell>
                   </TableRow>
                 ))

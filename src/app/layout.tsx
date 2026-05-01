@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const outfit = Outfit({
   variable: "--font-sans",
@@ -31,7 +32,11 @@ export default function RootLayout({
       lang="es"
       className={`${outfit.variable} ${robotoMono.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">{children}</body>
+      <body className="min-h-full flex flex-col bg-background text-foreground">
+        <TooltipProvider delay={300}>
+          {children}
+        </TooltipProvider>
+      </body>
     </html>
   );
 }

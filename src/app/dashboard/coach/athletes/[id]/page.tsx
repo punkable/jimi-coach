@@ -16,6 +16,13 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     .eq('id', id)
     .single()
 
+  // Fetch active memberships
+  const { data: memberships } = await supabase
+    .from('memberships')
+    .select('*')
+    .is('deleted_at', null)
+    .order('name', { ascending: true })
+
   if (!profile) {
     return <div className="p-8 text-center text-destructive font-bold">Atleta no encontrado.</div>
   }
@@ -85,7 +92,7 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
 
         {/* Subscription & Progress Column */}
         <div className="md:col-span-2 space-y-6">
-          <SubscriptionManager profile={profile} />
+          <SubscriptionManager profile={profile} memberships={memberships || []} />
 
           <Card>
             <CardHeader>

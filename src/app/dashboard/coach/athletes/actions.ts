@@ -57,7 +57,13 @@ export async function updateAthleteSubscription(athleteId: string, plan: string,
     throw new Error('Not authorized')
   }
 
-  const { error } = await supabase
+  // Use the admin client to bypass RLS for updating another user's profile
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { error } = await supabaseAdmin
     .from('profiles')
     .update({ 
       subscription_plan: plan,
@@ -74,4 +80,30 @@ export async function updateAthleteSubscription(athleteId: string, plan: string,
   revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
   revalidatePath('/dashboard/coach/athletes')
   return { success: true }
+}
+
+export async function deleteAthlete(athleteId: string) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  // Use the admin client to bypass RLS for updating another user's profile
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Soft delete athlete
+  const { error } = await supabaseAdmin
+    .from('profiles')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', athleteId)
+
+  if (error) {
+    console.error('Error soft deleting athlete:', error)
+    throw new Error('Failed to archive athlete')
+  }
+
+  revalidatePath('/dashboard/coach/athletes')
 }

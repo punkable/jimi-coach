@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Plus, GripVertical, Trash2, Dumbbell, Save, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure } from '../../actions'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, TouchSensor } from '@dnd-kit/core'
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { SortableMovement } from './SortableMovement'
 
 // Types based on our Supabase schema
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
@@ -17,6 +20,29 @@ export function BuilderClient({ planId, initialDays, library }: { planId: string
   const [days, setDays] = useState<Day[]>(initialDays.length > 0 ? initialDays : [])
   const [searchTerm, setSearchTerm] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleDragEnd = (event: any, dIdx: number, bIdx: number) => {
+    const { active, over } = event
+    if (active.id !== over?.id) {
+      setDays((prevDays) => {
+        const newDays = [...prevDays]
+        const block = newDays[dIdx].workout_blocks[bIdx]
+        // Use a unique drag_id for matching
+        const oldIndex = block.workout_movements.findIndex((m: any) => (m.id || m.exercise_id) === active.id)
+        const newIndex = block.workout_movements.findIndex((m: any) => (m.id || m.exercise_id) === over.id)
+        if (oldIndex !== -1 && newIndex !== -1) {
+          block.workout_movements = arrayMove(block.workout_movements, oldIndex, newIndex)
+        }
+        return newDays
+      })
+    }
+  }
 
   const filteredLibrary = library.filter(ex => ex.name.toLowerCase().includes(searchTerm.toLowerCase()))
 
@@ -117,28 +143,22 @@ export function BuilderClient({ planId, initialDays, library }: { planId: string
                           </div>
                         ) : (
                           <div className="divide-y divide-border/50">
-                            {block.workout_movements.map((mov, mIdx) => (
-                              <div key={mIdx} className="p-4 flex flex-col gap-2 hover:bg-secondary/5 transition-colors">
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold flex items-center gap-2">
-                                    <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
-                                    {mov.exercise?.name}
-                                  </span>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/50 hover:text-destructive"
-                                    onClick={() => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); setDays(n); }}>
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                                <div className="flex gap-2 pl-6">
-                                  <Input className="h-7 text-xs w-16 bg-background/50" placeholder="Sets" value={mov.sets} 
-                                    onChange={(e) => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(e.target.value); setDays(n); }} />
-                                  <Input className="h-7 text-xs w-20 bg-background/50" placeholder="Reps" value={mov.reps} 
-                                    onChange={(e) => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = e.target.value; setDays(n); }} />
-                                  <Input className="h-7 text-xs w-24 bg-background/50" placeholder="% RM o Kg" value={mov.weight_percentage} 
-                                    onChange={(e) => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = e.target.value; setDays(n); }} />
-                                </div>
-                              </div>
-                            ))}
+                            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, dIdx, bIdx)}>
+                              <SortableContext items={block.workout_movements.map((m: any) => m.id || m.exercise_id)} strategy={verticalListSortingStrategy}>
+                                {block.workout_movements.map((mov, mIdx) => (
+                                  <SortableMovement 
+                                    key={mov.id || mov.exercise_id} 
+                                    id={mov.id || mov.exercise_id} 
+                                    mov={mov} 
+                                    mIdx={mIdx}
+                                    updateSets={(val: string) => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; setDays(n); }}
+                                    updateReps={(val: string) => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; setDays(n); }}
+                                    updateWeight={(val: string) => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; setDays(n); }}
+                                    removeMov={() => { const n = [...days]; n[dIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); setDays(n); }}
+                                  />
+                                ))}
+                              </SortableContext>
+                            </DndContext>
                           </div>
                         )}
                       </CardContent>
