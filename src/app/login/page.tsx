@@ -9,10 +9,11 @@ import { Dumbbell } from 'lucide-react'
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>
+  searchParams: Promise<{ error?: string, message?: string }>
 }) {
   const resolvedSearchParams = await searchParams;
   const error = resolvedSearchParams?.error;
+  const message = resolvedSearchParams?.message;
 
   return (
     <div className="flex min-h-screen items-center justify-center p-4 bg-background">
@@ -33,6 +34,7 @@ export default async function LoginPage({
               <TabsTrigger value="register">Registrarse</TabsTrigger>
             </TabsList>
             
+            {message && <div className="mb-4 p-4 text-sm text-green-800 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800 font-medium">{message}</div>}
             <TabsContent value="login">
               <form action={login} className="space-y-4">
                 <div className="space-y-2">
