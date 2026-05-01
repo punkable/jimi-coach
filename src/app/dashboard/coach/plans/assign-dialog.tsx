@@ -17,11 +17,10 @@ export function AssignDialog({ planId, athletes }: { planId: string, athletes: A
   const [open, setOpen] = useState(false)
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="flex-1" size="sm">Asignar</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md glass border-border/50">
+    <>
+      <Button variant="outline" className="flex-1" size="sm" onClick={() => setOpen(true)}>Asignar</Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md glass border-border/50">
         <DialogHeader>
           <DialogTitle>Asignar Planificación</DialogTitle>
         </DialogHeader>
@@ -66,6 +65,7 @@ export function AssignDialog({ planId, athletes }: { planId: string, athletes: A
           </div>
         </form>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+    </>
   )
 }

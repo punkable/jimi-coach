@@ -148,7 +148,7 @@ export function BuilderClient({ planId, initialDays, library }: { planId: string
               </div>
             ))}
             
-            <Button variant="dashed" className="w-full py-6 border-2 border-dashed bg-transparent hover:bg-primary/10 hover:text-primary transition-colors" onClick={() => addDay(weekNum)}>
+            <Button variant="outline" className="w-full py-6 border-2 border-dashed bg-transparent hover:bg-primary/10 hover:text-primary transition-colors" onClick={() => addDay(weekNum)}>
               <Plus className="w-5 h-5 mr-2" /> Añadir Día a la Semana {weekNum}
             </Button>
           </div>

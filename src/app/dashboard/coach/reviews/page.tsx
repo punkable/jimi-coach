@@ -78,7 +78,7 @@ export default async function ReviewsPage() {
                           workout_result_id: result.id,
                           athlete_id: result.athlete_id,
                           coach_id: user?.id,
-                          coach_notes: formData.get('feedback')
+                          coach_notes: formData.get('feedback') as string
                         })
                       }} className="space-y-3 mt-2">
                         <textarea 
