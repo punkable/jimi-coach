@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { LogOut, User, Building2, CreditCard } from 'lucide-react'
+import { LogOut, Building2, CreditCard } from 'lucide-react'
 import { signout } from '@/app/login/actions'
+import CoachSettingsForm from './coach-settings-form'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -22,28 +21,9 @@ export default async function SettingsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Profile Settings */}
-        <Card className="md:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-primary" />
-              Perfil del Entrenador
-            </CardTitle>
-            <CardDescription>Actualiza tu información personal</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Nombre Completo</Label>
-                <Input defaultValue={profile?.full_name || ''} />
-              </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input defaultValue={user?.email || ''} disabled />
-              </div>
-            </div>
-            <Button>Guardar Cambios</Button>
-          </CardContent>
-        </Card>
+        <div className="md:col-span-2">
+          <CoachSettingsForm initialName={profile?.full_name || ''} email={user?.email || ''} />
+        </div>
 
         {/* Account Actions */}
         <div className="space-y-6">
@@ -55,8 +35,8 @@ export default async function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">Personalizar Marca</Button>
-              <Button variant="outline" className="w-full justify-start">Ajustes de Notificación</Button>
+              <Button variant="outline" className="w-full justify-start" disabled>Personalizar Marca (Próximamente)</Button>
+              <Button variant="outline" className="w-full justify-start" disabled>Ajustes de Notificación</Button>
             </CardContent>
           </Card>
 
@@ -69,7 +49,7 @@ export default async function SettingsPage() {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">Estás usando el plan gratuito (Beta).</p>
-              <Button variant="secondary" className="w-full">Gestionar Plan</Button>
+              <Button variant="secondary" className="w-full" disabled>Gestionar Plan</Button>
             </CardContent>
           </Card>
         </div>
