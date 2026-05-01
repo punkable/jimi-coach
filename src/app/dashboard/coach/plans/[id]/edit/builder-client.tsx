@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Plus, GripVertical, Trash2, Dumbbell, Save, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { savePlanStructure } from '../actions'
+import { savePlanStructure } from '../../actions'
 
 // Types based on our Supabase schema
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
