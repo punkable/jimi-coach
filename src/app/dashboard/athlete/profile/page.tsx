@@ -3,6 +3,7 @@ import { LogOut, User } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { Button } from '@/components/ui/button'
 import ProfileForm from './profile-form'
+import SubscriptionCard from './subscription-card'
 
 export default async function AthleteProfilePage() {
   const supabase = await createClient()
@@ -21,7 +22,9 @@ export default async function AthleteProfilePage() {
         </div>
       </div>
 
-      <ProfileForm initialName={profile?.full_name || ''} />
+      <SubscriptionCard profile={profile} />
+
+      <ProfileForm profile={profile} />
 
       <form action={signout} className="pt-4 border-t border-white/5">
         <Button variant="destructive" type="submit" className="w-full gap-2 font-bold uppercase tracking-widest h-12">

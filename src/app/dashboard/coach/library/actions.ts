@@ -34,3 +34,34 @@ export async function createExercise(formData: FormData) {
   revalidatePath('/dashboard/coach/library')
   redirect('/dashboard/coach/library')
 }
+
+export async function updateExercise(id: string, formData: FormData) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    throw new Error('Not authenticated')
+  }
+
+  const updatedExercise = {
+    name: formData.get('name') as string,
+    category: formData.get('category') as string,
+    difficulty_level: formData.get('difficulty_level') as string,
+    instructions: formData.get('instructions') as string,
+    video_url: formData.get('video_url') as string,
+  }
+
+  const { error } = await supabase
+    .from('exercises')
+    .update(updatedExercise)
+    .eq('id', id)
+
+  if (error) {
+    console.error('Error updating exercise:', error)
+    throw new Error('Failed to update exercise')
+  }
+
+  revalidatePath('/dashboard/coach/library')
+  redirect('/dashboard/coach/library')
+}

@@ -45,3 +45,33 @@ export async function createAthlete(formData: FormData) {
   revalidatePath('/dashboard/coach/athletes')
   redirect('/dashboard/coach/athletes')
 }
+
+export async function updateAthleteSubscription(athleteId: string, plan: string, totalClasses: number, classesUsed: number) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
+    throw new Error('Not authorized')
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ 
+      subscription_plan: plan,
+      total_classes: totalClasses,
+      classes_used: classesUsed
+    })
+    .eq('id', athleteId)
+
+  if (error) {
+    console.error('Error updating subscription:', error)
+    throw new Error('Failed to update subscription')
+  }
+
+  revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
+  revalidatePath('/dashboard/coach/athletes')
+  return { success: true }
+}

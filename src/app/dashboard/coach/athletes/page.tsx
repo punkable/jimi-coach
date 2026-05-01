@@ -55,7 +55,9 @@ export default async function AthletesPage() {
                     <TableCell>{athlete.email}</TableCell>
                     <TableCell>{new Date(athlete.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm">Ver Perfil</Button>
+                      <Link href={`/dashboard/coach/athletes/${athlete.id}`}>
+                        <Button variant="outline" size="sm" className="hover:bg-primary hover:text-primary-foreground">Ver Perfil</Button>
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))

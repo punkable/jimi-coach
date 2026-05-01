@@ -32,17 +32,14 @@ export default async function LibraryPage() {
         {exercises && exercises.length > 0 ? (
           exercises.map((ex) => (
             <Card key={ex.id} className="overflow-hidden flex flex-col">
-              <div className="relative aspect-video w-full overflow-hidden bg-secondary/30 flex items-center justify-center">
-                {ex.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={ex.image_url} alt={ex.name} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="relative aspect-video w-full bg-secondary/10 border-b border-border flex flex-col items-center justify-center p-4 text-center">
+                <Video className="w-8 h-8 text-primary/50 mb-2" />
+                {ex.video_url ? (
+                  <a href={ex.video_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline flex items-center gap-1">
+                    <PlaySquare className="w-3 h-3" /> Ver Video
+                  </a>
                 ) : (
-                  <Video className="w-8 h-8 text-muted-foreground/50 z-10" />
-                )}
-                {ex.video_url && (
-                  <div className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full">
-                    <PlaySquare className="w-4 h-4" />
-                  </div>
+                  <span className="text-xs text-muted-foreground">Sin video asignado</span>
                 )}
               </div>
               <CardHeader className="pb-2">
@@ -59,7 +56,9 @@ export default async function LibraryPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-auto pt-2">
-                <Button variant="outline" className="w-full" size="sm">Editar Ejercicio</Button>
+                <Link href={`/dashboard/coach/library/${ex.id}/edit`}>
+                  <Button variant="outline" className="w-full hover:bg-primary hover:text-primary-foreground" size="sm">Editar Ejercicio</Button>
+                </Link>
               </CardContent>
             </Card>
           ))

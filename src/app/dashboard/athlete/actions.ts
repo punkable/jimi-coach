@@ -35,14 +35,32 @@ export async function submitWorkoutResult(workoutDayId: string, rpe: number, not
   return { success: true }
 }
 
-export async function updateProfile(fullName: string) {
+export async function updateProfile(data: {
+  fullName: string,
+  phone: string,
+  bio: string,
+  weight: number | null,
+  height: number | null,
+  snatchRm: number | null,
+  shirtSize: string,
+  birthDate: string | null
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
   const { error } = await supabase
     .from('profiles')
-    .update({ full_name: fullName })
+    .update({ 
+      full_name: data.fullName,
+      phone_number: data.phone,
+      bio: data.bio,
+      weight_kg: data.weight,
+      height_cm: data.height,
+      snatch_rm: data.snatchRm,
+      shirt_size: data.shirtSize,
+      birth_date: data.birthDate
+    })
     .eq('id', user.id)
 
   if (error) {
