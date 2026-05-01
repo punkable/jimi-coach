@@ -173,11 +173,11 @@ export function WorkoutClient({ day }: { day: any }) {
                         <div className="divide-y divide-border/50">
                           {block.workout_movements.map((mov: any, mIdx: number) => (
                             <div key={mIdx} className="p-4 bg-background/30 flex gap-4">
-                              {/* Exercise Image thumbnail if available, else placeholder */}
-                              <div className="w-16 h-16 rounded-md overflow-hidden bg-secondary/30 shrink-0 relative flex items-center justify-center">
-                                {mov.exercises?.image_url ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img src={mov.exercises.image_url} alt="exercise" className="w-full h-full object-cover absolute inset-0" />
+                              <div className="w-16 h-16 rounded-md overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center border border-border/50">
+                                {mov.exercises?.video_url ? (
+                                  <a href={mov.exercises.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:scale-110 transition-transform">
+                                    <Play className="w-8 h-8 fill-primary/20" />
+                                  </a>
                                 ) : (
                                   <Dumbbell className="w-6 h-6 text-muted-foreground/50" />
                                 )}
