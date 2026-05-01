@@ -5,6 +5,8 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dumbbell } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
 
 export default async function LoginPage({
   searchParams,
@@ -19,19 +21,20 @@ export default async function LoginPage({
     <div className="flex min-h-screen items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center space-y-3">
-          <CardTitle className="text-4xl font-bold tracking-tight text-primary flex items-center justify-center gap-3">
-            <Dumbbell className="h-8 w-8" />
-            Jimi.coach
+          <CardTitle className="flex justify-center mb-2">
+            <Link href="/">
+              <Image src="/images/logo.png" alt="Jimi.coach Logo" width={220} height={60} className="object-contain hover:opacity-80 transition-opacity dark:invert" />
+            </Link>
           </CardTitle>
           <CardDescription className="text-base">
-            Tu plataforma de entrenamiento CrossFit
+            ¡Tu plataforma exclusiva de entrenamiento CrossFit! 🏋️‍♀️✨
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-              <TabsTrigger value="register">Registrarse</TabsTrigger>
+              <TabsTrigger value="login">Iniciar Sesión 🔓</TabsTrigger>
+              <TabsTrigger value="register">Registrarse 📝</TabsTrigger>
             </TabsList>
             
             {message && <div className="mb-4 p-4 text-sm text-green-800 bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-md border border-green-200 dark:border-green-800 font-medium">{message}</div>}
@@ -46,7 +49,7 @@ export default async function LoginPage({
                   <Input id="password" name="password" type="password" required />
                 </div>
                 {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-                <Button className="w-full" type="submit">Entrar</Button>
+                <Button className="w-full text-md font-bold h-11" type="submit">Entrar 🚀</Button>
               </form>
             </TabsContent>
 
@@ -66,7 +69,7 @@ export default async function LoginPage({
                 </div>
                 {/* Role is automatically set to 'athlete' in the backend */}
                 {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-                <Button className="w-full" type="submit">Crear cuenta</Button>
+                <Button className="w-full text-md font-bold h-11" type="submit">Crear cuenta ✨</Button>
               </form>
             </TabsContent>
           </Tabs>

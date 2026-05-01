@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Flame, Dumbbell, Calendar as CalendarIcon, PlayCircle } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default async function AthleteDashboard() {
   const supabase = await createClient()
@@ -28,10 +29,11 @@ export default async function AthleteDashboard() {
 
   return (
     <div className="p-4 md:p-8 space-y-8 max-w-md md:max-w-4xl mx-auto">
-      <header className="flex items-center justify-between pt-4">
+      <header className="flex flex-col gap-4 pt-4 mb-2">
+        <Image src="/images/logo.png" alt="Jimi.coach Logo" width={120} height={35} className="object-contain dark:invert" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Hola, {profile?.full_name?.split(' ')[0] || 'Atleta'}!</h1>
-          <p className="text-muted-foreground mt-1">¿Listo para destrozar el WOD hoy?</p>
+          <h1 className="text-3xl font-bold tracking-tight">¡Hola, {profile?.full_name?.split(' ')[0] || 'Atleta'}! 👋</h1>
+          <p className="text-muted-foreground mt-1">¿Listo para destrozar el WOD hoy? 🔥</p>
         </div>
       </header>
 

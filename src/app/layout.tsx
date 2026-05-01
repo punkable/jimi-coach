@@ -15,6 +15,10 @@ const robotoMono = Roboto_Mono({
 export const metadata: Metadata = {
   title: "Jimi Coach - CrossFit Training App",
   description: "Plataforma de entrenamiento para atletas y coaches de CrossFit.",
+  icons: {
+    icon: '/images/isotipo.png',
+    apple: '/images/isotipo.png',
+  },
 };
 
 export default function RootLayout({

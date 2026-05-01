@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Users, Library, Calendar, LayoutDashboard, Settings, Dumbbell, LogOut, Video } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
@@ -12,11 +13,10 @@ export default function CoachLayout({
       {/* Sidebar for Desktop / Hidden on Mobile */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2">
-            <Dumbbell className="h-6 w-6" />
-            Jimi.coach
-          </h2>
-          <p className="text-sm text-muted-foreground">Panel de Entrenador</p>
+          <Link href="/dashboard/coach">
+            <Image src="/images/logo.png" alt="Jimi.coach Logo" width={160} height={50} className="object-contain dark:invert mb-2 hover:opacity-80 transition-opacity" />
+          </Link>
+          <p className="text-sm text-muted-foreground font-medium">Panel de Entrenador 🛠️</p>
         </div>
         <nav className="flex-1 px-4 space-y-2">
           <Link href="/dashboard/coach" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-secondary/50 text-foreground transition-colors">
