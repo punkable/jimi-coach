@@ -31,6 +31,33 @@ export default async function WorkoutPage() {
 
   const todayData = days?.[0] // MVP: just take Day 1
 
+  // Fetch PRs for today's exercises
+  const exerciseIds: string[] = []
+  todayData?.workout_blocks?.forEach((block: any) => {
+    block.workout_movements?.forEach((mov: any) => {
+      if (mov.exercises?.id) exerciseIds.push(mov.exercises.id)
+    })
+  })
+
+  let prs: Record<string, { weight: number, reps: number }> = {}
+  if (exerciseIds.length > 0) {
+    const { data: pastSets } = await supabase
+      .from('workout_set_results')
+      .select('movement_id, weight, reps, is_completed, workout_movements(exercise_id)')
+      .eq('is_completed', true)
+      .in('workout_movements.exercise_id', exerciseIds)
+      .order('weight', { ascending: false })
+
+    if (pastSets) {
+      pastSets.forEach((s: any) => {
+        const exId = s.workout_movements?.exercise_id
+        if (exId && s.weight && (!prs[exId] || s.weight > prs[exId].weight)) {
+          prs[exId] = { weight: s.weight, reps: s.reps || 1 }
+        }
+      })
+    }
+  }
+
   const todayDate = new Date().toISOString().split('T')[0]
   const { data: readiness } = await supabase
     .from('daily_readiness')
@@ -41,7 +68,7 @@ export default async function WorkoutPage() {
 
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <WorkoutClient day={todayData} hasReadiness={!!readiness} />
+      <WorkoutClient day={todayData} hasReadiness={!!readiness} prs={prs} />
     </div>
   )
 }

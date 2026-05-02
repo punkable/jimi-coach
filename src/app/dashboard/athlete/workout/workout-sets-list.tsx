@@ -112,8 +112,18 @@ export function WorkoutSetsList({
     setSets(newSets)
   }
 
+  const completeAllSets = () => {
+    const newSets = sets.map(s => ({ ...s, is_completed: true }))
+    setSets(newSets)
+  }
+
   return (
     <div className="mt-3 space-y-2">
+      <div className="flex justify-end mb-2">
+        <Button variant="outline" size="sm" onClick={completeAllSets} className="h-6 text-[10px] px-2 py-0 border-primary/30 text-primary hover:bg-primary/10 gap-1 rounded-full">
+          <Check className="w-3 h-3" /> Marcar Todo
+        </Button>
+      </div>
       <div className="grid grid-cols-12 gap-2 text-[10px] uppercase font-bold text-muted-foreground mb-1 px-2">
         <div className="col-span-2 text-center">Set</div>
         

@@ -13,7 +13,7 @@ import { submitWorkoutResult, submitReadiness } from '../actions'
 import { Battery, Brain, Activity } from 'lucide-react'
 import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 
-export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: boolean }) {
+export function WorkoutClient({ day, hasReadiness, prs }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }> }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
   const [readinessOpen, setReadinessOpen] = useState(!hasReadiness)
   const [sleep, setSleep] = useState('3')
@@ -25,6 +25,27 @@ export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: 
   // Hevy-Style State
   const [allSetsData, setAllSetsData] = useState<Record<string, WorkoutSet[]>>({})
   const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null)
+
+  // Load from localStorage
+  useEffect(() => {
+    const savedSets = localStorage.getItem(`workout-sets-${day.id}`)
+    const savedBlocks = localStorage.getItem(`workout-blocks-${day.id}`)
+    if (savedSets) setAllSetsData(JSON.parse(savedSets))
+    if (savedBlocks) setCompletedBlocks(JSON.parse(savedBlocks))
+  }, [day.id])
+
+  // Save to localStorage
+  useEffect(() => {
+    if (Object.keys(allSetsData).length > 0) {
+      localStorage.setItem(`workout-sets-${day.id}`, JSON.stringify(allSetsData))
+    }
+  }, [allSetsData, day.id])
+
+  useEffect(() => {
+    if (Object.keys(completedBlocks).length > 0) {
+      localStorage.setItem(`workout-blocks-${day.id}`, JSON.stringify(completedBlocks))
+    }
+  }, [completedBlocks, day.id])
 
   // Timer Tick
   useEffect(() => {
@@ -212,11 +233,18 @@ export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: 
                                 )}
                                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-2">
                                   <span className="font-medium bg-secondary/50 text-muted-foreground px-2 py-0.5 rounded flex items-center gap-1">
-                                    Objetivo: {mov.sets || '-'}x{mov.reps || '-'}
+                                    Sugerido: {mov.sets || '-'}x{mov.reps || '-'}
                                   </span>
                                   {mov.weight_percentage && <span className="font-medium bg-primary/20 text-primary px-2 py-0.5 rounded">{mov.weight_percentage}</span>}
                                   {mov.rest && <span className="font-medium bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded flex items-center gap-1"><Timer className="w-3 h-3" /> {mov.rest}</span>}
                                 </div>
+                                
+                                {prs && mov.exercises?.id && prs[mov.exercises.id] && (
+                                  <p className="text-[10px] text-primary/80 mt-1.5 font-medium flex items-center gap-1">
+                                    🏆 Récord Histórico: {prs[mov.exercises.id].weight}kg x {prs[mov.exercises.id].reps}
+                                  </p>
+                                )}
+
                                 {mov.notes && <p className="text-xs text-muted-foreground mt-2 italic">{mov.notes}</p>}
 
                                 <WorkoutSetsList 
