@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer, X, Send, Dumbbell, PlusCircle, Search, Trophy } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -32,7 +32,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null)
 
   // ── Persist workout progress to localStorage ──────────────────────────────
+  const [isLoaded, setIsLoaded] = useState(false)
   const storageKey = `wod-progress-${day?.id}`
+  
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
@@ -41,15 +43,21 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         if (sets) setAllSetsData(sets)
         if (blocks) setCompletedBlocks(blocks)
       }
-    } catch {}
+    } catch (e) {
+      console.error('Error loading progress:', e)
+    } finally {
+      setIsLoaded(true)
+    }
   }, [storageKey])
 
   useEffect(() => {
-    if (!day?.id) return
+    if (!day?.id || !isLoaded) return
     try {
       localStorage.setItem(storageKey, JSON.stringify({ sets: allSetsData, blocks: completedBlocks }))
-    } catch {}
-  }, [allSetsData, completedBlocks, storageKey])
+    } catch (e) {
+      console.error('Error saving progress:', e)
+    }
+  }, [allSetsData, completedBlocks, storageKey, isLoaded])
   // ─────────────────────────────────────────────────────────────────────────
 
   // Timer Tick
@@ -102,6 +110,30 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
   const toggleBlock = (blockId: string) => {
     setCompletedBlocks(prev => ({ ...prev, [blockId]: !prev[blockId] }))
+  }
+
+  const isWorkoutComplete = () => {
+    const totalBlocks = day.workout_blocks?.length ?? 0
+    const completedCount = Object.values(completedBlocks).filter(Boolean).length
+    return completedCount >= totalBlocks
+  }
+
+  const handleSubmitResult = async () => {
+    setIsSubmitting(true)
+    try {
+      // Flatten allSetsData into a single array for the backend
+      const setsToSubmit = Object.values(allSetsData).flat().filter(s => s.is_completed)
+      
+      const res = await submitWorkoutResult(day.id, parseInt(rpe), notes, videoLink, setsToSubmit)
+      if (res.success) {
+        localStorage.removeItem(storageKey)
+        window.location.href = '/dashboard/athlete'
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   if (!day || !day.workout_blocks || day.workout_blocks.length === 0) {
@@ -346,52 +378,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 )
               })}
 
-              {/* Extra exercises added by athlete */}
-              {extraMovements.length > 0 && (
-                <Card className="glass border-border/40 shadow-lg overflow-hidden">
-                  <div className="p-4 bg-primary/5 border-b border-border/40">
-                    <h3 className="font-bold text-lg">Ejercicios Extra</h3>
-                  </div>
-                  <CardContent className="p-0">
-                    <div className="divide-y divide-border/50">
-                      {extraMovements.map((ex: any, idx: number) => {
-                        const fakeMovId = `extra-${ex.id}-${idx}`
-                        const fakeMov = { id: fakeMovId, exercises: ex, sets: 3, reps: null, rest: null, weight_percentage: null, notes: null }
-                        return (
-                          <div key={fakeMovId} className="p-4 bg-background/30 flex gap-4">
-                            <div className="w-16 h-16 rounded-md overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center border border-border/50">
-                              {ex.video_url ? (
-                                <a href={ex.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:scale-110 transition-transform">
-                                  <Play className="w-8 h-8 fill-primary/20" />
-                                </a>
-                              ) : (
-                                <Dumbbell className="w-6 h-6 text-muted-foreground/50" />
-                              )}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <h4 className="font-bold text-foreground text-sm">{ex.name}</h4>
-                                <button onClick={() => setExtraMovements(prev => prev.filter((_, i) => i !== idx))} className="text-destructive/60 hover:text-destructive shrink-0">
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                              {ex.instructions && (
-                                <p className="text-[11px] text-muted-foreground leading-snug mt-1 mb-2">{ex.instructions}</p>
-                              )}
-                              <WorkoutSetsList
-                                movement={fakeMov}
-                                onSetChange={(sets) => setAllSetsData(prev => ({ ...prev, [fakeMovId]: sets }))}
-                                onTimerStart={(secs) => setRestTimerSeconds(secs)}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               {/* Add Extra Exercise Button */}
               <button
                 onClick={() => setAddExerciseOpen(true)}
@@ -400,7 +386,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 <PlusCircle className="w-4 h-4" />
                 Añadir Ejercicio Extra
               </button>
-
             </motion.div>
           )}
         </AnimatePresence>
@@ -443,118 +428,158 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         </div>
       )}
 
-      {/* Finish Workout Modal */}
+      {/* Finish Confirmation / Feedback Modal */}
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
-        <DialogContent className="sm:max-w-md glass border-border/50">
+        <DialogContent className="max-w-[90vw] w-[400px] rounded-3xl border-border/40 glass-strong">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">¡Entrenamiento Superado!</DialogTitle>
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight">Finalizar Entrenamiento</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <Label>¿Qué tan duro estuvo? (RPE: {rpe}/10)</Label>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-muted-foreground">Fácil</span>
-                <input 
-                  type="range" min="1" max="10" 
-                  value={rpe} onChange={(e) => setRpe(e.target.value)}
-                  className="flex-1 accent-primary"
-                />
-                <span className="text-xs text-muted-foreground">Máximo</span>
+          
+          {!isWorkoutComplete() && (
+            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl mb-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-amber-500 uppercase tracking-widest">WOD Incompleto</p>
+                <p className="text-[11px] text-amber-200/70 mt-1 leading-relaxed">
+                  Aún tienes bloques sin marcar como completados. ¿Estás seguro de que quieres finalizar ahora?
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-6 pt-2">
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Esfuerzo Percibido (RPE)</Label>
+                <span className="text-lg font-black text-primary">{rpe}/10</span>
+              </div>
+              <input 
+                type="range" min="1" max="10" 
+                value={rpe} onChange={(e) => setRpe(e.target.value)}
+                className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-[8px] font-bold text-muted-foreground/40 uppercase tracking-tighter">
+                <span>Paseo por el parque</span>
+                <span>Muerte total</span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notas para el Coach (Opcional)</Label>
-              <Input 
-                id="notes" placeholder="Ej: Me dolió un poco el hombro..." 
+              <Label htmlFor="notes" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Notas para el Coach</Label>
+              <textarea 
+                id="notes" 
+                placeholder="Ej: Molestia en hombro, me sentí fuerte..." 
                 value={notes} onChange={(e) => setNotes(e.target.value)}
-                className="bg-background/50"
+                className="w-full bg-background/50 border border-border/40 rounded-xl p-3 text-sm min-h-[80px] focus:outline-none focus:ring-1 focus:ring-primary transition-all"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="video">Link de Video Técnico (Opcional)</Label>
-              <Input 
-                id="video" placeholder="Link de Drive, YouTube o IG" 
-                value={videoLink} onChange={(e) => setVideoLink(e.target.value)}
-                className="bg-background/50"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">
-                Pega el link de tu levantamiento pesado para que el coach lo revise.
-              </p>
+              <Label htmlFor="video" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Link de Video (Técnica)</Label>
+              <div className="relative">
+                <Video className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+                <Input 
+                  id="video" placeholder="Google Drive, YouTube, IG..." 
+                  value={videoLink} onChange={(e) => setVideoLink(e.target.value)}
+                  className="bg-background/50 pl-10 border-border/40 h-11"
+                />
+              </div>
             </div>
 
-            <div className="pt-4">
+            <div className="flex gap-3 pt-4">
               <Button 
-                className="w-full gap-2" 
-                disabled={isSubmitting}
-                onClick={async () => {
-                  setIsSubmitting(true)
-                  try {
-                    const flattenedSets = Object.values(allSetsData).flat()
-                    await submitWorkoutResult(day.id, parseInt(rpe), notes, videoLink, flattenedSets)
-                    // Clear saved progress after successful submission
-                    try { localStorage.removeItem(storageKey) } catch {}
-                    setFinishOpen(false)
-                    window.location.href = '/dashboard/athlete'
-                  } catch (e) {
-                    console.error("Error submitting workout", e)
-                  } finally {
-                    setIsSubmitting(false)
-                  }
-                }}
+                variant="outline" 
+                className="flex-1 h-12 rounded-xl font-bold uppercase tracking-widest text-[11px]"
+                onClick={() => setFinishOpen(false)}
               >
-                {isSubmitting ? 'Enviando...' : (
-                  <>
-                    <Send className="w-4 h-4" /> Enviar Resultados
-                  </>
-                )}
+                Volver
+              </Button>
+              <Button 
+                className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-[11px] shadow-[0_8px_20px_rgba(var(--primary),0.3)]"
+                onClick={handleSubmitResult}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Guardando...' : 'Confirmar'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Add Extra Exercise Dialog */}
+      <Dialog open={addExerciseOpen} onOpenChange={setAddExerciseOpen}>
+        <DialogContent className="max-w-[90vw] w-[400px] rounded-3xl border-border/40 glass-strong p-0 overflow-hidden">
+          <div className="p-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-black uppercase tracking-tight">Añadir Ejercicio</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/40" />
+              <Input 
+                placeholder="Buscar ejercicio..." 
+                value={exerciseSearch}
+                onChange={(e) => setExerciseSearch(e.target.value)}
+                className="bg-background/50 pl-10 border-border/40"
+              />
+            </div>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto p-2 mt-2">
+            {allExercises?.filter(ex => ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())).map(ex => (
+              <button
+                key={ex.id}
+                onClick={() => {
+                  setExtraMovements(prev => [...prev, ex])
+                  setAddExerciseOpen(false)
+                }}
+                className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-primary/10 transition-colors text-left group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-secondary/40 flex items-center justify-center border border-border/30 group-hover:border-primary/30 transition-all">
+                  <Dumbbell className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{ex.name}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">{ex.category || 'General'}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Readiness Modal */}
-      <Dialog open={readinessOpen} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md glass border-border/50 hide-close">
+      <Dialog open={readinessOpen} onOpenChange={setReadinessOpen}>
+        <DialogContent className="max-w-[90vw] w-[400px] rounded-3xl border-border/40 glass-strong">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <Activity className="w-6 h-6 text-primary" /> Daily Readiness
+            <DialogTitle className="text-2xl font-black uppercase tracking-tight flex items-center gap-2">
+              <Activity className="w-6 h-6 text-primary" />
+              Estado Diario
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6 pt-4">
-            <p className="text-sm text-muted-foreground">Antes de empezar, cuéntale a tu coach cómo te sientes hoy.</p>
+          <div className="space-y-8 pt-6">
+            <ReadinessSlider 
+              label="Calidad de Sueño" 
+              value={sleep} 
+              onChange={setSleep} 
+              icon={Battery} 
+              labels={['Fatal', 'Pobre', 'Ok', 'Bien', 'Top']} 
+            />
+            <ReadinessSlider 
+              label="Nivel de Estrés" 
+              value={stress} 
+              onChange={setStress} 
+              icon={Brain} 
+              labels={['Bajo', 'Ok', 'Medio', 'Alto', 'Máximo']} 
+            />
+            <ReadinessSlider 
+              label="Dolor Muscular" 
+              value={soreness} 
+              onChange={setSoreness} 
+              icon={Dumbbell} 
+              labels={['Nada', 'Leve', 'Ok', 'Mucho', 'Roto']} 
+            />
             
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><Battery className="w-4 h-4 text-blue-500" /> Calidad de Sueño (1-5)</Label>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-muted-foreground">Malo</span>
-                <input type="range" min="1" max="5" value={sleep} onChange={(e) => setSleep(e.target.value)} className="flex-1 accent-blue-500" />
-                <span className="text-xs text-muted-foreground">Excelente</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><Brain className="w-4 h-4 text-purple-500" /> Nivel de Estrés (1-5)</Label>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-muted-foreground">Bajo</span>
-                <input type="range" min="1" max="5" value={stress} onChange={(e) => setStress(e.target.value)} className="flex-1 accent-purple-500" />
-                <span className="text-xs text-muted-foreground">Alto</span>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2"><Dumbbell className="w-4 h-4 text-orange-500" /> Dolor Muscular (1-5)</Label>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-muted-foreground">Nada</span>
-                <input type="range" min="1" max="5" value={soreness} onChange={(e) => setSoreness(e.target.value)} className="flex-1 accent-orange-500" />
-                <span className="text-xs text-muted-foreground">Mucho</span>
-              </div>
-            </div>
-
             <Button 
-              className="w-full font-bold" 
+              className="w-full h-14 rounded-2xl font-black uppercase tracking-widest shadow-[0_8px_30px_rgba(var(--primary),0.3)]"
               disabled={isSubmittingReadiness}
               onClick={async () => {
                 setIsSubmittingReadiness(true)
@@ -568,58 +593,34 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 }
               }}
             >
-              {isSubmittingReadiness ? 'Guardando...' : 'Iniciar Entrenamiento'}
+              {isSubmittingReadiness ? 'Guardando...' : 'Empezar Entrenamiento'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
 
-      {/* Add Extra Exercise Modal */}
-      <Dialog open={addExerciseOpen} onOpenChange={setAddExerciseOpen}>
-        <DialogContent className="sm:max-w-md glass border-border/50 max-h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PlusCircle className="w-5 h-5 text-primary" />
-              Añadir Ejercicio Extra
-            </DialogTitle>
-          </DialogHeader>
-          <div className="relative mt-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar ejercicio..."
-              value={exerciseSearch}
-              onChange={e => setExerciseSearch(e.target.value)}
-              className="pl-9 bg-background/50"
-              autoFocus
-            />
-          </div>
-          <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-1">
-            {(allExercises ?? [])
-              .filter(ex => ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()))
-              .map((ex: any) => (
-                <button
-                  key={ex.id}
-                  onClick={() => {
-                    setExtraMovements(prev => [...prev, ex])
-                    setAddExerciseOpen(false)
-                    setExerciseSearch('')
-                  }}
-                  className="w-full text-left p-3 rounded-lg bg-background/50 hover:bg-primary/10 border border-border/30 hover:border-primary/40 transition-all group"
-                >
-                  <p className="font-semibold text-sm group-hover:text-primary transition-colors">{ex.name}</p>
-                  {ex.category && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{ex.category}</p>
-                  )}
-                </button>
-              ))
-            }
-            {(allExercises ?? []).filter(ex => ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())).length === 0 && (
-              <p className="text-center text-muted-foreground text-sm py-8">No se encontraron ejercicios</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
+function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label: string, value: string, onChange: (v: string) => void, icon: any, labels: string[] }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Icon className="w-4 h-4 text-primary" />
+        <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{label}</Label>
+      </div>
+      <input 
+        type="range" min="1" max="5" 
+        value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full h-1.5 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+      />
+      <div className="flex justify-between px-1">
+        {labels.map((l, i) => (
+          <span key={i} className={`text-[8px] font-bold uppercase tracking-tighter transition-colors ${parseInt(value) === i + 1 ? 'text-primary' : 'text-muted-foreground/30'}`}>
+            {l}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
