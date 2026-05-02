@@ -31,6 +31,27 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   const [allSetsData, setAllSetsData] = useState<Record<string, WorkoutSet[]>>({})
   const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null)
 
+  // ── Persist workout progress to localStorage ──────────────────────────────
+  const storageKey = `wod-progress-${day?.id}`
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey)
+      if (saved) {
+        const { sets, blocks } = JSON.parse(saved)
+        if (sets) setAllSetsData(sets)
+        if (blocks) setCompletedBlocks(blocks)
+      }
+    } catch {}
+  }, [storageKey])
+
+  useEffect(() => {
+    if (!day?.id) return
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ sets: allSetsData, blocks: completedBlocks }))
+    } catch {}
+  }, [allSetsData, completedBlocks, storageKey])
+  // ─────────────────────────────────────────────────────────────────────────
+
   // Timer Tick
   useEffect(() => {
     if (restTimerSeconds === null || restTimerSeconds <= 0) return
@@ -405,6 +426,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                   try {
                     const flattenedSets = Object.values(allSetsData).flat()
                     await submitWorkoutResult(day.id, parseInt(rpe), notes, videoLink, flattenedSets)
+                    // Clear saved progress after successful submission
+                    try { localStorage.removeItem(storageKey) } catch {}
                     setFinishOpen(false)
                     window.location.href = '/dashboard/athlete'
                   } catch (e) {
