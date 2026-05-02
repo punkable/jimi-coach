@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer, X, Send, Dumbbell, PlusCircle, Search } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer, X, Send, Dumbbell, PlusCircle, Search, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -117,22 +117,46 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background md:max-w-xl md:mx-auto md:w-full md:border-x md:border-border/50 relative shadow-2xl">
+    <div className="flex-1 flex flex-col h-full bg-background md:max-w-lg md:mx-auto md:w-full md:border-x md:border-border/40 relative overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border/50 bg-background/80 backdrop-blur z-10 sticky top-0">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/athlete">
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
-          <h1 className="text-xl font-bold tracking-tight">{day.title || 'Entrenamiento'}</h1>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" size="icon" className="rounded-full bg-primary/20 text-primary" onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}>
-            {activeTab === 'tools' ? <X className="w-5 h-5" /> : <Timer className="w-5 h-5" />}
+      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/30">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/athlete">
+              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 -ml-1">
+                <ArrowLeft className="w-4.5 h-4.5" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-sm font-black tracking-tight leading-none uppercase">{day.name || day.title || 'WOD'}</h1>
+              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+                {day.workout_blocks?.length ?? 0} bloques · {day.workout_blocks?.reduce((a: number, b: any) => a + (b.workout_movements?.length ?? 0), 0) ?? 0} ejercicios
+              </p>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className={`rounded-full w-9 h-9 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
+            onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
+          >
+            {activeTab === 'tools' ? <X className="w-4 h-4" /> : <Timer className="w-4 h-4" />}
           </Button>
         </div>
+        {/* Progress bar */}
+        {activeTab === 'workout' && (() => {
+          const total = day.workout_blocks?.length ?? 0
+          const done = Object.values(completedBlocks).filter(Boolean).length
+          const pct = total > 0 ? (done / total) * 100 : 0
+          return (
+            <div className="h-0.5 bg-border/20">
+              <div
+                className="h-full bg-primary transition-all duration-700 ease-out shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          )
+        })()}
       </header>
 
       {/* Main Content Area */}
@@ -202,80 +226,123 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             >
               {day.workout_blocks.map((block: any) => {
                 const isCompleted = completedBlocks[block.id]
-                
+                const blockMovCount = block.workout_movements?.length ?? 0
+
                 return (
-                  <Card key={block.id} className={`overflow-hidden transition-all duration-300 ${isCompleted ? 'opacity-50 grayscale border-primary/20' : 'glass border-border/40 shadow-lg'}`}>
-                    <div className={`p-4 flex items-center justify-between cursor-pointer ${isCompleted ? 'bg-secondary/20' : 'bg-primary/5'}`} onClick={() => toggleBlock(block.id)}>
-                      <h3 className={`font-bold text-lg ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
-                        {block.name}
-                      </h3>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${isCompleted ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground'}`}>
-                        {isCompleted && <CheckCircle2 className="w-4 h-4" />}
+                  <div
+                    key={block.id}
+                    className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                      isCompleted
+                        ? 'border-primary/20 opacity-60 bg-primary/5'
+                        : 'glass border-border/40 shadow-sm'
+                    }`}
+                  >
+                    {/* Block header */}
+                    <div
+                      className={`flex items-center justify-between px-4 py-3 cursor-pointer ${
+                        isCompleted ? 'bg-transparent' : 'bg-card/50'
+                      }`}
+                      onClick={() => toggleBlock(block.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
+                          isCompleted
+                            ? 'bg-primary border-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]'
+                            : 'border-muted-foreground/30'
+                        }`}>
+                          {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" />}
+                        </div>
+                        <div>
+                          <h3 className={`font-black text-sm tracking-tight uppercase ${
+                            isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
+                          }`}>
+                            {block.name}
+                          </h3>
+                          <p className="text-[10px] text-muted-foreground font-medium">{blockMovCount} ejercicio{blockMovCount !== 1 ? 's' : ''}</p>
+                        </div>
                       </div>
+                      <X className={`w-4 h-4 text-muted-foreground/40 transition-transform ${isCompleted ? 'rotate-0' : 'rotate-45'}`} />
                     </div>
                     
+                    {/* Movements */}
                     {!isCompleted && (
-                      <CardContent className="p-0">
-                        <div className="divide-y divide-border/50">
-                          {block.workout_movements.map((mov: any, mIdx: number) => (
-                            <div key={mIdx} className="p-4 bg-background/30 flex gap-4">
-                              <div className="w-16 h-16 rounded-md overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center border border-border/50">
+                      <div className="divide-y divide-border/20">
+                        {block.workout_movements.map((mov: any, mIdx: number) => (
+                          <div key={mIdx} className="p-4 space-y-4">
+                            <div className="flex gap-3">
+                              {/* Video/icon thumb */}
+                              <div className="w-12 h-12 rounded-xl bg-secondary/40 shrink-0 flex items-center justify-center border border-border/30 relative overflow-hidden group">
                                 {mov.exercises?.video_url ? (
-                                  <a href={mov.exercises.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:scale-110 transition-transform">
-                                    <Play className="w-8 h-8 fill-primary/20" />
+                                  <a href={mov.exercises.video_url} target="_blank" rel="noopener noreferrer"
+                                    className="absolute inset-0 flex items-center justify-center bg-primary/5 hover:bg-primary/15 transition-colors">
+                                    <Play className="w-5 h-5 text-primary fill-primary/20 group-hover:scale-110 transition-transform" />
                                   </a>
                                 ) : (
-                                  <Dumbbell className="w-6 h-6 text-muted-foreground/50" />
+                                  <Dumbbell className="w-5 h-5 text-muted-foreground/30" />
                                 )}
                               </div>
                               
                               <div className="flex-1">
-                                <h4 className="font-bold text-foreground text-sm leading-tight mb-1">{mov.exercises?.name || 'Movimiento'}</h4>
+                                <h4 className="font-bold text-foreground text-sm leading-tight uppercase tracking-tight">{mov.exercises?.name || 'Movimiento'}</h4>
                                 {mov.exercises?.instructions && (
-                                  <p className="text-[11px] text-muted-foreground leading-snug mt-1 mb-2">
+                                  <p className="text-[10px] text-muted-foreground leading-snug mt-1 italic">
                                     {mov.exercises.instructions}
                                   </p>
                                 )}
-                                <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-2">
-                                  <span className="font-medium bg-secondary/50 text-muted-foreground px-2 py-0.5 rounded flex items-center gap-1">
-                                    Sugerido: {mov.sets || '-'}x{mov.reps || '-'}
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  <span className="text-[10px] font-black bg-secondary/60 text-secondary-foreground px-2 py-0.5 rounded-md uppercase tracking-widest border border-border/20">
+                                    {mov.sets || '-'} x {mov.reps || '-'}
                                   </span>
-                                  {mov.weight_percentage && <span className="font-medium bg-primary/20 text-primary px-2 py-0.5 rounded">{mov.weight_percentage}</span>}
-                                  {mov.rest && <span className="font-medium bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded flex items-center gap-1"><Timer className="w-3 h-3" /> {mov.rest}</span>}
+                                  {mov.weight_percentage && (
+                                    <span className="text-[10px] font-black bg-primary/15 text-primary px-2 py-0.5 rounded-md uppercase tracking-widest border border-primary/20">
+                                      {mov.weight_percentage}
+                                    </span>
+                                  )}
+                                  {mov.rest && (
+                                    <span className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-500/20 flex items-center gap-1">
+                                      <Timer className="w-2.5 h-2.5" /> {mov.rest}
+                                    </span>
+                                  )}
                                 </div>
-                                {mov.notes && <p className="text-xs text-muted-foreground mt-2 italic">{mov.notes}</p>}
-
-                                <WorkoutSetsList 
-                                  movement={mov} 
-                                  onSetChange={(sets) => {
-                                    setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
-                                    // Auto-complete block if all sets of all movements in block are completed
-                                    const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
-                                    const allBlockMovements = block.workout_movements || []
-                                    let blockCompleted = true
-                                    allBlockMovements.forEach((m: any) => {
-                                      const mId = m.id as string;
-                                      const mSets = updatedAllSets[mId]
-                                      if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
-                                        blockCompleted = false
-                                      }
-                                    })
-                                    if (blockCompleted && allBlockMovements.length > 0) {
-                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
-                                    } else if (!blockCompleted) {
-                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
-                                    }
-                                  }}
-                                  onTimerStart={(secs) => setRestTimerSeconds(secs)}
-                                />
-
+                                {prs && mov.exercises?.id && prs[mov.exercises.id] && (
+                                  <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg w-fit">
+                                    <Trophy className="w-3 h-3 text-amber-500" />
+                                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
+                                      PB: {prs[mov.exercises.id].weight}kg × {prs[mov.exercises.id].reps}
+                                    </span>
+                                  </div>
+                                )}
+                                {mov.notes && <p className="text-[10px] text-muted-foreground mt-2 border-l-2 border-primary/30 pl-2">{mov.notes}</p>}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
+
+                            <WorkoutSetsList
+                              movement={mov}
+                              onSetChange={(sets) => {
+                                setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
+                                const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
+                                const allBlockMovements = block.workout_movements || []
+                                let blockCompleted = true
+                                allBlockMovements.forEach((m: any) => {
+                                  const mId = m.id as string
+                                  const mSets = updatedAllSets[mId]
+                                  if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
+                                    blockCompleted = false
+                                  }
+                                })
+                                if (blockCompleted && allBlockMovements.length > 0) {
+                                  setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
+                                } else if (!blockCompleted) {
+                                  setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
+                                }
+                              }}
+                              onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  </Card>
+                  </div>
                 )
               })}
 
@@ -364,14 +431,14 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         )}
       </AnimatePresence>
 
-      {/* Floating Finish Button */}
+      {/* Floating Finish Button Area */}
       {activeTab === 'workout' && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-12">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/80 to-transparent pt-12 pb-safe z-30 pointer-events-none">
           <Button 
-            className="w-full h-14 text-lg font-bold rounded-full shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl shadow-[0_8px_30px_rgba(var(--primary),0.4)] active:scale-95 transition-all pointer-events-auto"
             onClick={() => setFinishOpen(true)}
           >
-            COMPLETAR ENTRENAMIENTO
+            Finalizar WOD
           </Button>
         </div>
       )}

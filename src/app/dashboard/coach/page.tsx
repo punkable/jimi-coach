@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Activity, Plus, Dumbbell } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Users, Activity, Plus, Dumbbell, TrendingUp, Calendar, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { DashboardCharts } from './dashboard-charts'
@@ -42,7 +42,7 @@ export default async function CoachDashboard() {
     .is('deleted_at', null)
     .order('created_at', { ascending: true })
 
-  // Process Athlete Growth Data (Group by Month)
+  // Process Athlete Growth Data
   const athleteGrowthMap = new Map<string, number>()
   if (allAthletes) {
     allAthletes.forEach((a) => {
@@ -58,7 +58,7 @@ export default async function CoachDashboard() {
     return { month, athletes: cumulativeAthletes }
   })
 
-  // Fetch recent workout results for Compliance Chart (Last 7 days)
+  // Fetch recent workout results (Last 7 days)
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   const { data: recentResults } = await supabase
@@ -68,9 +68,8 @@ export default async function CoachDashboard() {
     .eq('completed', true)
     .order('completed_at', { ascending: true })
 
-  // Process Compliance Data (Group by Day)
+  // Process Compliance Data
   const complianceMap = new Map<string, number>()
-  // Initialize last 7 days with 0
   for (let i = 6; i >= 0; i--) {
     const d = new Date()
     d.setDate(d.getDate() - i)
@@ -93,66 +92,144 @@ export default async function CoachDashboard() {
   }))
 
   return (
-    <div className="p-4 md:p-8 space-y-8">
-      <header className="flex items-center justify-between">
+    <div className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h1 className="text-3xl font-bold">Bienvenido, Coach {profile?.full_name?.split(' ')[0] || ''}</h1>
-          <p className="text-muted-foreground mt-1">Resumen de tu academia</p>
+          <div className="flex items-center gap-2 text-primary mb-2">
+            <TrendingUp className="w-4 h-4" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Resumen de Rendimiento</span>
+          </div>
+          <h1 className="text-4xl font-black tracking-tight uppercase">Coach {profile?.full_name?.split(' ')[0] || ''}</h1>
+          <p className="text-muted-foreground text-sm font-medium mt-1">Gestiona tu academia y monitorea el progreso de tus atletas.</p>
         </div>
-        <Link href="/dashboard/coach/plans/new">
-          <Button className="hidden md:flex gap-2">
-            <Plus className="w-4 h-4" />
-            Nueva Planificación
-          </Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/dashboard/coach/plans/new" className="flex-1 md:flex-none">
+            <Button className="w-full md:w-auto h-12 px-6 rounded-2xl font-bold uppercase tracking-widest text-[11px] gap-2 shadow-[0_8px_20px_rgba(var(--primary),0.25)]">
+              <Plus className="w-4 h-4" />
+              Nueva Planificación
+            </Button>
+          </Link>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="glass border-border/50 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Alumnos Activos</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{athletes?.length || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Atletas en tu app</p>
-          </CardContent>
-        </Card>
-        <Card className="glass border-border/50 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Planes Creados</CardTitle>
-            <Activity className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{plansCount || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Rutinas en el sistema</p>
-          </CardContent>
-        </Card>
-        <Card className="glass border-border/50 shadow-lg">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ejercicios</CardTitle>
-            <Dumbbell className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{exercisesCount || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">Movimientos en librería</p>
-          </CardContent>
-        </Card>
+      {/* Main Stats Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard 
+          title="Alumnos Activos" 
+          value={athletes?.length || 0} 
+          icon={Users} 
+          trend="+12% este mes" 
+          color="primary"
+        />
+        <StatCard 
+          title="Planes de WOD" 
+          value={plansCount || 0} 
+          icon={Activity} 
+          trend="8 activos hoy" 
+          color="blue"
+        />
+        <StatCard 
+          title="Biblioteca" 
+          value={exercisesCount || 0} 
+          icon={Dumbbell} 
+          trend="15 videos técnicos" 
+          color="purple"
+        />
+        <StatCard 
+          title="Revisiones" 
+          value="4" 
+          icon={Calendar} 
+          trend="Pendientes hoy" 
+          color="orange"
+        />
       </div>
 
-      <DashboardCharts athleteGrowth={athleteGrowth} complianceData={complianceData} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <section className="glass rounded-3xl p-6 md:p-8">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-black uppercase tracking-tight">Actividad de Atletas</h2>
+              <div className="flex gap-2">
+                <div className="w-3 h-3 rounded-full bg-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Sesiones Completadas</span>
+              </div>
+            </div>
+            <DashboardCharts athleteGrowth={athleteGrowth} complianceData={complianceData} />
+          </section>
+        </div>
+
+        <div className="space-y-8">
+          <section className="glass rounded-3xl p-6 md:p-8 flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-black uppercase tracking-tight">Acciones Rápidas</h2>
+            </div>
+            <div className="space-y-3 flex-1">
+              <QuickActionLink href="/dashboard/coach/athletes" label="Gestionar Alumnos" icon={Users} />
+              <QuickActionLink href="/dashboard/coach/plans" label="Ver Calendario" icon={Calendar} />
+              <QuickActionLink href="/dashboard/coach/library" label="Añadir Ejercicio" icon={Plus} />
+              <QuickActionLink href="/dashboard/coach/reviews" label="Revisar Videos" icon={Video} />
+            </div>
+            <div className="mt-8 pt-8 border-t border-border/30">
+              <div className="bg-primary/10 rounded-2xl p-4 border border-primary/20">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Tip del Coach</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">Recuerda revisar los videos de técnica pendientes para mantener el engagement de tus atletas.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
 
       <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">Resultados Recientes</h2>
-          <Button variant="link" className="text-primary">Ver todos</Button>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-black uppercase tracking-tight">Últimos Resultados</h2>
+          <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest gap-2">
+            Ver Todos <ChevronRight className="w-3 h-3" />
+          </Button>
         </div>
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            Aún no hay resultados recientes. Cuando tus alumnos completen entrenamientos, aparecerán aquí.
+        <Card className="glass rounded-3xl border-dashed border-2 border-border/40">
+          <CardContent className="p-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-secondary/30 flex items-center justify-center mx-auto mb-4">
+              <Activity className="w-8 h-8 text-muted-foreground/40" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">Esperando resultados</h3>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">Cuando tus alumnos completen sus entrenamientos de hoy, verás sus marcas y RPE aquí mismo.</p>
           </CardContent>
         </Card>
       </section>
     </div>
+  )
+}
+
+function StatCard({ title, value, icon: Icon, trend, color }: { title: string, value: string | number, icon: any, trend: string, color: string }) {
+  const colors: any = {
+    primary: 'bg-primary/10 text-primary border-primary/20',
+    blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    purple: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
+    orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+  }
+
+  return (
+    <div className="glass rounded-3xl p-6 border-border/30 group hover:border-primary/40 transition-all duration-300">
+      <div className="flex items-center justify-between mb-4">
+        <div className={`p-2.5 rounded-xl ${colors[color]} transition-transform group-hover:scale-110`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">{trend}</span>
+      </div>
+      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-1">{title}</p>
+      <p className="text-3xl font-black text-foreground">{value}</p>
+    </div>
+  )
+}
+
+function QuickActionLink({ href, label, icon: Icon }: { href: string, label: string, icon: any }) {
+  return (
+    <Link href={href} className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 hover:bg-secondary/50 border border-transparent hover:border-border/50 transition-all group">
+      <div className="flex items-center gap-3">
+        <Icon className="w-4.5 h-4.5 text-muted-foreground group-hover:text-primary transition-colors" />
+        <span className="text-sm font-bold text-foreground/80 group-hover:text-foreground transition-colors">{label}</span>
+      </div>
+      <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+    </Link>
   )
 }

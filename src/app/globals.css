@@ -193,4 +193,22 @@
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
+
+  /* ── iOS Safe Area Insets ── */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-safe-nav {
+    /* nav height + safe area */
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  .mb-safe {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+  .bottom-safe {
+    bottom: env(safe-area-inset-bottom);
+  }
+  .h-nav-safe {
+    height: calc(4rem + env(safe-area-inset-bottom));
+  }
 }
