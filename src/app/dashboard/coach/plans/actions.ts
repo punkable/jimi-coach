@@ -36,6 +36,25 @@ export async function createPlan(formData: FormData) {
   redirect(`/dashboard/coach/plans`)
 }
 
+export async function archivePlan(planId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('workout_plans')
+    .update({ is_archived: true })
+    .eq('id', planId)
+    .eq('created_by', user.id)
+
+  if (error) {
+    console.error('Error archiving plan:', error)
+    throw new Error('Failed to archive plan')
+  }
+
+  revalidatePath('/dashboard/coach/plans')
+}
+
 export async function assignPlan(formData: FormData) {
   const supabase = await createClient()
 

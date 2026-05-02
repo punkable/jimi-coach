@@ -10,10 +10,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 export default async function AthletesPage() {
   const supabase = await createClient()
 
-  // Fetch athletes
+  // Fetch athletes and their plans
   const { data: athletes } = await supabase
     .from('profiles')
-    .select('*')
+    .select('*, assigned_plans(created_at, workout_plans(title))')
     .eq('role', 'athlete')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
@@ -46,6 +46,7 @@ export default async function AthletesPage() {
               <TableRow>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Plan Asignado</TableHead>
                 <TableHead>Fecha de Registro</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -54,8 +55,22 @@ export default async function AthletesPage() {
               {athletes && athletes.length > 0 ? (
                 athletes.map((athlete) => (
                   <TableRow key={athlete.id}>
-                    <TableCell className="font-medium">{athlete.full_name || 'Sin nombre'}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{athlete.full_name || 'Sin nombre'}</span>
+                        <span className="text-xs text-muted-foreground">{athlete.phone || 'Sin teléfono'}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>{athlete.email}</TableCell>
+                    <TableCell>
+                      {athlete.assigned_plans && athlete.assigned_plans.length > 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-primary/20 text-primary uppercase">
+                          {athlete.assigned_plans.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].workout_plans?.title || 'Plan'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Sin asignar</span>
+                      )}
+                    </TableCell>
                     <TableCell>{new Date(athlete.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right flex items-center justify-end gap-2">
                       <Link href={`/dashboard/coach/athletes/${athlete.id}`}>

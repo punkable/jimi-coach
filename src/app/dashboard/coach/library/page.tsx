@@ -1,8 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Video, PlaySquare } from 'lucide-react'
+import { Plus, Video, PlaySquare, Archive, Edit } from 'lucide-react'
 import Link from 'next/link'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
+import { archiveExercise } from './actions'
 
 export default async function LibraryPage() {
   const supabase = await createClient()
@@ -11,6 +13,7 @@ export default async function LibraryPage() {
   const { data: exercises } = await supabase
     .from('exercises')
     .select('*')
+    .is('is_archived', false)
     .order('name', { ascending: true })
 
   return (
@@ -29,36 +32,53 @@ export default async function LibraryPage() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <TooltipProvider>
         {exercises && exercises.length > 0 ? (
           exercises.map((ex) => (
-            <Card key={ex.id} className="overflow-hidden flex flex-col">
-              <div className="relative aspect-video w-full bg-secondary/10 border-b border-border flex flex-col items-center justify-center p-4 text-center">
-                <Video className="w-8 h-8 text-primary/50 mb-2" />
-                {ex.video_url ? (
-                  <a href={ex.video_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline flex items-center gap-1">
-                    <PlaySquare className="w-3 h-3" /> Ver Video
-                  </a>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Sin video asignado</span>
-                )}
-              </div>
+            <Card key={ex.id} className="overflow-hidden flex flex-col glass border-border/50 hover:border-border transition-all shadow-sm">
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg">{ex.name}</CardTitle>
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-lg leading-tight">{ex.name}</CardTitle>
                   {ex.difficulty_level && (
-                    <span className="text-[10px] uppercase bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold">
+                    <span className="text-[10px] uppercase bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold shrink-0">
                       {ex.difficulty_level}
                     </span>
                   )}
                 </div>
-                <CardDescription className="line-clamp-2">
+                <CardDescription className="line-clamp-2 mt-1">
                   {ex.instructions || 'Sin instrucciones detalladas.'}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="mt-auto pt-2">
+              <CardContent className="mt-auto pt-4 flex gap-2">
+                {ex.video_url ? (
+                  <a href={ex.video_url} target="_blank" rel="noreferrer" className="flex-1">
+                    <Button variant="default" className="w-full gap-2" size="sm">
+                      <PlaySquare className="w-4 h-4" /> Video
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="secondary" className="flex-1 opacity-50 cursor-not-allowed" size="sm" disabled>
+                    <Video className="w-4 h-4 mr-2" /> Sin video
+                  </Button>
+                )}
                 <Link href={`/dashboard/coach/library/${ex.id}/edit`}>
-                  <Button variant="outline" className="w-full hover:bg-primary hover:text-primary-foreground" size="sm">Editar Ejercicio</Button>
+                  <Button variant="outline" size="icon" className="shrink-0">
+                    <Edit className="w-4 h-4" />
+                  </Button>
                 </Link>
+                <form action={async () => {
+                  'use server'
+                  await archiveExercise(ex.id)
+                }}>
+                  <Tooltip>
+                    <TooltipTrigger type="submit" className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-9 w-9 text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 shrink-0">
+                      <Archive className="w-4 h-4" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs">Archivar ejercicio</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </form>
               </CardContent>
             </Card>
           ))
@@ -73,6 +93,7 @@ export default async function LibraryPage() {
             </Link>
           </div>
         )}
+        </TooltipProvider>
       </div>
     </div>
   )

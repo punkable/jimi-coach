@@ -68,11 +68,15 @@ export default function CoachLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pb-16 md:pb-0 relative">
-        <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Top Navbar for Notifications and Actions */}
+        <div className="h-16 w-full flex items-center justify-end px-4 md:px-8 border-b border-border/50 shrink-0 bg-background/50 backdrop-blur-sm z-40">
           <NotificationsBell />
         </div>
-        {children}
+        
+        <div className="flex-1 overflow-y-auto pb-16 md:pb-0">
+          {children}
+        </div>
       </main>
 
       {/* Mobile Bottom Nav */}

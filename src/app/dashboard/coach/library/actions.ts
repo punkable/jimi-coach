@@ -65,3 +65,21 @@ export async function updateExercise(id: string, formData: FormData) {
   revalidatePath('/dashboard/coach/library')
   redirect('/dashboard/coach/library')
 }
+
+export async function archiveExercise(exerciseId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('exercises')
+    .update({ is_archived: true })
+    .eq('id', exerciseId)
+
+  if (error) {
+    console.error('Error archiving exercise:', error)
+    throw new Error('Failed to archive exercise')
+  }
+
+  revalidatePath('/dashboard/coach/library')
+}
