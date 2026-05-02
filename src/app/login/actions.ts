@@ -45,7 +45,7 @@ export async function signup(formData: FormData) {
   const { data: authData, error } = await supabase.auth.signUp(data)
 
   if (error) {
-    redirect('/login?error=' + encodeURIComponent(error.message))
+    return { error: error.message }
   }
 
   // Update additional profile data immediately using admin client
@@ -54,6 +54,11 @@ export async function signup(formData: FormData) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Auto-confirm email to bypass Supabase strict email confirmation settings
+    await supabaseAdmin.auth.admin.updateUserById(authData.user.id, {
+      email_confirm: true
+    })
     
     await supabaseAdmin.from('profiles').update({
       weight_kg: parseFloat(formData.get('weight_kg') as string) || null,
@@ -63,15 +68,16 @@ export async function signup(formData: FormData) {
       shirt_size: formData.get('shirt_size') as string || null,
       bio: formData.get('bio') as string || null,
     }).eq('id', authData.user.id)
+
+    // Log the user in automatically after auto-confirming
+    await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password
+    })
   }
 
   revalidatePath('/', 'layout')
-  
-  if (authData?.session) {
-    redirect('/dashboard')
-  } else {
-    redirect('/login?message=¡Cuenta creada! Por favor revisa tu correo (incluyendo la carpeta de SPAM) para confirmar tu cuenta antes de iniciar sesión.')
-  }
+  redirect('/dashboard')
 }
 
 export async function signout() {

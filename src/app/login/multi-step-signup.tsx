@@ -59,6 +59,8 @@ export function MultiStepSignup({ error }: { error?: string }) {
 
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 1))
 
+  const [localError, setLocalError] = useState<string | undefined>(error)
+
   return (
     <div className="relative overflow-hidden w-full h-full">
       {/* Progress Bar */}
@@ -68,9 +70,20 @@ export function MultiStepSignup({ error }: { error?: string }) {
         ))}
       </div>
 
-      <form id="signup-form" action={(data) => {
+      {localError && (
+        <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md font-medium">
+          {localError}
+        </div>
+      )}
+
+      <form id="signup-form" action={async (data) => {
         setIsSubmitting(true)
-        signup(data)
+        setLocalError(undefined)
+        const result = await signup(data)
+        if (result?.error) {
+          setLocalError(result.error)
+          setIsSubmitting(false)
+        }
       }} className="relative min-h-[350px]">
         
         {/* Hidden inputs to ensure all data is submitted when form action fires */}
