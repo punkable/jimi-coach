@@ -25,14 +25,26 @@ export default async function TrashPage() {
 
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-5xl mx-auto">
-      <header>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Trash2 className="w-8 h-8 text-destructive" />
-          Papelera de Reciclaje
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Restaura elementos eliminados por accidente o destrúyelos permanentemente.
-        </p>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Trash2 className="w-8 h-8 text-destructive" />
+            Papelera de Reciclaje
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Restaura elementos o destrúyelos. Todo lo que tenga más de 30 días puede ser purgado.
+          </p>
+        </div>
+        <form action={async () => {
+          'use server'
+          const { purgeOldTrash } = await import('./actions')
+          await purgeOldTrash()
+        }}>
+          <Button variant="outline" type="submit" className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground">
+            <XCircle className="w-4 h-4" />
+            Vaciar Antiguos {'>'} 30 días
+          </Button>
+        </form>
       </header>
 
       {deletedItems.length === 0 ? (

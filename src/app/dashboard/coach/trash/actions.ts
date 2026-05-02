@@ -43,3 +43,19 @@ export async function permanentlyDeleteItem(table: string, id: string) {
 
   revalidatePath('/dashboard/coach/trash')
 }
+
+export async function purgeOldTrash() {
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { error } = await supabaseAdmin.rpc('purge_old_trash')
+
+  if (error) {
+    console.error(`Error purging old trash:`, error)
+    throw new Error('Failed to purge old trash')
+  }
+
+  revalidatePath('/dashboard/coach/trash')
+}

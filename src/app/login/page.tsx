@@ -1,4 +1,4 @@
-import { login, signup } from './actions'
+import { login } from './actions'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dumbbell } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { MultiStepSignup } from './multi-step-signup'
 
 export default async function LoginPage({
   searchParams,
@@ -53,24 +54,8 @@ export default async function LoginPage({
               </form>
             </TabsContent>
 
-            <TabsContent value="register">
-              <form action={signup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">Nombre completo</Label>
-                  <Input id="full_name" name="full_name" placeholder="John Doe" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" name="email" type="email" placeholder="atleta@ejemplo.com" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <Input id="password" name="password" type="password" required />
-                </div>
-                {/* Role is automatically set to 'athlete' in the backend */}
-                {error && <p className="text-sm text-destructive font-medium">{error}</p>}
-                <Button className="w-full text-md font-bold h-11" type="submit">Crear cuenta</Button>
-              </form>
+            <TabsContent value="register" className="h-[400px]">
+              <MultiStepSignup error={error} />
             </TabsContent>
           </Tabs>
         </CardContent>

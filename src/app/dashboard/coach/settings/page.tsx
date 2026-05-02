@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { LogOut, Building2, CreditCard } from 'lucide-react'
+import { LogOut, Building2, CreditCard, Dumbbell } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import CoachSettingsForm from './coach-settings-form'
 
@@ -43,13 +43,13 @@ export default async function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-primary" />
-                Suscripción
+                <Dumbbell className="w-5 h-5 text-primary" />
+                Tu Academia
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">Estás usando el plan gratuito (Beta).</p>
-              <Button variant="secondary" className="w-full" disabled>Gestionar Plan</Button>
+              <p className="text-sm text-muted-foreground mb-4">Administras "Jimi.coach" y tienes acceso completo a todas las funciones Pro de forma vitalicia.</p>
+              <Button variant="secondary" className="w-full" disabled>Plan Activo: Fundador</Button>
             </CardContent>
           </Card>
         </div>
