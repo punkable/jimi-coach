@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer, X, Send, Dumbbell } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer, X, Send, Dumbbell, PlusCircle, Search } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -13,7 +13,7 @@ import { submitWorkoutResult, submitReadiness } from '../actions'
 import { Battery, Brain, Activity } from 'lucide-react'
 import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 
-export function WorkoutClient({ day, hasReadiness, prs }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }> }) {
+export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[] }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
   const [readinessOpen, setReadinessOpen] = useState(!hasReadiness)
   const [sleep, setSleep] = useState('3')
@@ -21,31 +21,15 @@ export function WorkoutClient({ day, hasReadiness, prs }: { day: any, hasReadine
   const [soreness, setSoreness] = useState('3')
   const [isSubmittingReadiness, setIsSubmittingReadiness] = useState(false)
   const [completedBlocks, setCompletedBlocks] = useState<Record<string, boolean>>({})
+
+  // Extra Exercises State
+  const [extraMovements, setExtraMovements] = useState<any[]>([])
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false)
+  const [exerciseSearch, setExerciseSearch] = useState('')
   
   // Hevy-Style State
   const [allSetsData, setAllSetsData] = useState<Record<string, WorkoutSet[]>>({})
   const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null)
-
-  // Load from localStorage
-  useEffect(() => {
-    const savedSets = localStorage.getItem(`workout-sets-${day.id}`)
-    const savedBlocks = localStorage.getItem(`workout-blocks-${day.id}`)
-    if (savedSets) setAllSetsData(JSON.parse(savedSets))
-    if (savedBlocks) setCompletedBlocks(JSON.parse(savedBlocks))
-  }, [day.id])
-
-  // Save to localStorage
-  useEffect(() => {
-    if (Object.keys(allSetsData).length > 0) {
-      localStorage.setItem(`workout-sets-${day.id}`, JSON.stringify(allSetsData))
-    }
-  }, [allSetsData, day.id])
-
-  useEffect(() => {
-    if (Object.keys(completedBlocks).length > 0) {
-      localStorage.setItem(`workout-blocks-${day.id}`, JSON.stringify(completedBlocks))
-    }
-  }, [completedBlocks, day.id])
 
   // Timer Tick
   useEffect(() => {
@@ -238,13 +222,6 @@ export function WorkoutClient({ day, hasReadiness, prs }: { day: any, hasReadine
                                   {mov.weight_percentage && <span className="font-medium bg-primary/20 text-primary px-2 py-0.5 rounded">{mov.weight_percentage}</span>}
                                   {mov.rest && <span className="font-medium bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded flex items-center gap-1"><Timer className="w-3 h-3" /> {mov.rest}</span>}
                                 </div>
-                                
-                                {prs && mov.exercises?.id && prs[mov.exercises.id] && (
-                                  <p className="text-[10px] text-primary/80 mt-1.5 font-medium flex items-center gap-1">
-                                    🏆 Récord Histórico: {prs[mov.exercises.id].weight}kg x {prs[mov.exercises.id].reps}
-                                  </p>
-                                )}
-
                                 {mov.notes && <p className="text-xs text-muted-foreground mt-2 italic">{mov.notes}</p>}
 
                                 <WorkoutSetsList 
@@ -280,6 +257,62 @@ export function WorkoutClient({ day, hasReadiness, prs }: { day: any, hasReadine
                   </Card>
                 )
               })}
+
+              {/* Extra exercises added by athlete */}
+              {extraMovements.length > 0 && (
+                <Card className="glass border-border/40 shadow-lg overflow-hidden">
+                  <div className="p-4 bg-primary/5 border-b border-border/40">
+                    <h3 className="font-bold text-lg">Ejercicios Extra</h3>
+                  </div>
+                  <CardContent className="p-0">
+                    <div className="divide-y divide-border/50">
+                      {extraMovements.map((ex: any, idx: number) => {
+                        const fakeMovId = `extra-${ex.id}-${idx}`
+                        const fakeMov = { id: fakeMovId, exercises: ex, sets: 3, reps: null, rest: null, weight_percentage: null, notes: null }
+                        return (
+                          <div key={fakeMovId} className="p-4 bg-background/30 flex gap-4">
+                            <div className="w-16 h-16 rounded-md overflow-hidden bg-secondary/30 shrink-0 flex items-center justify-center border border-border/50">
+                              {ex.video_url ? (
+                                <a href={ex.video_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:scale-110 transition-transform">
+                                  <Play className="w-8 h-8 fill-primary/20" />
+                                </a>
+                              ) : (
+                                <Dumbbell className="w-6 h-6 text-muted-foreground/50" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <h4 className="font-bold text-foreground text-sm">{ex.name}</h4>
+                                <button onClick={() => setExtraMovements(prev => prev.filter((_, i) => i !== idx))} className="text-destructive/60 hover:text-destructive shrink-0">
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                              {ex.instructions && (
+                                <p className="text-[11px] text-muted-foreground leading-snug mt-1 mb-2">{ex.instructions}</p>
+                              )}
+                              <WorkoutSetsList
+                                movement={fakeMov}
+                                onSetChange={(sets) => setAllSetsData(prev => ({ ...prev, [fakeMovId]: sets }))}
+                                onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Add Extra Exercise Button */}
+              <button
+                onClick={() => setAddExerciseOpen(true)}
+                className="w-full py-3 border-2 border-dashed border-border/50 rounded-xl text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2 text-sm font-medium"
+              >
+                <PlusCircle className="w-4 h-4" />
+                Añadir Ejercicio Extra
+              </button>
+
             </motion.div>
           )}
         </AnimatePresence>
@@ -447,6 +480,52 @@ export function WorkoutClient({ day, hasReadiness, prs }: { day: any, hasReadine
             >
               {isSubmittingReadiness ? 'Guardando...' : 'Iniciar Entrenamiento'}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Extra Exercise Modal */}
+      <Dialog open={addExerciseOpen} onOpenChange={setAddExerciseOpen}>
+        <DialogContent className="sm:max-w-md glass border-border/50 max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PlusCircle className="w-5 h-5 text-primary" />
+              Añadir Ejercicio Extra
+            </DialogTitle>
+          </DialogHeader>
+          <div className="relative mt-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar ejercicio..."
+              value={exerciseSearch}
+              onChange={e => setExerciseSearch(e.target.value)}
+              className="pl-9 bg-background/50"
+              autoFocus
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto mt-3 space-y-2 pr-1">
+            {(allExercises ?? [])
+              .filter(ex => ex.name.toLowerCase().includes(exerciseSearch.toLowerCase()))
+              .map((ex: any) => (
+                <button
+                  key={ex.id}
+                  onClick={() => {
+                    setExtraMovements(prev => [...prev, ex])
+                    setAddExerciseOpen(false)
+                    setExerciseSearch('')
+                  }}
+                  className="w-full text-left p-3 rounded-lg bg-background/50 hover:bg-primary/10 border border-border/30 hover:border-primary/40 transition-all group"
+                >
+                  <p className="font-semibold text-sm group-hover:text-primary transition-colors">{ex.name}</p>
+                  {ex.category && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{ex.category}</p>
+                  )}
+                </button>
+              ))
+            }
+            {(allExercises ?? []).filter(ex => ex.name.toLowerCase().includes(exerciseSearch.toLowerCase())).length === 0 && (
+              <p className="text-center text-muted-foreground text-sm py-8">No se encontraron ejercicios</p>
+            )}
           </div>
         </DialogContent>
       </Dialog>

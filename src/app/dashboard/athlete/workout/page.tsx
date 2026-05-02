@@ -43,15 +43,14 @@ export default async function WorkoutPage() {
   if (exerciseIds.length > 0) {
     const { data: pastSets } = await supabase
       .from('workout_set_results')
-      .select('movement_id, weight, reps, is_completed, workout_movements(exercise_id)')
+      .select('weight, reps, is_completed, workout_movements(exercise_id)')
       .eq('is_completed', true)
-      .in('workout_movements.exercise_id', exerciseIds)
       .order('weight', { ascending: false })
 
     if (pastSets) {
       pastSets.forEach((s: any) => {
         const exId = s.workout_movements?.exercise_id
-        if (exId && s.weight && (!prs[exId] || s.weight > prs[exId].weight)) {
+        if (exId && exerciseIds.includes(exId) && s.weight && (!prs[exId] || s.weight > prs[exId].weight)) {
           prs[exId] = { weight: s.weight, reps: s.reps || 1 }
         }
       })
@@ -66,9 +65,16 @@ export default async function WorkoutPage() {
     .eq('date', todayDate)
     .single()
 
+  // Fetch full library for "Add Exercise" modal
+  const { data: allExercises } = await supabase
+    .from('exercises')
+    .select('id, name, category, instructions, video_url, tracking_type')
+    .eq('is_archived', false)
+    .order('name', { ascending: true })
+
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <WorkoutClient day={todayData} hasReadiness={!!readiness} prs={prs} />
+      <WorkoutClient day={todayData} hasReadiness={!!readiness} prs={prs} allExercises={allExercises ?? []} />
     </div>
   )
 }
