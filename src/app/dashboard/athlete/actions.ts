@@ -35,6 +35,34 @@ export async function submitWorkoutResult(workoutDayId: string, rpe: number, not
   return { success: true }
 }
 
+export async function submitReadiness(sleep: number, stress: number, soreness: number) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const today = new Date().toISOString().split('T')[0]
+
+  const { error } = await supabase
+    .from('daily_readiness')
+    .upsert({
+      athlete_id: user.id,
+      date: today,
+      sleep_quality: sleep,
+      stress_level: stress,
+      soreness: soreness
+    }, {
+      onConflict: 'athlete_id, date'
+    })
+
+  if (error) {
+    console.error('Error saving readiness:', error)
+    throw new Error('Failed to save readiness')
+  }
+
+  revalidatePath('/dashboard/athlete')
+  return { success: true }
+}
+
 export async function updateProfile(data: {
   fullName: string,
   phone: string,

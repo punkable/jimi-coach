@@ -9,10 +9,16 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { submitWorkoutResult } from '../actions'
+import { submitWorkoutResult, submitReadiness } from '../actions'
+import { Battery, Brain, Activity } from 'lucide-react'
 
-export function WorkoutClient({ day }: { day: any }) {
+export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: boolean }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
+  const [readinessOpen, setReadinessOpen] = useState(!hasReadiness)
+  const [sleep, setSleep] = useState('3')
+  const [stress, setStress] = useState('3')
+  const [soreness, setSoreness] = useState('3')
+  const [isSubmittingReadiness, setIsSubmittingReadiness] = useState(false)
   const [completedBlocks, setCompletedBlocks] = useState<Record<string, boolean>>({})
   
   // Finish Modal State
@@ -185,6 +191,11 @@ export function WorkoutClient({ day }: { day: any }) {
                               
                               <div className="flex-1">
                                 <h4 className="font-bold text-foreground text-sm leading-tight mb-1">{mov.exercises?.name || 'Movimiento'}</h4>
+                                {mov.exercises?.instructions && (
+                                  <p className="text-[11px] text-muted-foreground leading-snug mt-1 mb-2">
+                                    {mov.exercises.instructions}
+                                  </p>
+                                )}
                                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-2">
                                   <span className="font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded">Sets: {mov.sets || '-'}</span>
                                   <span className="font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded">Reps: {mov.reps || '-'}</span>
@@ -285,6 +296,66 @@ export function WorkoutClient({ day }: { day: any }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Readiness Modal */}
+      <Dialog open={readinessOpen} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-md glass border-border/50 hide-close">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Activity className="w-6 h-6 text-primary" /> Daily Readiness
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 pt-4">
+            <p className="text-sm text-muted-foreground">Antes de empezar, cuéntale a tu coach cómo te sientes hoy.</p>
+            
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Battery className="w-4 h-4 text-blue-500" /> Calidad de Sueño (1-5)</Label>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">Malo</span>
+                <input type="range" min="1" max="5" value={sleep} onChange={(e) => setSleep(e.target.value)} className="flex-1 accent-blue-500" />
+                <span className="text-xs text-muted-foreground">Excelente</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Brain className="w-4 h-4 text-purple-500" /> Nivel de Estrés (1-5)</Label>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">Bajo</span>
+                <input type="range" min="1" max="5" value={stress} onChange={(e) => setStress(e.target.value)} className="flex-1 accent-purple-500" />
+                <span className="text-xs text-muted-foreground">Alto</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2"><Dumbbell className="w-4 h-4 text-orange-500" /> Dolor Muscular (1-5)</Label>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">Nada</span>
+                <input type="range" min="1" max="5" value={soreness} onChange={(e) => setSoreness(e.target.value)} className="flex-1 accent-orange-500" />
+                <span className="text-xs text-muted-foreground">Mucho</span>
+              </div>
+            </div>
+
+            <Button 
+              className="w-full font-bold" 
+              disabled={isSubmittingReadiness}
+              onClick={async () => {
+                setIsSubmittingReadiness(true)
+                try {
+                  await submitReadiness(parseInt(sleep), parseInt(stress), parseInt(soreness))
+                  setReadinessOpen(false)
+                } catch (e) {
+                  console.error(e)
+                } finally {
+                  setIsSubmittingReadiness(false)
+                }
+              }}
+            >
+              {isSubmittingReadiness ? 'Guardando...' : 'Iniciar Entrenamiento'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   )
 }

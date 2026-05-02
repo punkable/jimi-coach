@@ -31,9 +31,17 @@ export default async function WorkoutPage() {
 
   const todayData = days?.[0] // MVP: just take Day 1
 
+  const todayDate = new Date().toISOString().split('T')[0]
+  const { data: readiness } = await supabase
+    .from('daily_readiness')
+    .select('id')
+    .eq('athlete_id', user.id)
+    .eq('date', todayDate)
+    .single()
+
   return (
     <div className="h-screen flex flex-col bg-background relative overflow-hidden">
-      <WorkoutClient day={todayData} />
+      <WorkoutClient day={todayData} hasReadiness={!!readiness} />
     </div>
   )
 }

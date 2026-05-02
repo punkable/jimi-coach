@@ -13,7 +13,7 @@ export default async function AthletesPage() {
   // Fetch athletes and their plans
   const { data: athletes } = await supabase
     .from('profiles')
-    .select('*, assigned_plans(created_at, workout_plans(title))')
+    .select('*, assigned_plans!assigned_plans_athlete_id_fkey(created_at, workout_plans(title))')
     .eq('role', 'athlete')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })

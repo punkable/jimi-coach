@@ -5,6 +5,7 @@ import { Flame, Dumbbell, Calendar as CalendarIcon, PlayCircle, AlertCircle, Mes
 import Link from 'next/link'
 import Image from 'next/image'
 import { StreakMascot } from '@/components/streak-mascot'
+import { AthleteStats } from './athlete-stats'
 
 export default async function AthleteDashboard() {
   const supabase = await createClient()
@@ -166,6 +167,8 @@ export default async function AthleteDashboard() {
           </CardContent>
         </Card>
       </section>
+
+      <AthleteStats totalWorkouts={results?.length || 0} currentStreak={currentStreak} />
         </div>
         <div className="md:col-span-1">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
