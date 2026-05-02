@@ -2,9 +2,9 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
-import { Plus, Settings, Trash2 } from 'lucide-react'
+import { Plus, Settings, Trash2, Archive, UserX } from 'lucide-react'
 import Link from 'next/link'
-import { deleteAthlete } from './actions'
+import { deleteAthlete, hardDeleteAthlete } from './actions'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 export default async function AthletesPage() {
@@ -69,12 +69,27 @@ export default async function AthletesPage() {
                       }}>
                         <Tooltip>
                           <TooltipTrigger>
-                            <Button variant="ghost" size="icon" type="submit" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                              <Trash2 className="w-4 h-4" />
+                            <Button variant="ghost" size="icon" type="submit" className="text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10">
+                              <Archive className="w-4 h-4" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p className="text-xs">Archivar alumno</p>
+                            <p className="text-xs">Suspender / Archivar</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </form>
+                      <form action={async () => {
+                        'use server'
+                        await hardDeleteAthlete(athlete.id)
+                      }}>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <Button variant="ghost" size="icon" type="submit" className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                              <UserX className="w-4 h-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="text-xs text-destructive font-bold">Eliminar permanentemente</p>
                           </TooltipContent>
                         </Tooltip>
                       </form>

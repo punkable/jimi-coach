@@ -34,7 +34,7 @@ $$ language plpgsql security definer;
 -- 2. LEADERBOARD (RANKING DEL BOX)
 -- Una 'View' (Vista) que calcula automáticamente quién levanta más peso en cada ejercicio.
 -- De esta forma el frontend no tiene que hacer cálculos, solo pide datos a 'box_leaderboard'.
-create or replace view box_leaderboard as
+create or replace view box_leaderboard with (security_invoker = true) as
 select 
   p.full_name as athlete_name,
   e.name as exercise_name,

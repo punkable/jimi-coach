@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Flame, Dumbbell, Calendar as CalendarIcon, PlayCircle, AlertCircle, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { StreakMascot } from '@/components/streak-mascot'
 
 export default async function AthleteDashboard() {
   const supabase = await createClient()
@@ -31,6 +32,37 @@ export default async function AthleteDashboard() {
   const hasActivePlan = profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo"
   const hasClassesLeft = profile?.total_classes === 0 || (profile?.classes_used < profile?.total_classes)
   const canTrain = hasActivePlan && hasClassesLeft
+
+  // Fetch workout results for streak calculation
+  const { data: results } = await supabase
+    .from('workout_results')
+    .select('completed_at')
+    .eq('athlete_id', user?.id)
+    .eq('completed', true)
+    .order('completed_at', { ascending: false })
+
+  let currentStreak = 0
+  if (results && results.length > 0) {
+    const uniqueDates = Array.from(new Set(results.map(r => r.completed_at.split('T')[0])))
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    const yesterday = new Date(today)
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+      let checkDate = new Date(uniqueDates[0])
+      currentStreak = 1
+      for (let i = 1; i < uniqueDates.length; i++) {
+        checkDate.setDate(checkDate.getDate() - 1)
+        if (uniqueDates[i] === checkDate.toISOString().split('T')[0]) {
+          currentStreak++
+        } else {
+          break
+        }
+      }
+    }
+  }
 
   if (!canTrain) {
     return (
@@ -64,8 +96,8 @@ export default async function AthleteDashboard() {
   }
 
   return (
-    <div className="p-4 md:p-8 space-y-8 max-w-md md:max-w-4xl mx-auto">
-      <header className="flex flex-col gap-4 pt-4 mb-2">
+    <div className="p-4 md:p-8 max-w-md md:max-w-4xl mx-auto">
+      <header className="flex flex-col gap-4 pt-4 mb-8">
         <Image src="/images/logo.png" alt="Jimi.coach Logo" width={120} height={35} className="object-contain" />
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Hola, {profile?.full_name?.split(' ')[0] || 'Atleta'}!</h1>
@@ -73,9 +105,11 @@ export default async function AthleteDashboard() {
         </div>
       </header>
 
-      <section>
-        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-          <CalendarIcon className="w-5 h-5 text-primary" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-8">
+          <section>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-primary" />
           Tu Plan Actual
         </h2>
         
@@ -132,6 +166,15 @@ export default async function AthleteDashboard() {
           </CardContent>
         </Card>
       </section>
+        </div>
+        <div className="md:col-span-1">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Flame className="w-5 h-5 text-primary" />
+            Tu Racha
+          </h2>
+          <StreakMascot streak={currentStreak} />
+        </div>
+      </div>
     </div>
   )
 }

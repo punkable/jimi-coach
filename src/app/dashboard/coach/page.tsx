@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Users, Activity, Plus, Dumbbell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { DashboardCharts } from './dashboard-charts'
 
 export default async function CoachDashboard() {
   const supabase = await createClient()
@@ -32,6 +33,64 @@ export default async function CoachDashboard() {
   const { count: exercisesCount } = await supabase
     .from('exercises')
     .select('*', { count: 'exact', head: true })
+
+  // Fetch all active athletes with created_at for growth chart
+  const { data: allAthletes } = await supabase
+    .from('profiles')
+    .select('id, created_at')
+    .eq('role', 'athlete')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true })
+
+  // Process Athlete Growth Data (Group by Month)
+  const athleteGrowthMap = new Map<string, number>()
+  if (allAthletes) {
+    allAthletes.forEach((a) => {
+      const date = new Date(a.created_at)
+      const monthStr = date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' })
+      athleteGrowthMap.set(monthStr, (athleteGrowthMap.get(monthStr) || 0) + 1)
+    })
+  }
+  
+  let cumulativeAthletes = 0
+  const athleteGrowth = Array.from(athleteGrowthMap.entries()).map(([month, count]) => {
+    cumulativeAthletes += count
+    return { month, athletes: cumulativeAthletes }
+  })
+
+  // Fetch recent workout results for Compliance Chart (Last 7 days)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  const { data: recentResults } = await supabase
+    .from('workout_results')
+    .select('id, completed_at, completed')
+    .gte('completed_at', sevenDaysAgo.toISOString())
+    .eq('completed', true)
+    .order('completed_at', { ascending: true })
+
+  // Process Compliance Data (Group by Day)
+  const complianceMap = new Map<string, number>()
+  // Initialize last 7 days with 0
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    complianceMap.set(d.toLocaleDateString('es-ES', { weekday: 'short' }), 0)
+  }
+
+  if (recentResults) {
+    recentResults.forEach((r) => {
+      const date = new Date(r.completed_at)
+      const dayStr = date.toLocaleDateString('es-ES', { weekday: 'short' })
+      if (complianceMap.has(dayStr)) {
+        complianceMap.set(dayStr, complianceMap.get(dayStr)! + 1)
+      }
+    })
+  }
+
+  const complianceData = Array.from(complianceMap.entries()).map(([day, completed]) => ({
+    day,
+    completed
+  }))
 
   return (
     <div className="p-4 md:p-8 space-y-8">
@@ -80,6 +139,8 @@ export default async function CoachDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <DashboardCharts athleteGrowth={athleteGrowth} complianceData={complianceData} />
 
       <section>
         <div className="flex items-center justify-between mb-4">

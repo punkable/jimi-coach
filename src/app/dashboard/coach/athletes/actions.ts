@@ -107,3 +107,25 @@ export async function deleteAthlete(athleteId: string) {
 
   revalidatePath('/dashboard/coach/athletes')
 }
+
+export async function hardDeleteAthlete(athleteId: string) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  // Hard delete from auth.users (cascades to profiles)
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(athleteId)
+
+  if (error) {
+    console.error('Error hard deleting athlete:', error)
+    throw new Error('Failed to permanently delete athlete')
+  }
+
+  revalidatePath('/dashboard/coach/athletes')
+}

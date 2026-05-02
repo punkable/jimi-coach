@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +13,12 @@ import { User, Activity, Dumbbell, ArrowRight, ArrowLeft, Loader2 } from 'lucide
 export function MultiStepSignup({ error }: { error?: string }) {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    // Reset submitting state if error or message changes in the URL
+    setIsSubmitting(false)
+  }, [searchParams])
 
   // Store data in state to populate hidden inputs so AnimatePresence doesn't destroy the data
   const [formDataState, setFormDataState] = useState({

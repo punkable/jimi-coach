@@ -20,6 +20,19 @@ export const metadata: Metadata = {
     icon: '/images/isotipo.png',
     apple: '/images/isotipo.png',
   },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Jimi Coach',
+  },
+};
+
+export const viewport = {
+  themeColor: '#8A0000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

@@ -66,7 +66,12 @@ export async function signup(formData: FormData) {
   }
 
   revalidatePath('/', 'layout')
-  redirect('/login?message=¡Cuenta creada! Por favor revisa tu correo (incluyendo la carpeta de SPAM) para confirmar tu cuenta antes de iniciar sesión.')
+  
+  if (authData?.session) {
+    redirect('/dashboard')
+  } else {
+    redirect('/login?message=¡Cuenta creada! Por favor revisa tu correo (incluyendo la carpeta de SPAM) para confirmar tu cuenta antes de iniciar sesión.')
+  }
 }
 
 export async function signout() {

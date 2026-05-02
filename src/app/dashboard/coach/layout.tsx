@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Users, Library, Calendar, LayoutDashboard, Settings, Dumbbell, LogOut, Video, Crown, Trash2, HelpCircle } from 'lucide-react'
 import { signout } from '@/app/login/actions'
+import { NotificationsBell } from '@/components/notifications-bell'
 
 export default function CoachLayout({
   children,
@@ -67,7 +68,10 @@ export default function CoachLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
+      <main className="flex-1 overflow-y-auto pb-16 md:pb-0 relative">
+        <div className="absolute top-4 right-4 md:top-8 md:right-8 z-50">
+          <NotificationsBell />
+        </div>
         {children}
       </main>
 
