@@ -30,7 +30,8 @@ export async function submitWorkoutResult(workoutDayId: string, rpe: number, not
   }
 
   if (sets && sets.length > 0) {
-    const setsToInsert = sets.map(s => ({
+    // Strip client-only id field before insert
+    const setsToInsert = sets.map(({ id: _id, ...s }) => ({
       ...s,
       workout_result_id: result.id
     }))
