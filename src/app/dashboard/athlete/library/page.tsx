@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Video, PlaySquare, LibraryBig } from 'lucide-react'
 
 export default async function AthleteLibraryPage() {
@@ -9,6 +10,7 @@ export default async function AthleteLibraryPage() {
   const { data: exercises } = await supabase
     .from('exercises')
     .select('*')
+    .is('is_archived', false)
     .order('name', { ascending: true })
 
   return (
@@ -24,31 +26,32 @@ export default async function AthleteLibraryPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {exercises && exercises.length > 0 ? (
           exercises.map((ex) => (
-            <Card key={ex.id} className="overflow-hidden flex flex-col border-primary/10 bg-card/40 backdrop-blur-sm hover:border-primary/40 transition-colors">
-              <div className="relative aspect-video w-full bg-secondary/10 border-b border-white/5 flex flex-col items-center justify-center p-4 text-center">
-                <Video className="w-10 h-10 text-primary/30 mb-3" />
-                {ex.video_url ? (
-                  <a href={ex.video_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 bg-primary/20 text-primary hover:bg-primary hover:text-white px-4 py-2 rounded-full text-sm font-bold transition-all">
-                    <PlaySquare className="w-4 h-4" /> Ver Demostración
-                  </a>
-                ) : (
-                  <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground/50">Pronto disponible</span>
-                )}
-              </div>
+            <Card key={ex.id} className="overflow-hidden flex flex-col glass border-border/50 hover:border-border transition-all shadow-sm">
               <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg uppercase tracking-wider">{ex.name}</CardTitle>
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-lg leading-tight uppercase tracking-wider">{ex.name}</CardTitle>
                   {ex.difficulty_level && (
-                    <span className="text-[10px] uppercase bg-secondary text-secondary-foreground px-2 py-0.5 rounded-sm font-bold">
+                    <span className="text-[10px] uppercase bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold shrink-0">
                       {ex.difficulty_level}
                     </span>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="mt-auto">
-                <CardDescription className="text-sm">
+                <CardDescription className="line-clamp-2 mt-1 text-sm">
                   {ex.instructions || 'Sigue las instrucciones generales del coach durante la clase.'}
                 </CardDescription>
+              </CardHeader>
+              <CardContent className="mt-auto pt-4">
+                {ex.video_url ? (
+                  <a href={ex.video_url} target="_blank" rel="noreferrer" className="block">
+                    <Button variant="default" className="w-full gap-2" size="sm">
+                      <PlaySquare className="w-4 h-4" /> Ver Video
+                    </Button>
+                  </a>
+                ) : (
+                  <Button variant="secondary" className="w-full opacity-50 cursor-not-allowed" size="sm" disabled>
+                    <Video className="w-4 h-4 mr-2" /> Sin video
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))

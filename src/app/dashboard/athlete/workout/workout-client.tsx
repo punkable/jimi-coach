@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label'
 import { submitWorkoutResult, submitReadiness } from '../actions'
 import { Battery, Brain, Activity } from 'lucide-react'
+import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 
 export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: boolean }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
@@ -21,6 +22,19 @@ export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: 
   const [isSubmittingReadiness, setIsSubmittingReadiness] = useState(false)
   const [completedBlocks, setCompletedBlocks] = useState<Record<string, boolean>>({})
   
+  // Hevy-Style State
+  const [allSetsData, setAllSetsData] = useState<Record<string, WorkoutSet[]>>({})
+  const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null)
+
+  // Timer Tick
+  useEffect(() => {
+    if (restTimerSeconds === null || restTimerSeconds <= 0) return
+    const interval = setInterval(() => {
+      setRestTimerSeconds(prev => (prev && prev > 0 ? prev - 1 : null))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [restTimerSeconds])
+
   // Finish Modal State
   const [finishOpen, setFinishOpen] = useState(false)
   const [rpe, setRpe] = useState('7')
@@ -197,11 +211,38 @@ export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: 
                                   </p>
                                 )}
                                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs mt-2">
-                                  <span className="font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded">Sets: {mov.sets || '-'}</span>
-                                  <span className="font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded">Reps: {mov.reps || '-'}</span>
+                                  <span className="font-medium bg-secondary/50 text-muted-foreground px-2 py-0.5 rounded flex items-center gap-1">
+                                    Objetivo: {mov.sets || '-'}x{mov.reps || '-'}
+                                  </span>
                                   {mov.weight_percentage && <span className="font-medium bg-primary/20 text-primary px-2 py-0.5 rounded">{mov.weight_percentage}</span>}
+                                  {mov.rest && <span className="font-medium bg-blue-500/20 text-blue-500 px-2 py-0.5 rounded flex items-center gap-1"><Timer className="w-3 h-3" /> {mov.rest}</span>}
                                 </div>
                                 {mov.notes && <p className="text-xs text-muted-foreground mt-2 italic">{mov.notes}</p>}
+
+                                <WorkoutSetsList 
+                                  movement={mov} 
+                                  onSetChange={(sets) => {
+                                    setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
+                                    // Auto-complete block if all sets of all movements in block are completed
+                                    const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
+                                    const allBlockMovements = block.workout_movements || []
+                                    let blockCompleted = true
+                                    allBlockMovements.forEach((m: any) => {
+                                      const mId = m.id as string;
+                                      const mSets = updatedAllSets[mId]
+                                      if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
+                                        blockCompleted = false
+                                      }
+                                    })
+                                    if (blockCompleted && allBlockMovements.length > 0) {
+                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
+                                    } else if (!blockCompleted) {
+                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
+                                    }
+                                  }}
+                                  onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                                />
+
                               </div>
                             </div>
                           ))}
@@ -215,6 +256,31 @@ export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: 
           )}
         </AnimatePresence>
       </div>
+
+      {/* Floating Rest Timer */}
+      <AnimatePresence>
+        {restTimerSeconds !== null && restTimerSeconds > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50, scale: 0.9 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-24 right-4 z-50"
+          >
+            <div className="glass bg-primary/90 text-primary-foreground px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 border border-primary-foreground/20">
+              <Timer className="w-5 h-5 animate-pulse" />
+              <span className="font-mono font-bold text-lg">
+                {Math.floor(restTimerSeconds / 60)}:{(restTimerSeconds % 60).toString().padStart(2, '0')}
+              </span>
+              <button 
+                onClick={() => setRestTimerSeconds(null)} 
+                className="ml-2 bg-primary-foreground/20 hover:bg-primary-foreground/40 rounded-full p-1 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Floating Finish Button */}
       {activeTab === 'workout' && (
@@ -276,7 +342,8 @@ export function WorkoutClient({ day, hasReadiness }: { day: any, hasReadiness?: 
                 onClick={async () => {
                   setIsSubmitting(true)
                   try {
-                    await submitWorkoutResult(day.id, parseInt(rpe), notes, videoLink)
+                    const flattenedSets = Object.values(allSetsData).flat()
+                    await submitWorkoutResult(day.id, parseInt(rpe), notes, videoLink, flattenedSets)
                     setFinishOpen(false)
                     window.location.href = '/dashboard/athlete'
                   } catch (e) {

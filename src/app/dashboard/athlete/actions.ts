@@ -4,7 +4,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
-export async function submitWorkoutResult(workoutDayId: string, rpe: number, notes: string, videoLink: string) {
+export async function submitWorkoutResult(workoutDayId: string, rpe: number, notes: string, videoLink: string, sets?: any[]) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -27,6 +27,18 @@ export async function submitWorkoutResult(workoutDayId: string, rpe: number, not
   if (resultError) {
     console.error('Error submitting result:', resultError)
     throw new Error('Failed to submit result')
+  }
+
+  if (sets && sets.length > 0) {
+    const setsToInsert = sets.map(s => ({
+      ...s,
+      workout_result_id: result.id
+    }))
+    const { error: setsError } = await supabase.from('workout_set_results').insert(setsToInsert)
+    if (setsError) {
+      console.error('Error saving individual sets:', setsError)
+      // Don't throw here, at least the main result was saved
+    }
   }
 
   revalidatePath('/dashboard/athlete')
