@@ -13,15 +13,25 @@ export function MultiStepSignup({ error }: { error?: string }) {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // We can use a standard form submit, but we have multiple steps.
-  // We'll wrap all steps in a single <form> and hide/show sections.
+  // Store data in state to populate hidden inputs so AnimatePresence doesn't destroy the data
+  const [formDataState, setFormDataState] = useState({
+    full_name: '', email: '', password: '',
+    weight_kg: '', height_cm: '', birth_date: '',
+    snatch_rm: '', shirt_size: '', bio: ''
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormDataState(prev => ({ ...prev, [e.target.id]: e.target.value }))
+  }
 
   const nextStep = () => {
     // Validate Step 1 before moving to Step 2
     if (step === 1) {
       const form = document.getElementById('signup-form') as HTMLFormElement
-      if (!form.full_name.value || !form.email.value || !form.password.value) {
-        // Trigger browser validation
+      const fn = form.querySelector('#full_name') as HTMLInputElement
+      const em = form.querySelector('#email') as HTMLInputElement
+      const pw = form.querySelector('#password') as HTMLInputElement
+      if (!fn?.value || !em?.value || !pw?.value) {
         form.reportValidity()
         return
       }
@@ -29,7 +39,10 @@ export function MultiStepSignup({ error }: { error?: string }) {
     // Validate Step 2 before moving to Step 3
     if (step === 2) {
       const form = document.getElementById('signup-form') as HTMLFormElement
-      if (!form.weight_kg.value || !form.height_cm.value || !form.birth_date.value) {
+      const wk = form.querySelector('#weight_kg') as HTMLInputElement
+      const hc = form.querySelector('#height_cm') as HTMLInputElement
+      const bd = form.querySelector('#birth_date') as HTMLInputElement
+      if (!wk?.value || !hc?.value || !bd?.value) {
         form.reportValidity()
         return
       }
@@ -53,6 +66,17 @@ export function MultiStepSignup({ error }: { error?: string }) {
         signup(data)
       }} className="relative min-h-[350px]">
         
+        {/* Hidden inputs to ensure all data is submitted when form action fires */}
+        <input type="hidden" name="full_name" value={formDataState.full_name} />
+        <input type="hidden" name="email" value={formDataState.email} />
+        <input type="hidden" name="password" value={formDataState.password} />
+        <input type="hidden" name="weight_kg" value={formDataState.weight_kg} />
+        <input type="hidden" name="height_cm" value={formDataState.height_cm} />
+        <input type="hidden" name="birth_date" value={formDataState.birth_date} />
+        <input type="hidden" name="snatch_rm" value={formDataState.snatch_rm} />
+        <input type="hidden" name="shirt_size" value={formDataState.shirt_size} />
+        <input type="hidden" name="bio" value={formDataState.bio} />
+
         <AnimatePresence mode="wait">
           {step === 1 && (
             <motion.div
@@ -68,15 +92,15 @@ export function MultiStepSignup({ error }: { error?: string }) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="full_name">Nombre completo</Label>
-                <Input id="full_name" name="full_name" placeholder="John Doe" required />
+                <Input id="full_name" placeholder="John Doe" value={formDataState.full_name} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="atleta@ejemplo.com" required />
+                <Input id="email" type="email" placeholder="atleta@ejemplo.com" value={formDataState.email} onChange={handleChange} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" name="password" type="password" required />
+                <Input id="password" type="password" value={formDataState.password} onChange={handleChange} required />
               </div>
             </motion.div>
           )}
@@ -100,17 +124,17 @@ export function MultiStepSignup({ error }: { error?: string }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="weight_kg">Peso (Kg)</Label>
-                  <Input id="weight_kg" name="weight_kg" type="number" step="0.1" placeholder="Ej: 75.5" required />
+                  <Input id="weight_kg" type="number" step="0.1" placeholder="Ej: 75.5" value={formDataState.weight_kg} onChange={handleChange} required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="height_cm">Altura (Cm)</Label>
-                  <Input id="height_cm" name="height_cm" type="number" placeholder="Ej: 175" required />
+                  <Input id="height_cm" type="number" placeholder="Ej: 175" value={formDataState.height_cm} onChange={handleChange} required />
                 </div>
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="birth_date">Fecha de Nacimiento</Label>
-                <Input id="birth_date" name="birth_date" type="date" required />
+                <Input id="birth_date" type="date" value={formDataState.birth_date} onChange={handleChange} required />
               </div>
             </motion.div>
           )}
@@ -134,11 +158,11 @@ export function MultiStepSignup({ error }: { error?: string }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="snatch_rm">RM Snatch (Kg)</Label>
-                  <Input id="snatch_rm" name="snatch_rm" type="number" step="0.1" placeholder="Opcional" />
+                  <Input id="snatch_rm" type="number" step="0.1" placeholder="Opcional" value={formDataState.snatch_rm} onChange={handleChange} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="shirt_size">Talla de Polera</Label>
-                  <select id="shirt_size" name="shirt_size" className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1">
+                  <select id="shirt_size" className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1" value={formDataState.shirt_size} onChange={handleChange}>
                     <option className="bg-background text-foreground" value="">Seleccionar...</option>
                     <option className="bg-background text-foreground" value="XS">XS</option>
                     <option className="bg-background text-foreground" value="S">S</option>
@@ -151,7 +175,7 @@ export function MultiStepSignup({ error }: { error?: string }) {
 
               <div className="space-y-2">
                 <Label htmlFor="bio">Biografía o Notas Médicas</Label>
-                <Textarea id="bio" name="bio" placeholder="¿Alguna lesión importante? ¿Cuentanos de ti?" className="resize-none h-20" />
+                <Textarea id="bio" placeholder="¿Alguna lesión importante? ¿Cuentanos de ti?" className="resize-none h-20" value={formDataState.bio} onChange={handleChange} />
               </div>
 
               {error && <p className="text-sm text-destructive font-medium mt-2">{error}</p>}
