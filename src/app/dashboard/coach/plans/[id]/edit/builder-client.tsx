@@ -28,6 +28,7 @@ import {
   verticalListSortingStrategy 
 } from '@dnd-kit/sortable'
 import { SortableMovement } from './SortableMovement'
+import { SortableBlock } from './SortableBlock'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
@@ -112,7 +113,6 @@ export function BuilderClient({
         workout_movements: (b.workout_movements || []).map((m: any) => ({
           ...m,
           id: m.id || genId(),
-          // Supabase returns 'exercises', but we use 'exercise' in state
           exercise: m.exercises || m.exercise
         }))
       }))
@@ -141,38 +141,52 @@ export function BuilderClient({
     const { active, over } = event
     if (!over) return
 
-    // ID Formats:
-    // - Movement: "uuid"
-    // - Block Drop Zone: "block-dIdx-bIdx"
-    // - Library Item: "lib-uuid"
-
-    const isLibraryItem = active.data.current?.type === 'library-item'
-    
-    // 1. Identify Target Block
-    let overDIdx = -1, overBIdx = -1, overMIdx = -1
+    const activeId = String(active.id)
     const overId = String(over.id)
 
-    if (overId.startsWith('block-')) {
-      const parts = overId.split('-')
-      overDIdx = parseInt(parts[1])
-      overBIdx = parseInt(parts[2])
-      overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
-    } else {
-      // It's a movement ID
-      days.forEach((d, di) => {
-        d.workout_blocks.forEach((b, bi) => {
-          const mi = b.workout_movements.findIndex(m => m.id === overId)
-          if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
+    // 1. Handle Block Reordering
+    if (active.data.current?.type === 'block') {
+      const activeDIdx = active.data.current.dIdx
+      if (activeId !== overId) {
+        setDays(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          const blockIds = next[activeDIdx].workout_blocks.map((b: any) => b.id)
+          const oldIndex = blockIds.indexOf(activeId)
+          
+          let newIndex = blockIds.indexOf(overId)
+          if (newIndex === -1 && overId.startsWith('block-')) {
+             newIndex = parseInt(overId.split('-')[2])
+          }
+          
+          if (oldIndex !== -1 && newIndex !== -1) {
+            next[activeDIdx].workout_blocks = arrayMove(next[activeDIdx].workout_blocks, oldIndex, newIndex)
+          }
+          return next
         })
-      })
+      }
+      return
     }
 
-    if (overDIdx === -1) return
-
     // 2. Handle Library Item Drop
-    if (isLibraryItem) {
-      const exercise = active.data.current.exercise
-      addMovement(overDIdx, overBIdx, exercise, overMIdx)
+    if (active.data.current?.type === 'library-item') {
+      let overDIdx = -1, overBIdx = -1, overMIdx = -1
+      if (overId.startsWith('block-')) {
+        const parts = overId.split('-')
+        overDIdx = parseInt(parts[1])
+        overBIdx = parseInt(parts[2])
+        overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
+      } else {
+        days.forEach((d, di) => {
+          d.workout_blocks.forEach((b, bi) => {
+            const mi = b.workout_movements.findIndex(m => m.id === overId)
+            if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
+          })
+        })
+      }
+      if (overDIdx !== -1) {
+        const exercise = active.data.current.exercise
+        addMovement(overDIdx, overBIdx, exercise, overMIdx)
+      }
       return
     }
 
@@ -180,18 +194,35 @@ export function BuilderClient({
     let activeDIdx = -1, activeBIdx = -1, activeMIdx = -1
     days.forEach((d, di) => {
       d.workout_blocks.forEach((b, bi) => {
-        const mi = b.workout_movements.findIndex(m => m.id === active.id)
+        const mi = b.workout_movements.findIndex(m => m.id === activeId)
         if (mi !== -1) { activeDIdx = di; activeBIdx = bi; activeMIdx = mi; }
       })
     })
 
     if (activeDIdx !== -1) {
-      setDays(prev => {
-        const next = JSON.parse(JSON.stringify(prev)) // deep clone for safety
-        const [moved] = next[activeDIdx].workout_blocks[activeBIdx].workout_movements.splice(activeMIdx, 1)
-        next[overDIdx].workout_blocks[overBIdx].workout_movements.splice(overMIdx, 0, moved)
-        return next
-      })
+      let overDIdx = -1, overBIdx = -1, overMIdx = -1
+      if (overId.startsWith('block-')) {
+        const parts = overId.split('-')
+        overDIdx = parseInt(parts[1])
+        overBIdx = parseInt(parts[2])
+        overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
+      } else {
+        days.forEach((d, di) => {
+          d.workout_blocks.forEach((b, bi) => {
+            const mi = b.workout_movements.findIndex(m => m.id === overId)
+            if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
+          })
+        })
+      }
+
+      if (overDIdx !== -1) {
+        setDays(prev => {
+          const next = JSON.parse(JSON.stringify(prev))
+          const [moved] = next[activeDIdx].workout_blocks[activeBIdx].workout_movements.splice(activeMIdx, 1)
+          next[overDIdx].workout_blocks[overBIdx].workout_movements.splice(overMIdx, 0, moved)
+          return next
+        })
+      }
     }
   }
 
@@ -406,171 +437,143 @@ export function BuilderClient({
                     </div>
 
                     {/* Blocks in Day */}
-                    <div className="space-y-4">
-                      {day.workout_blocks.map((block, bIdx) => (
-                        <Card key={block.id} className="border-border/30 bg-card/30 rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/40">
-                          <div className="p-4 border-b border-border/10 bg-muted/20 flex items-center justify-between gap-3">
-                            <input 
-                              className="bg-transparent font-black text-[10px] uppercase tracking-widest outline-none w-full focus:text-primary transition-colors" 
-                              value={block.name}
-                              onChange={(e) => {
-                                const n = [...days]; n[globalDIdx].workout_blocks[bIdx].name = e.target.value; setDays(n);
-                              }}
-                            />
-                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md opacity-20 hover:opacity-100 hover:text-destructive" onClick={() => {
+                    <SortableContext items={day.workout_blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                      <div className="space-y-6">
+                        {day.workout_blocks.map((block, bIdx) => (
+                          <SortableBlock 
+                            key={block.id} 
+                            id={block.id} 
+                            block={block} 
+                            onRemove={() => {
                               const n = [...days]; n[globalDIdx].workout_blocks.splice(bIdx, 1); setDays(n);
-                            }}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
-                            {/* Routine Description Area */}
-                            <div className="mb-4 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                  <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
-                                </Label>
-                                <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
-                                  <PopoverTrigger render={<Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all" />}>
-                                    <Video className="w-3 h-3" /> Vincular Video
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
-                                    <div className="p-3 border-b border-border/10 bg-secondary/10">
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
-                                      <div className="relative">
-                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
-                                        <Input 
-                                          placeholder="Buscar en biblioteca..." 
-                                          className="h-9 text-xs pl-9 bg-background/50 border-border/20 rounded-xl" 
-                                          onChange={(e) => setLibSearch(e.target.value)}
-                                          value={libSearch}
-                                          autoFocus
-                                        />
+                            }}
+                            onRename={(val: string) => {
+                              const n = [...days]; n[globalDIdx].workout_blocks[bIdx].name = val; setDays(n);
+                            }}
+                          >
+                            <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
+                              {/* Routine Description Area */}
+                              <div className="mb-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                    <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
+                                  </Label>
+                                  <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
+                                        <Video className="w-3 h-3" /> Vincular Video
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
+                                      <div className="p-3 border-b border-border/10 bg-secondary/10">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
+                                        <div className="relative">
+                                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+                                          <Input 
+                                            placeholder="Buscar en biblioteca..." 
+                                            className="h-9 text-xs pl-9 bg-background/50 border-border/20 rounded-xl" 
+                                            onChange={(e) => setLibSearch(e.target.value)}
+                                            value={libSearch}
+                                            autoFocus
+                                          />
+                                        </div>
                                       </div>
-                                    </div>
-                                    <ScrollArea className="h-64">
-                                      <div className="p-1.5 space-y-0.5">
-                                        {filteredLibrary.slice(0, 50).map(ex => (
-                                          <button
-                                            key={ex.id}
-                                            className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
-                                            onClick={() => {
-                                              const tag = `[${ex.name}]`
-                                              const n = [...days]
-                                              const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
-                                              n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
-                                              setDays(n)
-                                              setOpenPopoverId(null)
-                                              // Also add to movements if not present, so it's "known" to the block
-                                              const exists = block.workout_movements.some(m => m.exercise_id === ex.id)
-                                              if (!exists) addMovement(globalDIdx, bIdx, ex, undefined, 0)
-                                            }}
-                                          >
-                                            <div className="flex flex-col">
-                                              <span className="uppercase tracking-tight">{ex.name}</span>
-                                              <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
-                                            </div>
-                                            <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                              <Plus className="w-3.5 h-3.5 text-primary" />
-                                            </div>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    </ScrollArea>
-                                  </PopoverContent>
-                                </Popover>
+                                      <ScrollArea className="h-64">
+                                        <div className="p-1.5 space-y-0.5">
+                                          {filteredLibrary.slice(0, 50).map(ex => (
+                                            <button
+                                              key={ex.id}
+                                              className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
+                                              onClick={() => {
+                                                const tag = `[${ex.name}]`
+                                                const n = [...days]
+                                                const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
+                                                n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
+                                                setDays(n)
+                                                setOpenPopoverId(null)
+                                              }}
+                                            >
+                                              <div className="flex flex-col">
+                                                <span className="uppercase tracking-tight">{ex.name}</span>
+                                                <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
+                                              </div>
+                                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Plus className="w-3.5 h-3.5 text-primary" />
+                                              </div>
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+
+                                <Textarea 
+                                  placeholder="Ej: AMRAP 15 min de:
+ 10 Pull Ups
+ 5 Snatch
+ 20 Box Jumps"
+                                  className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
+                                  value={block.description || ''}
+                                  onChange={(e) => {
+                                    const n = [...days]; n[globalDIdx].workout_blocks[bIdx].description = e.target.value; setDays(n);
+                                  }}
+                                />
+
+                                <p className="text-[8px] text-muted-foreground/40 font-medium italic px-1">
+                                  El alumno verá un icono de video <Video className="w-2 h-2 inline" /> junto a los nombres de ejercicios vinculados.
+                                </p>
                               </div>
 
-                              <Textarea 
-                                placeholder="Ej: AMRAP 15 min de:
-10 Pull Ups
-5 Snatch
-20 Box Jumps"
-                                className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
-                                value={block.description || ''}
-                                onChange={(e) => {
-                                  const n = [...days]; n[globalDIdx].workout_blocks[bIdx].description = e.target.value; setDays(n);
-                                }}
-                              />
+                              <div className="border-t border-border/10 pt-4 mb-2 flex items-center justify-between">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Movimientos Estructurados</Label>
+                                <span className="text-[8px] font-medium text-muted-foreground/30 italic">(Opcional: Series/Reps)</span>
+                              </div>
 
-                              {/* Quick Tags (exercises already in the block) */}
-                              {block.workout_movements.length > 0 && (
-                                <div className="space-y-2">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Toca para insertar en el texto:</p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {block.workout_movements.map((m, i) => (
-                                      <button
-                                        key={i}
-                                        onClick={() => {
-                                          const n = [...days]
-                                          const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
-                                          const name = m.exercise?.name || ''
-                                          n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + name
-                                          setDays(n)
-                                        }}
-                                        className="px-2.5 py-1.5 bg-secondary/40 hover:bg-primary/10 hover:text-primary rounded-lg text-[9px] font-bold uppercase tracking-tight transition-all border border-border/10 flex items-center gap-1.5 group"
-                                      >
-                                        <Plus className="w-2.5 h-2.5 opacity-30 group-hover:opacity-100" />
-                                        {m.exercise?.name}
-                                      </button>
-                                    ))}
-                                  </div>
+                              <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                                <div className="divide-y divide-border/5">
+                                  {block.workout_movements.map((mov, mIdx) => (
+                                    <SortableMovement 
+                                      key={mov.id} 
+                                      id={mov.id} 
+                                      mov={mov} 
+                                      mIdx={mIdx}
+                                      updateSets={(val: string) => {
+                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; setDays(n);
+                                      }}
+                                      updateReps={(val: string) => {
+                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; setDays(n);
+                                      }}
+                                      updateWeight={(val: string) => {
+                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; setDays(n);
+                                      }}
+                                      removeMov={() => {
+                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); setDays(n);
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              </SortableContext>
+                              
+                              {/* Visual Drop Zone for Library Items */}
+                              {block.workout_movements.length === 0 && (
+                                <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-border/10 m-3 rounded-xl pointer-events-none">
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
                                 </div>
                               )}
-                              
-                              <p className="text-[8px] text-muted-foreground/40 font-medium italic px-1">
-                                El alumno verá un icono de video <Video className="w-2 h-2 inline" /> junto a los nombres de ejercicios vinculados.
-                              </p>
-                            </div>
-
-                            <div className="border-t border-border/10 pt-4 mb-2 flex items-center justify-between">
-                              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Movimientos Estructurados</Label>
-                              <span className="text-[8px] font-medium text-muted-foreground/30 italic">(Opcional: Series/Reps)</span>
-                            </div>
-
-                            <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>
-                              <div className="divide-y divide-border/5">
-                                {block.workout_movements.map((mov, mIdx) => (
-                                  <SortableMovement 
-                                    key={mov.id} 
-                                    id={mov.id} 
-                                    mov={mov} 
-                                    mIdx={mIdx}
-                                    updateSets={(val: string) => {
-                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; setDays(n);
-                                    }}
-                                    updateReps={(val: string) => {
-                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; setDays(n);
-                                    }}
-                                    updateWeight={(val: string) => {
-                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; setDays(n);
-                                    }}
-                                    removeMov={() => {
-                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); setDays(n);
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            </SortableContext>
-                            
-                            {/* Visual Drop Zone for Library Items */}
-                            {block.workout_movements.length === 0 && (
-                              <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-border/10 m-3 rounded-xl pointer-events-none">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
-                              </div>
-                            )}
-                          </DroppableBlock>
-                        </Card>
-                      ))}
-                      
-                      <Button 
-                        variant="ghost" 
-                        className="w-full h-10 border border-dashed border-border/20 rounded-xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] transition-all text-muted-foreground/40"
-                        onClick={() => addBlock(day.id)}
-                      >
-                        <Plus className="w-3 h-3 mr-2" /> Añadir Bloque
-                      </Button>
-                    </div>
+                            </DroppableBlock>
+                          </SortableBlock>
+                        ))}
+                      </div>
+                    </SortableContext>
+                    
+                    <Button 
+                      variant="ghost" 
+                      className="w-full h-10 border border-dashed border-border/20 rounded-xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] transition-all text-muted-foreground/40"
+                      onClick={() => addBlock(day.id)}
+                    >
+                      <Plus className="w-3 h-3 mr-2" /> Añadir Bloque
+                    </Button>
                   </div>
                 )
               })}
