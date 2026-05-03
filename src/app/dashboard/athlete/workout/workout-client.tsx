@@ -357,11 +357,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     {/* Routine Description */}
                     {!isCompleted && block.description && (
                       <div className="px-4 py-3 bg-secondary/10 border-b border-border/10">
-                        <SmartRoutineText 
-                          text={block.description} 
-                          exercises={allExercises || []} 
-                          onVideoClick={(url, name) => setActiveVideo({ url, name })}
-                        />
+                        <p className="text-[13px] text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap">
+                          {block.description}
+                        </p>
                       </div>
                     )}
                     
@@ -728,40 +726,4 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
   )
 }
 
-function SmartRoutineText({ text, exercises, onVideoClick }: { text: string, exercises: any[], onVideoClick: (videoUrl: string, name: string) => void }) {
-  if (!text) return null
-  
-  // Regex to find [Text]
-  const parts = text.split(/(\[.*?\])/g)
-  
-  return (
-    <div className="text-[13px] text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap">
-      {parts.map((part, i) => {
-        if (part.startsWith('[') && part.endsWith(']')) {
-          const exerciseName = part.slice(1, -1)
-          const exercise = exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase())
-          
-          if (exercise?.video_url) {
-            return (
-              <button 
-                key={i}
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onVideoClick(exercise.video_url, exercise.name)
-                }}
-                className="text-primary font-black hover:underline inline-flex items-center gap-0.5 mx-0.5 align-baseline"
-              >
-                {exerciseName}
-                <Video className="w-3 h-3" />
-              </button>
-            )
-          }
-          return <span key={i} className="font-bold text-foreground">{exerciseName}</span>
-        }
-        return <span key={i}>{part}</span>
-      })}
-    </div>
-  )
 }
