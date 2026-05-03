@@ -3,13 +3,12 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Trophy, Home, TrendingUp, User, Users, LogOut } from 'lucide-react'
+import { Home, TrendingUp, User, Users, LogOut } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
 const navItems = [
   { href: '/dashboard/athlete', icon: Home, label: 'Hoy', exact: true },
-  { href: '/dashboard/athlete/ranking', icon: Trophy, label: 'Ranking', exact: false },
-  { href: '/dashboard/athlete/feed', icon: Users, label: 'Box', exact: false },
+  { href: '/dashboard/athlete/feed', icon: Users, label: 'Actividad', exact: false },
   { href: '/dashboard/athlete/progress', icon: TrendingUp, label: 'Progreso', exact: false },
   { href: '/dashboard/athlete/profile', icon: User, label: 'Perfil', exact: false },
 ]
