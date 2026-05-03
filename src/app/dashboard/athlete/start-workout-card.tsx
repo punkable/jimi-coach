@@ -47,15 +47,7 @@ export function StartWorkoutCard({ plan, trainedToday }: StartWorkoutCardProps) 
     }
   }, [])
 
-  const handleStartClick = (e: React.MouseEvent) => {
-    if (trainedToday && !hasProgress) {
-      e.preventDefault()
-      setShowConfirm(true)
-    }
-  }
-
   const confirmStart = () => {
-    setShowConfirm(false)
     router.push('/dashboard/athlete/workout')
   }
 
@@ -69,7 +61,6 @@ export function StartWorkoutCard({ plan, trainedToday }: StartWorkoutCardProps) 
         
         <Link 
           href="/dashboard/athlete/workout" 
-          onClick={handleStartClick}
           className="block group"
         >
           <Card className="glass overflow-hidden border-primary/20 group-hover:border-primary/50 transition-all duration-300 relative">
@@ -85,64 +76,28 @@ export function StartWorkoutCard({ plan, trainedToday }: StartWorkoutCardProps) 
                     </div>
                     <div>
                       <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
-                        {hasProgress ? 'Reanudar Entrenamiento' : trainedToday ? 'Volver a Entrenar' : 'Comenzar WOD'}
+                        {hasProgress ? 'Reanudar Entrenamiento' : 'Comenzar Sesión'}
                       </h3>
                       <p className="text-muted-foreground text-sm md:text-base font-medium">
-                        {hasProgress ? 'Tienes una sesión en curso. ¡Continúa donde quedaste!' : trainedToday ? '¡Ya entrenaste hoy! ¿Quieres otra sesión?' : 'Pulsa para iniciar tu sesión de hoy.'}
+                        {hasProgress ? 'Continúa donde quedaste.' : 'Selecciona tu día y empieza a entrenar.'}
                       </p>
                     </div>
                   </div>
                 </div>
                 <Button 
                   size="lg" 
-                  className={`h-14 px-8 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl group-hover:scale-105 transition-transform ${hasProgress ? 'bg-primary text-primary-foreground animate-pulse' : trainedToday ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : ''}`}
+                  className={`h-14 px-8 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl group-hover:scale-105 transition-transform ${hasProgress ? 'bg-primary text-primary-foreground animate-pulse' : ''}`}
                 >
-                  {hasProgress ? 'Reanudar WOD' : trainedToday ? 'Nueva Sesión' : 'Entrenar Ahora'}
+                  {hasProgress ? 'Reanudar WOD' : 'Entrenar Ahora'}
                 </Button>
               </div>
             </CardContent>
           </Card>
         </Link>
       </section>
-
-      <Dialog open={showConfirm} onOpenChange={setShowConfirm}>
-        <DialogContent className="glass border-primary/20 max-w-[90vw] md:max-w-md rounded-3xl">
-          <DialogHeader>
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-amber-500" />
-            </div>
-            <DialogTitle className="text-2xl font-black uppercase tracking-tight text-left">
-              ¿Entrenar de nuevo?
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-base text-left pt-2 leading-relaxed">
-              Ya tienes un entrenamiento registrado hoy. Si decides entrenar de nuevo, se considerará como <span className="text-white font-bold">una clase extra</span> y se descontará de tu membresía.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="bg-primary/5 border border-primary/20 rounded-2xl p-4 my-4">
-            <div className="flex gap-3">
-              <Zap className="w-5 h-5 text-primary shrink-0" />
-              <p className="text-xs font-medium text-primary/90 leading-relaxed">
-                Cada inicio de WOD consume 1 cupo de tu plan actual. Asegúrate de tener clases disponibles.
-              </p>
-            </div>
-          </div>
-          <DialogFooter className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => setShowConfirm(false)}
-              className="w-full sm:w-auto rounded-xl font-bold uppercase tracking-widest text-xs"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={confirmStart}
-              className="w-full sm:w-auto rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20"
-            >
-              Confirmar Sesión
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+    </>
+  )
+}
     </>
   )
 }

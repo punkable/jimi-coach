@@ -346,11 +346,24 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                           }`}>
                             {block.name}
                           </h3>
-                          <p className="text-[10px] text-muted-foreground font-medium">{blockMovCount} ejercicio{blockMovCount !== 1 ? 's' : ''}</p>
+                          <p className="text-[10px] text-muted-foreground font-medium">
+                            {blockMovCount > 0 ? `${blockMovCount} ejercicios` : 'Rutina de texto'}
+                          </p>
                         </div>
                       </div>
                       <X className={`w-4 h-4 text-muted-foreground/40 transition-transform ${isCompleted ? 'rotate-0' : 'rotate-45'}`} />
                     </div>
+                    
+                    {/* Routine Description */}
+                    {!isCompleted && block.description && (
+                      <div className="px-4 py-3 bg-secondary/10 border-b border-border/10">
+                        <SmartRoutineText 
+                          text={block.description} 
+                          exercises={allExercises || []} 
+                          onVideoClick={(url, name) => setActiveVideo({ url, name })}
+                        />
+                      </div>
+                    )}
                     
                     {/* Movements */}
                     {!isCompleted && (
