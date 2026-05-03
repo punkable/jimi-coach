@@ -1,4 +1,3 @@
-'use strict'
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
@@ -43,7 +42,9 @@ export async function submitWorkoutResult(workoutDayId: string, rpe: number, not
   }
 
   revalidatePath('/dashboard/athlete')
+  revalidatePath('/dashboard/athlete/profile')
   revalidatePath('/dashboard/athlete/progress')
+  revalidatePath('/dashboard/coach/reviews')
   
   return { success: true }
 }

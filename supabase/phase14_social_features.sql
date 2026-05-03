@@ -32,7 +32,7 @@ CREATE POLICY "Coaches can manage their insights"
 CREATE TABLE IF NOT EXISTS activity_feed (
   id uuid DEFAULT uuid_generate_v4() PRIMARY KEY,
   athlete_id uuid REFERENCES profiles(id) ON DELETE CASCADE,
-  type text CHECK (type IN ('workout_done', 'pr_set', 'streak', 'feedback_received')) NOT NULL,
+  type text CHECK (type IN ('workout_done', 'pr_set', 'streak', 'feedback_received', 'announcement')) NOT NULL,
   content text, -- Human readable summary e.g. "Completó 5 rondas de Cindy · RPE 8"
   workout_result_id uuid REFERENCES workout_results(id) ON DELETE SET NULL,
   created_at timestamp with time zone DEFAULT now() NOT NULL

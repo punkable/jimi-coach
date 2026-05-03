@@ -82,3 +82,25 @@ export async function archiveInsight(insightId: string) {
   await supabase.from('coach_insights').update({ is_archived: true }).eq('id', insightId)
   revalidatePath('/dashboard/coach/insights')
 }
+
+export async function postToFeed(content: string, type: string = 'announcement') {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  await supabase.from('activity_feed').insert({
+    athlete_id: user.id,
+    type,
+    content
+  })
+
+  revalidatePath('/dashboard/athlete/feed')
+  revalidatePath('/dashboard/coach/feed')
+  revalidatePath('/dashboard/coach')
+}
+
+export async function deletePlanDay(dayId: string) {
+  const supabase = await createClient()
+  await supabase.from('workout_days').delete().eq('id', dayId)
+  revalidatePath('/dashboard/coach/plans')
+}

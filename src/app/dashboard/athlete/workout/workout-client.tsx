@@ -150,8 +150,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background md:max-w-lg md:mx-auto md:w-full md:border-x md:border-border/40 relative overflow-hidden">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/30">
+      {/* Header — pt-safe ensures notch/dynamic-island doesn't overlap */}
+      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/30"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <Link href="/dashboard/athlete">
@@ -191,8 +192,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         })()}
       </header>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-6">
+      {/* Main Content Area — pb-36 leaves room for finish button + home indicator */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6" style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'tools' ? (
             <motion.div 
@@ -377,6 +378,34 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                   </div>
                 )
               })}
+              {/* Extra Movements Section */}
+              {extraMovements.map((mov, idx) => (
+                <div key={`extra-${idx}`} className="rounded-2xl border glass border-primary/20 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                  <div className="flex items-center justify-between px-4 py-3 bg-primary/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <PlusCircle className="w-4 h-4 text-primary" />
+                      </div>
+                      <h3 className="font-black text-sm tracking-tight uppercase">{mov.name}</h3>
+                    </div>
+                    <button 
+                      onClick={() => setExtraMovements(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-muted-foreground/40 hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="p-4">
+                    <WorkoutSetsList
+                      movement={{ id: `extra-${idx}`, exercises: mov, sets: 3 }}
+                      onSetChange={(sets) => {
+                        setAllSetsData(prev => ({ ...prev, [`extra-${idx}`]: sets }))
+                      }}
+                      onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                    />
+                  </div>
+                </div>
+              ))}
 
               {/* Add Extra Exercise Button */}
               <button
@@ -398,7 +427,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             initial={{ opacity: 0, y: 50, scale: 0.9 }} 
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-24 right-4 z-50"
+            className="fixed right-4 z-50"
+            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}
           >
             <div className="glass bg-primary/90 text-primary-foreground px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 border border-primary-foreground/20">
               <Timer className="w-5 h-5 animate-pulse" />
@@ -416,10 +446,13 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         )}
       </AnimatePresence>
 
-      {/* Floating Finish Button Area */}
+      {/* Floating Finish Button Area — inline style ensures it clears iOS home indicator */}
       {activeTab === 'workout' && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/80 to-transparent pt-12 pb-safe z-30 pointer-events-none">
-          <Button 
+        <div
+          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-16 z-30 pointer-events-none"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', padding: '4rem 1rem max(env(safe-area-inset-bottom), 16px)' }}
+        >
+          <Button
             className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl shadow-[0_8px_30px_rgba(var(--primary),0.4)] active:scale-95 transition-all pointer-events-auto"
             onClick={() => setFinishOpen(true)}
           >

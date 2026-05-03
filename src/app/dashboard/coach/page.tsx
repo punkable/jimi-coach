@@ -4,6 +4,7 @@ import { Users, Activity, Plus, Dumbbell, TrendingUp, Calendar, ChevronRight, Vi
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { DashboardCharts } from './dashboard-charts'
+import { PostFeedForm } from './post-feed-form'
 
 export default async function CoachDashboard() {
   const supabase = await createClient()
@@ -163,11 +164,14 @@ export default async function CoachDashboard() {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-black uppercase tracking-tight">Acciones Rápidas</h2>
             </div>
-            <div className="space-y-3 flex-1">
-              <QuickActionLink href="/dashboard/coach/athletes" label="Gestionar Alumnos" icon={Users} />
-              <QuickActionLink href="/dashboard/coach/plans" label="Ver Calendario" icon={Calendar} />
-              <QuickActionLink href="/dashboard/coach/library" label="Añadir Ejercicio" icon={Plus} />
-              <QuickActionLink href="/dashboard/coach/reviews" label="Revisar Videos" icon={Video} />
+            <div className="space-y-4 flex-1">
+              <PostFeedForm />
+              <div className="space-y-3">
+                <QuickActionLink href="/dashboard/coach/athletes" label="Gestionar Alumnos" icon={Users} />
+                <QuickActionLink href="/dashboard/coach/plans" label="Ver Calendario" icon={Calendar} />
+                <QuickActionLink href="/dashboard/coach/library" label="Añadir Ejercicio" icon={Plus} />
+                <QuickActionLink href="/dashboard/coach/reviews" label="Revisar Videos" icon={Video} />
+              </div>
             </div>
             <div className="mt-8 pt-8 border-t border-border/30">
               <div className="bg-primary/10 rounded-2xl p-4 border border-primary/20">

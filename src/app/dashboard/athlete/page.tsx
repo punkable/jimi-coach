@@ -48,10 +48,10 @@ export default async function AthleteDashboard() {
 
   const { data: results } = await supabase
     .from('workout_results')
-    .select('created_at, rpe')
+    .select('completed_at, rpe')
     .eq('athlete_id', user?.id)
     .eq('completed', true)
-    .order('created_at', { ascending: false })
+    .order('completed_at', { ascending: false })
 
   // Fetch coach insights visible to this athlete
   const { data: insights } = await supabase
@@ -67,7 +67,7 @@ export default async function AthleteDashboard() {
   // Streak calculation
   let currentStreak = 0
   if (results && results.length > 0) {
-    const uniqueDates = Array.from(new Set(results.map(r => r.created_at.split('T')[0])))
+    const uniqueDates = Array.from(new Set(results.map(r => r.completed_at.split('T')[0])))
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
     const yesterday = new Date(today)
@@ -86,7 +86,7 @@ export default async function AthleteDashboard() {
   }
 
   const todayStr2 = new Date().toISOString().split('T')[0]
-  const trainedToday = results?.some(r => r.created_at.startsWith(todayStr2))
+  const trainedToday = results?.some(r => r.completed_at.startsWith(todayStr2))
   const last5 = results?.slice(0, 5) ?? []
   const avgRpe = last5.length > 0
     ? Math.round(last5.reduce((a, r) => a + (r.rpe || 0), 0) / last5.length)

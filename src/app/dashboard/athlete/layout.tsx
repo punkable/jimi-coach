@@ -18,8 +18,8 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
 
   return (
     // Use 100dvh for mobile browsers; avoid 100vh which ignores browser chrome
-    <div className={`flex flex-col bg-background ${isWorkout ? 'h-[100dvh]' : 'min-h-[100dvh] pb-nav-safe'}`}>
-      <main className="flex-1 overflow-y-auto">
+    <div className={`flex flex-col bg-background ${isWorkout ? 'h-[100dvh]' : 'min-h-[100dvh]'}`}>
+      <main className="flex-1 overflow-y-auto" style={isWorkout ? {} : { paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
         {children}
       </main>
 

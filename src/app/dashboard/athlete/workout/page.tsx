@@ -73,7 +73,7 @@ export default async function WorkoutPage() {
     .order('name', { ascending: true })
 
   return (
-    <div className="h-screen flex flex-col bg-background relative overflow-hidden">
+    <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <WorkoutClient day={todayData} hasReadiness={!!readiness} prs={prs} allExercises={allExercises ?? []} />
     </div>
   )

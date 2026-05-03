@@ -24,6 +24,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
           <NavItem href="/dashboard/coach/insights" icon={Target} label="Insights" />
           <NavItem href="/dashboard/coach/library" icon={Library} label="Biblioteca" />
           <NavItem href="/dashboard/coach/reviews" icon={Video} label="Revisiones" />
+          <NavItem href="/dashboard/coach/feed" icon={Activity} label="Box Feed" />
           <NavItem href="/dashboard/coach/memberships" icon={Crown} label="Membresías" />
         </nav>
         <div className="p-4 border-t border-border/40 space-y-1">
@@ -44,7 +45,14 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
           <div className="md:hidden">
             <Image src="/images/isotipo.png" alt="Logo" width={24} height={24} className="opacity-80" />
           </div>
-          <NotificationsBell />
+          <div className="flex items-center gap-4">
+            <NotificationsBell />
+            <form action={signout} className="md:hidden">
+              <Button variant="ghost" size="icon" type="submit" className="text-muted-foreground hover:text-destructive">
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </form>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto pb-safe-nav md:pb-0">
           {children}
@@ -56,7 +64,7 @@ export default function CoachLayout({ children }: { children: React.ReactNode })
         <MobileNavItem href="/dashboard/coach" icon={LayoutDashboard} label="Inicio" />
         <MobileNavItem href="/dashboard/coach/athletes" icon={Users} label="Alumnos" />
         <MobileNavItem href="/dashboard/coach/insights" icon={Target} label="Insights" />
-        <MobileNavItem href="/dashboard/coach/reviews" icon={Video} label="Review" />
+        <MobileNavItem href="/dashboard/coach/feed" icon={Activity} label="Feed" />
         <MobileNavItem href="/dashboard/coach/plans" icon={Calendar} label="Planes" />
       </nav>
     </div>
