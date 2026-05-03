@@ -106,7 +106,11 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
   if (planMeta) {
     await supabase
       .from('workout_plans')
-      .update({ title: planMeta.title, description: planMeta.description })
+      .update({ 
+        title: planMeta.title, 
+        description: planMeta.description,
+        is_community_enabled: (planMeta as any).is_community_enabled 
+      })
       .eq('id', planId)
   }
 

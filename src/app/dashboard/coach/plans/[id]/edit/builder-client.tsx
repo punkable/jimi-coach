@@ -31,6 +31,8 @@ import { SortableMovement } from './SortableMovement'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 // Types
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
@@ -118,7 +120,8 @@ export function BuilderClient({
   const [days, setDays] = useState<Day[]>(processInitialDays(initialDays))
   const [planMeta, setPlanMeta] = useState({
     title: initialPlan?.title || '',
-    description: initialPlan?.description || ''
+    description: initialPlan?.description || '',
+    is_community_enabled: initialPlan?.is_community_enabled ?? true
   })
   
   const [activeWeek, setActiveWeek] = useState<string>('1')
@@ -322,14 +325,26 @@ export function BuilderClient({
                 <Layout className="w-6 h-6 text-primary-foreground" />
               </div>
               <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-4 mb-1">
+                  <Input 
+                    className="text-xl font-black uppercase tracking-tight bg-transparent border-none p-0 h-auto focus-visible:ring-0 placeholder:opacity-20"
+                    value={planMeta.title}
+                    placeholder="NOMBRE DEL PLAN..."
+                    onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
+                  />
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/30 rounded-full border border-border/20">
+                    <Switch 
+                      id="community-mode" 
+                      checked={planMeta.is_community_enabled}
+                      onCheckedChange={(checked) => setPlanMeta({...planMeta, is_community_enabled: checked})}
+                    />
+                    <Label htmlFor="community-mode" className="text-[9px] font-black uppercase tracking-widest cursor-pointer select-none">
+                      Comunidad {planMeta.is_community_enabled ? 'ON' : 'OFF'}
+                    </Label>
+                  </div>
+                </div>
                 <Input 
-                  className="text-xl font-black uppercase tracking-tight bg-transparent border-none p-0 h-auto focus-visible:ring-0 placeholder:opacity-20"
-                  value={planMeta.title}
-                  placeholder="NOMBRE DEL PLAN..."
-                  onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
-                />
-                <Input 
-                  className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 text-muted-foreground text-sm font-medium mt-1 placeholder:opacity-20"
+                  className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 text-muted-foreground text-sm font-medium placeholder:opacity-20"
                   value={planMeta.description}
                   placeholder="Añade una descripción corta del programa..."
                   onChange={(e) => setPlanMeta({...planMeta, description: e.target.value})}

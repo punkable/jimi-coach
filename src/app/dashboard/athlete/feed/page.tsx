@@ -13,28 +13,31 @@ export default async function FeedPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 1. Get the plans assigned to the current user
+  // 1. Get the plans assigned to the current user and their social settings
   const { data: myPlans } = await supabase
     .from('assigned_plans')
-    .select('plan_id')
+    .select('plan_id, workout_plans(is_community_enabled)')
     .eq('athlete_id', user?.id)
 
-  const myPlanIds = myPlans?.map(p => p.plan_id) || []
+  // 2. Identify which plans have community enabled
+  const socialPlanIds = myPlans
+    ?.filter((p: any) => p.workout_plans?.is_community_enabled)
+    .map(p => p.plan_id) || []
 
-  // 2. Get all athletes that share any of these plans
+  // 3. Get all athletes that share these "social" plans
   let peerIds: string[] = [user?.id as string]
-  if (myPlanIds.length > 0) {
+  if (socialPlanIds.length > 0) {
     const { data: peers } = await supabase
       .from('assigned_plans')
       .select('athlete_id')
-      .in('plan_id', myPlanIds)
+      .in('plan_id', socialPlanIds)
     
     if (peers) {
       peerIds = Array.from(new Set(peers.map(p => p.athlete_id)))
     }
   }
 
-  // 3. Filter feed entries to only show peers (and coach announcements which have athlete_id = coach_id)
+  // 4. Filter feed entries to only show peers from enabled plans (plus self)
   // For now, we filter by peerIds to ensure privacy.
   const { data: feedEntries } = await supabase
     .from('activity_feed')
