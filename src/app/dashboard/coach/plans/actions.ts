@@ -41,6 +41,12 @@ export async function archivePlan(planId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  // Role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
+    throw new Error('Not authorized')
+  }
+
   const { error } = await supabase
     .from('workout_plans')
     .update({ is_archived: true })
@@ -85,40 +91,99 @@ export async function assignPlan(formData: FormData) {
   revalidatePath('/dashboard/coach/athletes')
 }
 
-export async function savePlanStructure(planId: string, days: any[]) {
+export async function savePlanStructure(planId: string, days: any[], planMeta?: { title: string, description: string }) {
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  // Due to complexity of nested inserts, the easiest MVP approach is to delete existing days and recreate.
-  // In production, we'd do a smart merge.
-  await supabase.from('workout_days').delete().eq('plan_id', planId)
+  // Role check
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
+    throw new Error('Not authorized')
+  }
+
+  // 1. Update Plan Metadata if provided
+  if (planMeta) {
+    await supabase
+      .from('workout_plans')
+      .update({ title: planMeta.title, description: planMeta.description })
+      .eq('id', planId)
+  }
+
+  // 2. Fetch existing structure to handle deletions
+  const { data: existingDays } = await supabase
+    .from('workout_days')
+    .select('id, workout_blocks(id, workout_movements(id))')
+    .eq('plan_id', planId)
+
+  const incomingDayIds = days.map(d => d.id).filter(id => id.length > 15) // UUIDs are long
+  const daysToDelete = existingDays?.filter(d => !incomingDayIds.includes(d.id)).map(d => d.id) || []
+
+  // Delete days no longer present (CASCADE will handle blocks/movements)
+  if (daysToDelete.length > 0) {
+    await supabase.from('workout_days').delete().in('id', daysToDelete)
+  }
 
   for (const day of days) {
-    const { data: insertedDay, error: dayError } = await supabase
-      .from('workout_days')
-      .insert({ 
-        plan_id: planId, 
-        day_of_week: day.day_of_week, 
-        title: day.title,
-        week_number: day.week_number || 1
-      })
-      .select('id').single()
-    
-    if (dayError || !insertedDay) continue;
+    const isNewDay = day.id.length < 15
+    const dayData = {
+      plan_id: planId,
+      day_of_week: day.day_of_week,
+      title: day.title,
+      week_number: day.week_number || 1
+    }
+
+    let dayId = day.id
+    if (isNewDay) {
+      const { data: newDay } = await supabase.from('workout_days').insert(dayData).select('id').single()
+      dayId = newDay?.id
+    } else {
+      await supabase.from('workout_days').update(dayData).eq('id', dayId)
+    }
+
+    if (!dayId) continue
+
+    // Handle Blocks
+    const existingBlocks = existingDays?.find(d => d.id === dayId)?.workout_blocks || []
+    const incomingBlockIds = day.workout_blocks.map((b: any) => b.id).filter((id: string) => id.length > 15)
+    const blocksToDelete = existingBlocks.filter(b => !incomingBlockIds.includes(b.id)).map(b => b.id)
+
+    if (blocksToDelete.length > 0) {
+      await supabase.from('workout_blocks').delete().in('id', blocksToDelete)
+    }
 
     for (let i = 0; i < day.workout_blocks.length; i++) {
       const block = day.workout_blocks[i]
-      const { data: insertedBlock, error: blockError } = await supabase
-        .from('workout_blocks')
-        .insert({ workout_day_id: insertedDay.id, name: block.name, type: block.type, order_index: i })
-        .select('id').single()
+      const isNewBlock = block.id.length < 15
+      const blockData = {
+        workout_day_id: dayId,
+        name: block.name,
+        type: block.type,
+        order_index: i
+      }
 
-      if (blockError || !insertedBlock) continue;
+      let blockId = block.id
+      if (isNewBlock) {
+        const { data: newBlock } = await supabase.from('workout_blocks').insert(blockData).select('id').single()
+        blockId = newBlock?.id
+      } else {
+        await supabase.from('workout_blocks').update(blockData).eq('id', blockId)
+      }
 
+      if (!blockId) continue
+
+      // Handle Movements (Simplest is to recreate movements for the block to ensure order, 
+      // but if we want to preserve IDs for results, we must upsert)
+      // Actually, results point to WORKOUT_DAY_ID in many places, or WORKOUT_RESULT links to DAY.
+      // But if results link to specific MOVEMENTS (not yet in schema for results), we'd need more care.
+      // Current schema: workout_results.workout_day_id. 
+      // So as long as DAY_ID is preserved, results are safe.
+      
+      // For simplicity and to ensure order_index is perfect, we refresh movements in this block
+      await supabase.from('workout_movements').delete().eq('block_id', blockId)
+      
       const movementsToInsert = block.workout_movements.map((m: any, mIdx: number) => ({
-        block_id: insertedBlock.id,
+        block_id: blockId,
         exercise_id: m.exercise_id,
         sets: m.sets,
         reps: m.reps,

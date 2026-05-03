@@ -68,7 +68,7 @@ export default function ProfileForm({ profile }: { profile: any }) {
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full">
       {/* Visual Avatar Sidebar (Moves into the Left Column conceptually) */}
       <div className="lg:col-span-4 flex flex-col gap-6">
-        <div className="glass rounded-[32px] p-8 flex flex-col items-center text-center relative overflow-hidden group">
+        <div className="glass rounded-[32px] p-8 flex flex-col items-center text-center relative group">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
           
           <button 
@@ -144,7 +144,7 @@ export default function ProfileForm({ profile }: { profile: any }) {
 
       {/* Main Forms Section */}
       <div className="lg:col-span-8 space-y-6">
-        <Card className="border-white/5 bg-card/40 backdrop-blur-md shadow-xl overflow-hidden rounded-[32px]">
+        <Card className="border-white/5 bg-card/40 backdrop-blur-md shadow-xl rounded-[32px]">
           <CardHeader className="bg-white/5 pb-8">
             <CardTitle className="text-xl flex items-center gap-3 font-black uppercase tracking-tighter">
               <div className="p-2 rounded-xl bg-primary/10">

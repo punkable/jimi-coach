@@ -88,6 +88,12 @@ export async function deleteAthlete(athleteId: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
+  // Verify authorization
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
+    throw new Error('Not authorized')
+  }
+
   // Use the admin client to bypass RLS for updating another user's profile
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -113,6 +119,12 @@ export async function hardDeleteAthlete(athleteId: string) {
 
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  // Verify authorization
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
+    throw new Error('Not authorized')
+  }
 
   const supabaseAdmin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

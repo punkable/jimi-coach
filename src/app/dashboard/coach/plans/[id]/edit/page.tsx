@@ -48,7 +48,7 @@ export default async function PlanEditPage({ params }: { params: Promise<{ id: s
       </header>
 
       {/* The interactive builder component */}
-      <BuilderClient planId={plan.id} initialDays={days || []} library={exercises || []} />
+      <BuilderClient planId={plan.id} initialPlan={plan} initialDays={days || []} library={exercises || []} />
     </div>
   )
 }
