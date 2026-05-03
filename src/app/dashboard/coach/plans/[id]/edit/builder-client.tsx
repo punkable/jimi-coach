@@ -39,7 +39,7 @@ import { Textarea } from '@/components/ui/textarea'
 // Types
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
 type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
-type Block = { id: string, name: string, type: string, workout_movements: Movement[] }
+type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[] }
 type Day = { id: string, day_of_week: number, title: string, week_number: number, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)

@@ -91,7 +91,7 @@ export async function assignPlan(formData: FormData) {
   revalidatePath('/dashboard/coach/athletes')
 }
 
-export async function savePlanStructure(planId: string, days: any[], planMeta?: { title: string, description: string }) {
+export async function savePlanStructure(planId: string, days: any[], planMeta?: { title: string, description: string, is_community_enabled?: boolean }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -109,7 +109,7 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       .update({ 
         title: planMeta.title, 
         description: planMeta.description,
-        is_community_enabled: (planMeta as any).is_community_enabled 
+        is_community_enabled: planMeta.is_community_enabled 
       })
       .eq('id', planId)
   }
