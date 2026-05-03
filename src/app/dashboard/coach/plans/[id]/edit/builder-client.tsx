@@ -129,6 +129,7 @@ export function BuilderClient({
   const [activeWeek, setActiveWeek] = useState<string>('1')
   const [libSearch, setLibSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -429,9 +430,9 @@ export function BuilderClient({
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                   <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
                                 </Label>
-                                <Popover>
+                                <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
                                   <PopoverTrigger render={<Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all" />}>
-                                    <Video className="w-3 h-3" /> Añadir Video
+                                    <Video className="w-3 h-3" /> Vincular Video
                                   </PopoverTrigger>
                                   <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
                                     <div className="p-3 border-b border-border/10 bg-secondary/10">
@@ -459,6 +460,7 @@ export function BuilderClient({
                                               const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
                                               n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
                                               setDays(n)
+                                              setOpenPopoverId(null)
                                               // Also add to movements if not present, so it's "known" to the block
                                               const exists = block.workout_movements.some(m => m.exercise_id === ex.id)
                                               if (!exists) addMovement(globalDIdx, bIdx, ex, undefined, 0)

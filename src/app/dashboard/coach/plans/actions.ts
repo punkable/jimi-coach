@@ -217,4 +217,5 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
 
   revalidatePath(`/dashboard/coach/plans/${planId}/edit`)
   revalidatePath('/dashboard/athlete')
+  revalidatePath('/dashboard/athlete/workout')
 }

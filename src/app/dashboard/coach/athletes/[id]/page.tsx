@@ -23,6 +23,22 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     .is('deleted_at', null)
     .order('name', { ascending: true })
 
+  // Fetch all workout plans
+  const { data: plans } = await supabase
+    .from('workout_plans')
+    .select('id, title')
+    .is('is_archived', false)
+    .order('title', { ascending: true })
+
+  // Fetch their current plan assignment
+  const { data: assignment } = await supabase
+    .from('assigned_plans')
+    .select('plan_id')
+    .eq('athlete_id', id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
   if (!profile) {
     return <div className="p-8 text-center text-destructive font-bold">Atleta no encontrado.</div>
   }
@@ -92,7 +108,12 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
 
         {/* Subscription & Progress Column */}
         <div className="md:col-span-2 space-y-6">
-          <SubscriptionManager profile={profile} memberships={memberships || []} />
+          <SubscriptionManager 
+            profile={profile} 
+            memberships={memberships || []} 
+            plans={plans || []} 
+            currentPlanId={assignment?.plan_id}
+          />
 
           <Card>
             <CardHeader>

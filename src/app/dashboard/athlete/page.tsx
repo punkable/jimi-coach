@@ -53,7 +53,7 @@ export default async function AthleteDashboard() {
   if (planId) {
     const { data } = await supabase
       .from('workout_days')
-      .select('*')
+      .select('*, workout_blocks(*)')
       .eq('plan_id', planId)
       .order('day_of_week', { ascending: true })
     planDays = data || []
