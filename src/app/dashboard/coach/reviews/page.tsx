@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Video, ExternalLink, MessageSquare, CheckCircle, Clock, Dumbbell, User, Archive, StickyNote } from 'lucide-react'
-import { updateReviewStatus, addPrivateNote, createFeedback } from '../actions'
+import { updateReviewStatus, createFeedback } from '../actions'
 
 type StatusFilter = 'pending' | 'done' | 'archived'
 
@@ -185,42 +185,54 @@ export default async function ReviewsPage({
                     {/* Actions */}
                     {status === 'pending' && (
                       <div className="space-y-3">
-                        <form action={async (fd) => {
-                          'use server'
-                          await createFeedback(result.id, result.athlete_id, fd.get('feedback') as string)
-                        }} className="space-y-2">
-                          <textarea
-                            name="feedback"
-                            required
-                            placeholder="Escribe tu corrección técnica..."
-                            className="w-full bg-background/50 border border-border/40 rounded-xl p-3 text-sm min-h-[80px] focus:outline-none focus:ring-1 focus:ring-primary"
-                          />
-                          <Button type="submit" className="w-full h-11 rounded-xl font-black uppercase tracking-widest text-[10px]">
-                            <MessageSquare className="w-4 h-4 mr-2" /> Enviar Feedback
-                          </Button>
-                        </form>
-
-                        <div className="flex gap-2">
-                          {fb?.id && (
-                            <>
+                        <div className="flex flex-col gap-2">
+                          <form action={async (fd) => {
+                            'use server'
+                            await createFeedback(result.id, result.athlete_id, fd.get('feedback') as string)
+                          }} className="space-y-2">
+                            <textarea
+                              name="feedback"
+                              placeholder="Escribe tu corrección técnica (opcional)..."
+                              className="w-full bg-background/50 border border-border/40 rounded-xl p-3 text-sm min-h-[80px] focus:outline-none focus:ring-1 focus:ring-primary"
+                            />
+                            <div className="flex gap-2">
+                              <Button type="submit" className="flex-1 h-11 rounded-xl font-black uppercase tracking-widest text-[10px]">
+                                <MessageSquare className="w-4 h-4 mr-2" /> Enviar Feedback
+                              </Button>
+                            </div>
+                          </form>
+                          
+                          <div className="flex gap-2">
+                            {!fb ? (
                               <form action={async () => {
                                 'use server'
-                                await updateReviewStatus(fb.id, 'done')
-                              }} className="flex-1">
-                                <Button type="submit" variant="outline" className="w-full h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-green-500/30 text-green-500 hover:bg-green-500/10">
-                                  <CheckCircle className="w-3.5 h-3.5 mr-1" /> Marcar Hecho
+                                await createFeedback(result.id, result.athlete_id, '', 'archived')
+                              }} className="w-full">
+                                <Button type="submit" variant="outline" className="w-full h-11 rounded-xl text-muted-foreground border-border/40 hover:bg-secondary/50 font-black uppercase tracking-widest text-[10px]">
+                                  <Archive className="w-4 h-4 mr-2" /> Archivar sin Feedback
                                 </Button>
                               </form>
-                              <form action={async () => {
-                                'use server'
-                                await updateReviewStatus(fb.id, 'archived')
-                              }} className="flex-1">
-                                <Button type="submit" variant="outline" className="w-full h-9 text-[10px] font-black uppercase tracking-widest rounded-xl text-muted-foreground hover:bg-secondary/50">
-                                  <Archive className="w-3.5 h-3.5 mr-1" /> Archivar
-                                </Button>
-                              </form>
-                            </>
-                          )}
+                            ) : (
+                              <>
+                                <form action={async () => {
+                                  'use server'
+                                  await updateReviewStatus(fb.id, 'done')
+                                }} className="flex-1">
+                                  <Button type="submit" variant="outline" className="w-full h-9 text-[10px] font-black uppercase tracking-widest rounded-xl border-green-500/30 text-green-500 hover:bg-green-500/10">
+                                    <CheckCircle className="w-3.5 h-3.5 mr-1" /> Marcar Hecho
+                                  </Button>
+                                </form>
+                                <form action={async () => {
+                                  'use server'
+                                  await updateReviewStatus(fb.id, 'archived')
+                                }} className="flex-1">
+                                  <Button type="submit" variant="outline" className="w-full h-9 text-[10px] font-black uppercase tracking-widest rounded-xl text-muted-foreground hover:bg-secondary/50">
+                                    <Archive className="w-3.5 h-3.5 mr-1" /> Archivar
+                                  </Button>
+                                </form>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     )}

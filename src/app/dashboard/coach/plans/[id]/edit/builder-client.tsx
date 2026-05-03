@@ -430,27 +430,28 @@ export function BuilderClient({
                                   <Popover>
                                     <PopoverTrigger className={cn(
                                       buttonVariants({ variant: "outline", size: "sm" }),
-                                      "h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 rounded-lg border-primary/20 text-primary"
+                                      "h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 rounded-lg border-primary/20 text-primary hover:bg-primary/5 transition-all"
                                     )}>
-                                      <Video className="w-2.5 h-2.5" /> Vincular Video
+                                      <Plus className="w-2.5 h-2.5" /> Vincular Ejercicio
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-64 p-0" align="end">
-                                      <div className="p-2 border-b border-border/10">
-                                        <Input 
-                                          placeholder="Buscar ejercicio..." 
-                                          className="h-8 text-[10px]" 
-                                          autoFocus
-                                          onChange={(e) => {
-                                            // Local filter for this popover if needed
-                                          }}
-                                        />
+                                    <PopoverContent className="w-64 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
+                                      <div className="p-3 border-b border-border/10 bg-secondary/10">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Toca para insertar link de video</p>
+                                        <div className="relative">
+                                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40" />
+                                          <Input 
+                                            placeholder="Buscar ejercicio..." 
+                                            className="h-8 text-[10px] pl-8 bg-background/50" 
+                                            autoFocus
+                                          />
+                                        </div>
                                       </div>
-                                      <ScrollArea className="h-48">
-                                        <div className="p-1">
+                                      <ScrollArea className="h-56">
+                                        <div className="p-1.5 space-y-0.5">
                                           {library.map(ex => (
                                             <button
                                               key={ex.id}
-                                              className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-primary/10 rounded-md transition-colors flex items-center justify-between group"
+                                              className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
                                               onClick={() => {
                                                 const tag = `[${ex.name}]`
                                                 const n = [...days]
@@ -459,8 +460,10 @@ export function BuilderClient({
                                                 setDays(n)
                                               }}
                                             >
-                                              {ex.name}
-                                              <Plus className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100" />
+                                              <span className="uppercase tracking-tight">{ex.name}</span>
+                                              <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Plus className="w-3 h-3 text-primary" />
+                                              </div>
                                             </button>
                                           ))}
                                         </div>
@@ -470,14 +473,14 @@ export function BuilderClient({
                                 </div>
                               </div>
                               <Textarea 
-                                placeholder="Ej: 5 rondas de 10 [Pull Ups], 15 [Sentadillas]..."
-                                className="min-h-[100px] bg-background/30 border-border/10 text-xs font-medium leading-relaxed resize-none rounded-xl focus:ring-primary/20"
+                                placeholder="Escribe tu rutina aquí... Usa 'Vincular Ejercicio' para añadir videos técnicos dentro de tu texto."
+                                className="min-h-[120px] bg-background/30 border-border/10 text-xs font-medium leading-relaxed resize-none rounded-xl focus:ring-primary/20"
                                 value={block.description || ''}
                                 onChange={(e) => {
                                   const n = [...days]; n[globalDIdx].workout_blocks[bIdx].description = e.target.value; setDays(n);
                                 }}
                               />
-                              <p className="text-[8px] text-muted-foreground/50 font-medium italic">Los ejercicios entre corchetes [] mostrarán el video automáticamente.</p>
+                              <p className="text-[8px] text-muted-foreground/40 font-medium italic">Los ejercicios vinculados se verán como botones de video para el alumno.</p>
                             </div>
 
                             <div className="border-t border-border/5 pt-4 mb-2">

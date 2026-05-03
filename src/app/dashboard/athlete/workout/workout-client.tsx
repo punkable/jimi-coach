@@ -356,10 +356,12 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     
                     {/* Routine Description */}
                     {!isCompleted && block.description && (
-                      <div className="px-4 py-3 bg-secondary/10 border-b border-border/10">
-                        <p className="text-[13px] text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap">
-                          {block.description}
-                        </p>
+                      <div className="px-4 py-4 bg-secondary/5 bg-gradient-to-br from-primary/5 to-transparent border-b border-border/10">
+                        <SmartRoutineText 
+                          text={block.description} 
+                          exercises={allExercises || []} 
+                          onVideoClick={(url, name) => setActiveVideo({ url, name })}
+                        />
                       </div>
                     )}
                     
@@ -722,6 +724,43 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
           </span>
         ))}
       </div>
+    </div>
+  )
+}
+
+function SmartRoutineText({ text, exercises, onVideoClick }: { text: string, exercises: any[], onVideoClick: (videoUrl: string, name: string) => void }) {
+  if (!text) return null
+  
+  const parts = text.split(/(\[.*?\])/g)
+  
+  return (
+    <div className="text-[13px] text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap">
+      {parts.map((part, i) => {
+        if (part.startsWith('[') && part.endsWith(']')) {
+          const exerciseName = part.slice(1, -1)
+          const exercise = exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase())
+          
+          if (exercise?.video_url) {
+            return (
+              <button 
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onVideoClick(exercise.video_url, exercise.name)
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mx-1 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all align-middle group shadow-sm"
+              >
+                <span className="font-black text-[10px] uppercase tracking-tight">{exerciseName}</span>
+                <Video className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
+              </button>
+            )
+          }
+          return <span key={i} className="font-bold text-foreground">{exerciseName}</span>
+        }
+        return <span key={i}>{part}</span>
+      })}
     </div>
   )
 }

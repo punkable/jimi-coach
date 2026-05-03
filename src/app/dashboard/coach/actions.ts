@@ -32,7 +32,7 @@ export async function addPrivateNote(feedbackId: string, notes: string) {
   revalidatePath('/dashboard/coach/reviews')
 }
 
-export async function createFeedback(workoutResultId: string, athleteId: string, coachNotes: string) {
+export async function createFeedback(workoutResultId: string, athleteId: string, coachNotes: string = '', status: 'done' | 'archived' = 'done') {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
@@ -42,11 +42,12 @@ export async function createFeedback(workoutResultId: string, athleteId: string,
     athlete_id: athleteId,
     coach_id: user.id,
     coach_notes: coachNotes,
-    status: 'done',
-    reviewed_at: new Date().toISOString()
+    status: status,
+    reviewed_at: status === 'done' ? new Date().toISOString() : null
   })
 
   revalidatePath('/dashboard/coach/reviews')
+  revalidatePath('/dashboard/athlete/progress')
 }
 
 export async function createInsight(data: {
