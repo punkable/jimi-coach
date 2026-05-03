@@ -105,34 +105,3 @@ export async function deletePlanDay(dayId: string) {
   await supabase.from('workout_days').delete().eq('id', dayId)
   revalidatePath('/dashboard/coach/plans')
 }
-
-export async function assignWorkoutPlan(athleteId: string, planId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
-
-  // Check if already assigned
-  const { data: existing } = await supabase
-    .from('assigned_plans')
-    .select('id')
-    .eq('athlete_id', athleteId)
-    .eq('plan_id', planId)
-    .single()
-
-  if (existing) return { success: true }
-
-  const { error } = await supabase
-    .from('assigned_plans')
-    .insert({
-      athlete_id: athleteId,
-      plan_id: planId,
-      assigned_by: user.id,
-      start_date: new Date().toISOString().split('T')[0]
-    })
-
-  if (error) throw error
-
-  revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
-  revalidatePath('/dashboard/athlete')
-  return { success: true }
-}
