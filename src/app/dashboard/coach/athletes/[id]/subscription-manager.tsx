@@ -62,7 +62,7 @@ export default function SubscriptionManager({
             <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
               Plan Contratado
             </label>
-            <Select value={membership} onValueChange={(val) => setMembership(val)}>
+            <Select value={membership} onValueChange={(val) => setMembership(val || "Sin Plan Activo")}>
               <SelectTrigger className="w-full bg-background/50 border-white/10 font-bold uppercase text-xs h-11">
                 <SelectValue placeholder="Selecciona un plan" />
               </SelectTrigger>
@@ -79,7 +79,7 @@ export default function SubscriptionManager({
             <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest flex items-center gap-2">
               <Dumbbell className="w-3 h-3" /> Programación (WOD)
             </label>
-            <Select value={activePlanId} onValueChange={(val) => setActivePlanId(val)}>
+            <Select value={activePlanId} onValueChange={(val) => setActivePlanId(val || "no-plan")}>
               <SelectTrigger className="w-full bg-background/50 border-white/10 font-bold uppercase text-xs h-11">
                 <SelectValue placeholder="Sin Programación" />
               </SelectTrigger>
