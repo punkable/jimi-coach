@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Flame, Dumbbell, PlayCircle, AlertCircle,
