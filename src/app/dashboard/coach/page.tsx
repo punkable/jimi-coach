@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { DashboardCharts } from './dashboard-charts'
 import { PostFeedForm } from './post-feed-form'
+import { DevTools } from './dev-tools'
 
 export default async function CoachDashboard() {
   const supabase = await createClient()
@@ -178,6 +179,7 @@ export default async function CoachDashboard() {
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">Tip del Coach</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">Recuerda revisar los videos de técnica pendientes para mantener el engagement de tus atletas.</p>
               </div>
+              <DevTools />
             </div>
           </section>
         </div>

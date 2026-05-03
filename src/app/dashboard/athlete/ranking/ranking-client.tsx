@@ -168,25 +168,6 @@ export function RankingClient({ leaderboard }: { leaderboard: any[] }) {
         </div>
       </motion.div>
 
-      {/* Demo Tools */}
-      <div className="mt-12 pt-8 border-t border-border/20">
-        <Card className="bg-primary/5 border-dashed border-2 border-primary/20 rounded-[32px] overflow-hidden">
-          <CardContent className="p-8 md:p-12 text-center">
-            <PlayCircle className="w-12 h-12 text-primary mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-black uppercase tracking-tight mb-2">Modo Desarrollador</h3>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-8 font-medium">
-              ¿Quieres probar cómo se ve un entrenamiento con múltiples ejercicios? Pulsa el botón para generar un WOD de prueba.
-            </p>
-            <Button 
-              onClick={handleSeed}
-              disabled={loading}
-              className="h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs gap-3 shadow-xl shadow-primary/20"
-            >
-              {loading ? 'Generando...' : 'Crear WOD de Prueba'}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   )
 }
