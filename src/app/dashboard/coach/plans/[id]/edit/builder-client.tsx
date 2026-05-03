@@ -275,6 +275,17 @@ export function BuilderClient({
         
         {/* ── Sidebar: Library ── */}
         <aside className="w-80 flex flex-col gap-4 bg-background/40 border border-border/20 rounded-[24px] p-4 shrink-0 shadow-sm">
+          <div className="pb-2 border-b border-border/10">
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving} 
+              className="w-full gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl shadow-lg shadow-primary/10"
+            >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              Guardar Plan
+            </Button>
+          </div>
+
           <div className="space-y-1">
             <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
               <Dumbbell className="w-3 h-3" /> Biblioteca
@@ -299,17 +310,6 @@ export function BuilderClient({
               ))}
             </div>
           </ScrollArea>
-          
-          <div className="pt-2 border-t border-border/10">
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving} 
-              className="w-full gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl shadow-lg shadow-primary/10"
-            >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              Guardar Plan
-            </Button>
-          </div>
         </aside>
 
         {/* ── Main Workspace ── */}

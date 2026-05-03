@@ -13,6 +13,29 @@ export default async function FeedPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
+  // 1. Get the plans assigned to the current user
+  const { data: myPlans } = await supabase
+    .from('assigned_plans')
+    .select('plan_id')
+    .eq('athlete_id', user?.id)
+
+  const myPlanIds = myPlans?.map(p => p.plan_id) || []
+
+  // 2. Get all athletes that share any of these plans
+  let peerIds: string[] = [user?.id as string]
+  if (myPlanIds.length > 0) {
+    const { data: peers } = await supabase
+      .from('assigned_plans')
+      .select('athlete_id')
+      .in('plan_id', myPlanIds)
+    
+    if (peers) {
+      peerIds = Array.from(new Set(peers.map(p => p.athlete_id)))
+    }
+  }
+
+  // 3. Filter feed entries to only show peers (and coach announcements which have athlete_id = coach_id)
+  // For now, we filter by peerIds to ensure privacy.
   const { data: feedEntries } = await supabase
     .from('activity_feed')
     .select(`
@@ -20,6 +43,7 @@ export default async function FeedPage() {
       profiles:athlete_id(full_name, avatar_url, emoji),
       fist_bumps(from_athlete_id)
     `)
+    .in('athlete_id', peerIds)
     .order('created_at', { ascending: false })
     .limit(30)
 
@@ -30,7 +54,7 @@ export default async function FeedPage() {
         className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl border-b border-border/30 px-4 flex items-center justify-between"
         style={{ paddingTop: 'env(safe-area-inset-top)', height: 'calc(3.5rem + env(safe-area-inset-top))' }}
       >
-        <h1 className="text-base font-black uppercase tracking-tight">Box Feed</h1>
+        <h1 className="text-base font-black uppercase tracking-tight">Actividad</h1>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Live</span>
@@ -107,9 +131,9 @@ export default async function FeedPage() {
         ) : (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="text-6xl mb-6">👊</div>
-            <h2 className="text-xl font-black uppercase tracking-tight mb-2">El feed está vacío</h2>
+            <h2 className="text-xl font-black uppercase tracking-tight mb-2">Sin actividad reciente</h2>
             <p className="text-muted-foreground text-sm max-w-xs">
-              Cuando tus compañeros completen entrenamientos, aparecerán aquí. ¡Sé el primero!
+              Cuando tus compañeros de plan completen entrenamientos, aparecerán aquí.
             </p>
           </div>
         )}
