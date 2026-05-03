@@ -419,7 +419,68 @@ export function BuilderClient({
                               <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
-                          <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px]">
+                          <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
+                            {/* Routine Description Area */}
+                            <div className="mb-4 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Rutina / WOD (Texto libre)</Label>
+                                <div className="flex gap-1">
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" size="sm" className="h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 rounded-lg border-primary/20 text-primary">
+                                        <Video className="w-2.5 h-2.5" /> Vincular Video
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64 p-0" align="end">
+                                      <div className="p-2 border-b border-border/10">
+                                        <Input 
+                                          placeholder="Buscar ejercicio..." 
+                                          className="h-8 text-[10px]" 
+                                          autoFocus
+                                          onChange={(e) => {
+                                            // Local filter for this popover if needed
+                                          }}
+                                        />
+                                      </div>
+                                      <ScrollArea className="h-48">
+                                        <div className="p-1">
+                                          {library.map(ex => (
+                                            <button
+                                              key={ex.id}
+                                              className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-primary/10 rounded-md transition-colors flex items-center justify-between group"
+                                              onClick={() => {
+                                                const tag = `[${ex.name}]`
+                                                const n = [...days]
+                                                const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
+                                                n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
+                                                setDays(n)
+                                              }}
+                                            >
+                                              {ex.name}
+                                              <Plus className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100" />
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </ScrollArea>
+                                    </PopoverContent>
+                                  </Popover>
+                                </div>
+                              </div>
+                              <Textarea 
+                                placeholder="Ej: 5 rondas de 10 [Pull Ups], 15 [Sentadillas]..."
+                                className="min-h-[100px] bg-background/30 border-border/10 text-xs font-medium leading-relaxed resize-none rounded-xl focus:ring-primary/20"
+                                value={block.description || ''}
+                                onChange={(e) => {
+                                  const n = [...days]; n[globalDIdx].workout_blocks[bIdx].description = e.target.value; setDays(n);
+                                }}
+                              />
+                              <p className="text-[8px] text-muted-foreground/50 font-medium italic">Los ejercicios entre corchetes [] mostrarán el video automáticamente.</p>
+                            </div>
+
+                            <div className="border-t border-border/5 pt-4 mb-2">
+                              <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Movimientos Estructurados (Opcional)</Label>
+                            </div>
+
                             <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>
                               <div className="divide-y divide-border/5">
                                 {block.workout_movements.map((mov, mIdx) => (

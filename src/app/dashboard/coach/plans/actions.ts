@@ -162,6 +162,7 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       const blockData = {
         workout_day_id: dayId,
         name: block.name,
+        description: block.description,
         type: block.type,
         order_index: i
       }

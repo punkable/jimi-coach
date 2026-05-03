@@ -118,6 +118,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
     }
   }
 
+  // Video Modal State for Smart Text
+  const [activeVideo, setActiveVideo] = useState<{ url: string, name: string } | null>(null)
+
   const toggleBlock = (blockId: string) => {
     setCompletedBlocks(prev => ({ ...prev, [blockId]: !prev[blockId] }))
   }
@@ -160,6 +163,32 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background md:max-w-lg md:mx-auto md:w-full md:border-x md:border-border/40 relative overflow-hidden">
+      {/* Smart Video Dialog */}
+      <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
+        <DialogContent className="max-w-[90vw] w-[400px] rounded-3xl border-border/40 glass-strong p-0 overflow-hidden">
+          <div className="p-4 border-b border-border/10 flex items-center justify-between">
+            <h3 className="font-black uppercase tracking-tight text-sm">{activeVideo?.name}</h3>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setActiveVideo(null)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="aspect-video bg-black flex items-center justify-center">
+            {activeVideo?.url ? (
+              <iframe 
+                src={activeVideo.url.replace('watch?v=', 'embed/')} 
+                className="w-full h-full" 
+                allowFullScreen 
+              />
+            ) : (
+              <p className="text-white/40 text-xs">Video no disponible</p>
+            )}
+          </div>
+          <div className="p-4 bg-secondary/20">
+            <Button className="w-full" onClick={() => setActiveVideo(null)}>Cerrar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Header — pt-safe ensures notch/dynamic-island doesn't overlap */}
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/30"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
@@ -666,6 +695,44 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
           </span>
         ))}
       </div>
+    </div>
+  )
+}
+
+function SmartRoutineText({ text, exercises, onVideoClick }: { text: string, exercises: any[], onVideoClick: (videoUrl: string, name: string) => void }) {
+  if (!text) return null
+  
+  // Regex to find [Text]
+  const parts = text.split(/(\[.*?\])/g)
+  
+  return (
+    <div className="text-[13px] text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap">
+      {parts.map((part, i) => {
+        if (part.startsWith('[') && part.endsWith(']')) {
+          const exerciseName = part.slice(1, -1)
+          const exercise = exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase())
+          
+          if (exercise?.video_url) {
+            return (
+              <button 
+                key={i}
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  onVideoClick(exercise.video_url, exercise.name)
+                }}
+                className="text-primary font-black hover:underline inline-flex items-center gap-0.5 mx-0.5 align-baseline"
+              >
+                {exerciseName}
+                <Video className="w-3 h-3" />
+              </button>
+            )
+          }
+          return <span key={i} className="font-bold text-foreground">{exerciseName}</span>
+        }
+        return <span key={i}>{part}</span>
+      })}
     </div>
   )
 }
