@@ -58,26 +58,41 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
           </p>
         </header>
 
-        <div className="space-y-4">
-          {days.map((day) => (
-            <Link key={day.id} href={`/dashboard/athlete/workout?dayId=${day.id}`}>
-              <Card className="glass hover:border-primary/50 transition-all active:scale-[0.98] group mb-4">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div>
-                    <h3 className="font-black text-lg uppercase tracking-tight group-hover:text-primary transition-colors">
-                      {day.title || `Día ${day.day_of_week}`}
-                    </h3>
-                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
-                      Semana {day.week_number} · {day.workout_blocks?.length || 0} Bloques
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
-                    <PlayCircle className="w-6 h-6" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+        <div className="space-y-3">
+          {days.map((day) => {
+            const dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+            const defaultName = dayNames[(day.day_of_week - 1) % 7]
+            
+            return (
+              <Link key={day.id} href={`/dashboard/athlete/workout?dayId=${day.id}`}>
+                <Card className="glass hover:border-primary/50 transition-all active:scale-[0.97] group border-border/30 overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="flex items-center p-4 gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex flex-col items-center justify-center border border-border/30 group-hover:border-primary/30 transition-colors">
+                        <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Día</span>
+                        <span className="text-xl font-black leading-none mt-0.5">{day.day_of_week}</span>
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors truncate">
+                          {day.title || defaultName}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
+                            {day.workout_blocks?.length || 0} Bloques de entrenamiento
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-muted-foreground/30 group-hover:text-primary group-hover:bg-primary/10 transition-all">
+                        <PlayCircle className="w-6 h-6" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
         </div>
       </div>
     )
