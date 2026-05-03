@@ -725,5 +725,3 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
     </div>
   )
 }
-
-}
