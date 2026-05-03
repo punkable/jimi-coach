@@ -427,10 +427,11 @@ export function BuilderClient({
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Rutina / WOD (Texto libre)</Label>
                                 <div className="flex gap-1">
                                   <Popover>
-                                    <PopoverTrigger asChild>
-                                      <Button variant="outline" size="sm" className="h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 rounded-lg border-primary/20 text-primary">
-                                        <Video className="w-2.5 h-2.5" /> Vincular Video
-                                      </Button>
+                                    <PopoverTrigger className={cn(
+                                      buttonVariants({ variant: "outline", size: "sm" }),
+                                      "h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 rounded-lg border-primary/20 text-primary"
+                                    )}>
+                                      <Video className="w-2.5 h-2.5" /> Vincular Video
                                     </PopoverTrigger>
                                     <PopoverContent className="w-64 p-0" align="end">
                                       <div className="p-2 border-b border-border/10">
