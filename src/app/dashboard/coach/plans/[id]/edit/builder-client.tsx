@@ -233,14 +233,14 @@ export function BuilderClient({
     setDays(n)
   }
 
-  const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number) => {
+  const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number, sets: number = 3) => {
     const n = JSON.parse(JSON.stringify(days))
     const newMov = {
       id: genId(),
       exercise_id: exercise.id,
       exercise: exercise,
-      sets: 3,
-      reps: '10',
+      sets: sets,
+      reps: sets > 0 ? '10' : '',
       weight_percentage: '',
       notes: ''
     }
@@ -424,68 +424,108 @@ export function BuilderClient({
                           </div>
                           <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
                             {/* Routine Description Area */}
-                            <div className="mb-4 space-y-2">
+                            <div className="mb-4 space-y-3">
                               <div className="flex items-center justify-between">
-                                <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Rutina / WOD (Texto libre)</Label>
-                                <div className="flex gap-1">
-                                  <Popover>
-                                    <PopoverTrigger className={cn(
-                                      buttonVariants({ variant: "outline", size: "sm" }),
-                                      "h-6 px-2 text-[9px] font-black uppercase tracking-widest gap-1 rounded-lg border-primary/20 text-primary hover:bg-primary/5 transition-all"
-                                    )}>
-                                      <Plus className="w-2.5 h-2.5" /> Vincular Ejercicio
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-64 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
-                                      <div className="p-3 border-b border-border/10 bg-secondary/10">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Toca para insertar link de video</p>
-                                        <div className="relative">
-                                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/40" />
-                                          <Input 
-                                            placeholder="Buscar ejercicio..." 
-                                            className="h-8 text-[10px] pl-8 bg-background/50" 
-                                            autoFocus
-                                          />
-                                        </div>
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                                  <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
+                                </Label>
+                                <Popover>
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
+                                      <Video className="w-3 h-3" /> Añadir Video
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
+                                    <div className="p-3 border-b border-border/10 bg-secondary/10">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
+                                      <div className="relative">
+                                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+                                        <Input 
+                                          placeholder="Buscar en biblioteca..." 
+                                          className="h-9 text-xs pl-9 bg-background/50 border-border/20 rounded-xl" 
+                                          onChange={(e) => setLibSearch(e.target.value)}
+                                          value={libSearch}
+                                          autoFocus
+                                        />
                                       </div>
-                                      <ScrollArea className="h-56">
-                                        <div className="p-1.5 space-y-0.5">
-                                          {library.map(ex => (
-                                            <button
-                                              key={ex.id}
-                                              className="w-full text-left px-3 py-2 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
-                                              onClick={() => {
-                                                const tag = `[${ex.name}]`
-                                                const n = [...days]
-                                                const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
-                                                n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
-                                                setDays(n)
-                                              }}
-                                            >
+                                    </div>
+                                    <ScrollArea className="h-64">
+                                      <div className="p-1.5 space-y-0.5">
+                                        {filteredLibrary.slice(0, 50).map(ex => (
+                                          <button
+                                            key={ex.id}
+                                            className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
+                                            onClick={() => {
+                                              const tag = `[${ex.name}]`
+                                              const n = [...days]
+                                              const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
+                                              n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
+                                              setDays(n)
+                                              // Also add to movements if not present, so it's "known" to the block
+                                              const exists = block.workout_movements.some(m => m.exercise_id === ex.id)
+                                              if (!exists) addMovement(globalDIdx, bIdx, ex, undefined, 0)
+                                            }}
+                                          >
+                                            <div className="flex flex-col">
                                               <span className="uppercase tracking-tight">{ex.name}</span>
-                                              <div className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus className="w-3 h-3 text-primary" />
-                                              </div>
-                                            </button>
-                                          ))}
-                                        </div>
-                                      </ScrollArea>
-                                    </PopoverContent>
-                                  </Popover>
-                                </div>
+                                              <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
+                                            </div>
+                                            <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                              <Plus className="w-3.5 h-3.5 text-primary" />
+                                            </div>
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </ScrollArea>
+                                  </PopoverContent>
+                                </Popover>
                               </div>
+
                               <Textarea 
-                                placeholder="Escribe tu rutina aquí... Usa 'Vincular Ejercicio' para añadir videos técnicos dentro de tu texto."
-                                className="min-h-[120px] bg-background/30 border-border/10 text-xs font-medium leading-relaxed resize-none rounded-xl focus:ring-primary/20"
+                                placeholder="Ej: AMRAP 15 min de:
+10 Pull Ups
+5 Snatch
+20 Box Jumps"
+                                className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
                                 value={block.description || ''}
                                 onChange={(e) => {
                                   const n = [...days]; n[globalDIdx].workout_blocks[bIdx].description = e.target.value; setDays(n);
                                 }}
                               />
-                              <p className="text-[8px] text-muted-foreground/40 font-medium italic">Los ejercicios vinculados se verán como botones de video para el alumno.</p>
+
+                              {/* Quick Tags (exercises already in the block) */}
+                              {block.workout_movements.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 px-1">Toca para insertar en el texto:</p>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {block.workout_movements.map((m, i) => (
+                                      <button
+                                        key={i}
+                                        onClick={() => {
+                                          const n = [...days]
+                                          const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
+                                          const name = m.exercise?.name || ''
+                                          n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + name
+                                          setDays(n)
+                                        }}
+                                        className="px-2.5 py-1.5 bg-secondary/40 hover:bg-primary/10 hover:text-primary rounded-lg text-[9px] font-bold uppercase tracking-tight transition-all border border-border/10 flex items-center gap-1.5 group"
+                                      >
+                                        <Plus className="w-2.5 h-2.5 opacity-30 group-hover:opacity-100" />
+                                        {m.exercise?.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <p className="text-[8px] text-muted-foreground/40 font-medium italic px-1">
+                                El alumno verá un icono de video <Video className="w-2 h-2 inline" /> junto a los nombres de ejercicios vinculados.
+                              </p>
                             </div>
 
-                            <div className="border-t border-border/5 pt-4 mb-2">
-                              <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50">Movimientos Estructurados (Opcional)</Label>
+                            <div className="border-t border-border/10 pt-4 mb-2 flex items-center justify-between">
+                              <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Movimientos Estructurados</Label>
+                              <span className="text-[8px] font-medium text-muted-foreground/30 italic">(Opcional: Series/Reps)</span>
                             </div>
 
                             <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>

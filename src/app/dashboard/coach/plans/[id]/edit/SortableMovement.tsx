@@ -59,7 +59,7 @@ export function SortableMovement({
         </Button>
       </div>
       
-      <div className="flex items-center gap-2 pl-6">
+      <div className="flex items-center gap-2 pl-6 animate-in fade-in slide-in-from-top-1 duration-200">
         <div className="flex flex-col gap-0.5">
           <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 ml-1">Sets</span>
           <Input 

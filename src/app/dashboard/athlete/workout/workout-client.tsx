@@ -360,6 +360,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                         <SmartRoutineText 
                           text={block.description} 
                           exercises={allExercises || []} 
+                          blockExercises={block.workout_movements?.map((m: any) => m.exercises) || []}
                           onVideoClick={(url, name) => setActiveVideo({ url, name })}
                         />
                       </div>
@@ -368,80 +369,89 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     {/* Movements */}
                     {!isCompleted && (
                       <div className="divide-y divide-border/20">
-                        {block.workout_movements.map((mov: any, mIdx: number) => (
-                          <div key={mIdx} className="p-4 space-y-4">
-                            <div className="flex gap-3">
-                              {/* Video/icon thumb */}
-                              <div className="w-12 h-12 rounded-xl bg-secondary/40 shrink-0 flex items-center justify-center border border-border/30 relative overflow-hidden group">
-                                {mov.exercises?.video_url ? (
-                                  <a href={mov.exercises.video_url} target="_blank" rel="noopener noreferrer"
-                                    className="absolute inset-0 flex items-center justify-center bg-primary/5 hover:bg-primary/15 transition-colors">
-                                    <Play className="w-5 h-5 text-primary fill-primary/20 group-hover:scale-110 transition-transform" />
-                                  </a>
-                                ) : (
-                                  <Dumbbell className="w-5 h-5 text-muted-foreground/30" />
-                                )}
-                              </div>
-                              
-                              <div className="flex-1">
-                                <h4 className="font-bold text-foreground text-sm leading-tight uppercase tracking-tight">{mov.exercises?.name || 'Movimiento'}</h4>
-                                {mov.exercises?.instructions && (
-                                  <p className="text-[10px] text-muted-foreground leading-snug mt-1 italic">
-                                    {mov.exercises.instructions}
-                                  </p>
-                                )}
-                                <div className="flex flex-wrap gap-2 mt-2">
-                                  <span className="text-[10px] font-black bg-secondary/60 text-secondary-foreground px-2 py-0.5 rounded-md uppercase tracking-widest border border-border/20">
-                                    {mov.sets || '-'} x {mov.reps || '-'}
-                                  </span>
-                                  {mov.weight_percentage && (
-                                    <span className="text-[10px] font-black bg-primary/15 text-primary px-2 py-0.5 rounded-md uppercase tracking-widest border border-primary/20">
-                                      {mov.weight_percentage}
-                                    </span>
-                                  )}
-                                  {mov.rest && (
-                                    <span className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-500/20 flex items-center gap-1">
-                                      <Timer className="w-2.5 h-2.5" /> {mov.rest}
-                                    </span>
+                        {block.workout_movements.map((mov: any, mIdx: number) => {
+                          const hasSets = (mov.sets || 0) > 0
+                          return (
+                            <div key={mIdx} className="p-4 space-y-4">
+                              <div className="flex gap-3">
+                                {/* Video/icon thumb */}
+                                <div className="w-12 h-12 rounded-xl bg-secondary/40 shrink-0 flex items-center justify-center border border-border/30 relative overflow-hidden group">
+                                  {mov.exercises?.video_url ? (
+                                    <button 
+                                      onClick={() => setActiveVideo({ url: mov.exercises.video_url, name: mov.exercises.name })}
+                                      className="absolute inset-0 flex items-center justify-center bg-primary/5 hover:bg-primary/15 transition-colors">
+                                      <Play className="w-5 h-5 text-primary fill-primary/20 group-hover:scale-110 transition-transform" />
+                                    </button>
+                                  ) : (
+                                    <Dumbbell className="w-5 h-5 text-muted-foreground/30" />
                                   )}
                                 </div>
-                                {prs && mov.exercises?.id && prs[mov.exercises.id] && (
-                                  <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg w-fit">
-                                    <Trophy className="w-3 h-3 text-amber-500" />
-                                    <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
-                                      PB: {prs[mov.exercises.id].weight}kg × {prs[mov.exercises.id].reps}
-                                    </span>
+                                
+                                <div className="flex-1">
+                                  <h4 className="font-bold text-foreground text-sm leading-tight uppercase tracking-tight">{mov.exercises?.name || 'Movimiento'}</h4>
+                                  {mov.exercises?.instructions && (
+                                    <p className="text-[10px] text-muted-foreground leading-snug mt-1 italic">
+                                      {mov.exercises.instructions}
+                                    </p>
+                                  )}
+                                  <div className="flex flex-wrap gap-2 mt-2">
+                                    {hasSets && (
+                                      <span className="text-[10px] font-black bg-secondary/60 text-secondary-foreground px-2 py-0.5 rounded-md uppercase tracking-widest border border-border/20">
+                                        {mov.sets} x {mov.reps || '-'}
+                                      </span>
+                                    )}
+                                    {mov.weight_percentage && (
+                                      <span className="text-[10px] font-black bg-primary/15 text-primary px-2 py-0.5 rounded-md uppercase tracking-widest border border-primary/20">
+                                        {mov.weight_percentage}
+                                      </span>
+                                    )}
+                                    {mov.rest && (
+                                      <span className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-500/20 flex items-center gap-1">
+                                        <Timer className="w-2.5 h-2.5" /> {mov.rest}
+                                      </span>
+                                    )}
                                   </div>
-                                )}
-                                {mov.notes && <p className="text-[10px] text-muted-foreground mt-2 border-l-2 border-primary/30 pl-2">{mov.notes}</p>}
+                                  {prs && mov.exercises?.id && prs[mov.exercises.id] && (
+                                    <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg w-fit">
+                                      <Trophy className="w-3 h-3 text-amber-500" />
+                                      <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
+                                        PB: {prs[mov.exercises.id].weight}kg × {prs[mov.exercises.id].reps}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {mov.notes && <p className="text-[10px] text-muted-foreground mt-2 border-l-2 border-primary/30 pl-2">{mov.notes}</p>}
+                                </div>
                               </div>
-                            </div>
 
-                            <WorkoutSetsList
-                              movement={mov}
-                              initialSets={allSetsData[mov.id]}
-                              onSetChange={(sets) => {
-                                setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
-                                const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
-                                const allBlockMovements = block.workout_movements || []
-                                let blockCompleted = true
-                                allBlockMovements.forEach((m: any) => {
-                                  const mId = m.id as string
-                                  const mSets = updatedAllSets[mId]
-                                  if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
-                                    blockCompleted = false
-                                  }
-                                })
-                                if (blockCompleted && allBlockMovements.length > 0) {
-                                  setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
-                                } else if (!blockCompleted) {
-                                  setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
-                                }
-                              }}
-                              onTimerStart={(secs) => setRestTimerSeconds(secs)}
-                            />
-                          </div>
-                        ))}
+                              {hasSets && (
+                                <WorkoutSetsList
+                                  movement={mov}
+                                  initialSets={allSetsData[mov.id]}
+                                  onSetChange={(sets) => {
+                                    setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
+                                    const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
+                                    const allBlockMovements = block.workout_movements || []
+                                    let blockCompleted = true
+                                    allBlockMovements.forEach((m: any) => {
+                                      if ((m.sets || 0) <= 0) return // Skip video-only movements
+                                      const mId = m.id as string
+                                      const mSets = updatedAllSets[mId]
+                                      if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
+                                        blockCompleted = false
+                                      }
+                                    })
+                                    if (blockCompleted && allBlockMovements.length > 0) {
+                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
+                                    } else if (!blockCompleted) {
+                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
+                                    }
+                                  }}
+                                  onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                                />
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -728,37 +738,55 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
   )
 }
 
-function SmartRoutineText({ text, exercises, onVideoClick }: { text: string, exercises: any[], onVideoClick: (videoUrl: string, name: string) => void }) {
+function SmartRoutineText({ text, exercises, blockExercises, onVideoClick }: { text: string, exercises: any[], blockExercises?: any[], onVideoClick: (videoUrl: string, name: string) => void }) {
   if (!text) return null
   
-  const parts = text.split(/(\[.*?\])/g)
+  // Collect names to auto-link (those in the block)
+  const autoLinkNames = (blockExercises || [])
+    .filter(ex => ex?.name)
+    .map(ex => ex.name)
+    .sort((a, b) => b.length - a.length)
+
+  if (autoLinkNames.length === 0 && !text.includes('[')) {
+    return <div className="text-[14px] text-foreground/90 leading-relaxed font-medium whitespace-pre-wrap">{text}</div>
+  }
+
+  const escapedNames = autoLinkNames.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+  const regex = new RegExp(`(\\[.*?\\].*?|\\b(?:${escapedNames})\\b)`, 'gi')
+  
+  const parts = text.split(regex)
   
   return (
-    <div className="text-[13px] text-foreground/80 leading-relaxed font-medium whitespace-pre-wrap">
+    <div className="text-[14px] text-foreground/90 leading-relaxed font-medium whitespace-pre-wrap">
       {parts.map((part, i) => {
+        if (!part) return null
+
+        let exerciseName = ''
+        let exercise: any = null
+
         if (part.startsWith('[') && part.endsWith(']')) {
-          const exerciseName = part.slice(1, -1)
-          const exercise = exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase())
-          
-          if (exercise?.video_url) {
-            return (
-              <button 
-                key={i}
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  onVideoClick(exercise.video_url, exercise.name)
-                }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 mx-1 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-all align-middle group shadow-sm"
-              >
-                <span className="font-black text-[10px] uppercase tracking-tight">{exerciseName}</span>
-                <Video className="w-3 h-3 opacity-60 group-hover:opacity-100 transition-opacity" />
-              </button>
-            )
-          }
-          return <span key={i} className="font-bold text-foreground">{exerciseName}</span>
+          exerciseName = part.slice(1, -1)
+          exercise = exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase())
+        } else {
+          exercise = blockExercises?.find(ex => ex?.name?.toLowerCase() === part.toLowerCase())
+          if (exercise) exerciseName = part
         }
+
+        if (exercise?.video_url) {
+          return (
+            <span key={i} className="inline-flex items-center gap-1 group">
+              <span className="font-bold text-foreground">{exerciseName}</span>
+              <button 
+                type="button"
+                onClick={() => onVideoClick(exercise.video_url, exercise.name)}
+                className="w-5 h-5 rounded-md bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-all align-middle shadow-sm border border-primary/10"
+              >
+                <Video className="w-3 h-3" />
+              </button>
+            </span>
+          )
+        }
+
         return <span key={i}>{part}</span>
       })}
     </div>

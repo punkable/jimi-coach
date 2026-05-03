@@ -59,10 +59,7 @@ export default async function AthleteDashboard() {
     planDays = data || []
   }
 
-  const hasActivePlan = profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo"
-  // Default to true if total_classes is not set (null/0) or if classes_used < total_classes
-  const hasClassesLeft = !profile?.total_classes || profile.total_classes === 0 || (profile?.classes_used < profile?.total_classes)
-  const canTrain = hasActivePlan && hasClassesLeft
+  const canTrain = !!(profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo")
 
   const { data: results } = await supabase
     .from('workout_results')
@@ -75,7 +72,7 @@ export default async function AthleteDashboard() {
   // Fetch coach insights visible to this athlete
   const { data: insights } = await supabase
     .from('coach_insights')
-    .select('id, type, title, content, is_pinned, created_at')
+    .select('id, type, title, body, is_pinned, created_at')
     .or(`athlete_id.eq.${user?.id},athlete_id.is.null`)
     .eq('is_archived', false)
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
@@ -121,11 +118,9 @@ export default async function AthleteDashboard() {
           <AlertCircle className="w-12 h-12 text-destructive" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight uppercase">Entrenamiento Pausado</h1>
+          <h1 className="text-2xl font-black tracking-tight uppercase">Membresía Inactiva</h1>
           <p className="text-muted-foreground mt-2 max-w-xs">
-            {!hasActivePlan
-              ? "Tu coach aún no ha configurado tu plan activo o mensualidad."
-              : "Te has quedado sin clases disponibles. Es momento de renovar."}
+            Tu coach aún no ha configurado tu plan activo o tu mensualidad ha expirado.
           </p>
         </div>
         <a href="http://wa.me/56972878295" target="_blank" rel="noopener noreferrer">
