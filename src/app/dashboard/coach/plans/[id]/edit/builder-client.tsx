@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Dumbbell, Save, Loader2, Search, X } from 'lucide-react'
+import { Plus, Trash2, Dumbbell, Save, Loader2, Search, X, Calendar } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure } from '../../actions'
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, TouchSensor } from '@dnd-kit/core'

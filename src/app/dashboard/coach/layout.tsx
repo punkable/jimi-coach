@@ -2,9 +2,10 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { Users, Library, Calendar, LayoutDashboard, Settings, LogOut, Video, Crown, HelpCircle, Target } from 'lucide-react'
+import { Users, Library, Calendar, LayoutDashboard, Settings, LogOut, Video, Crown, HelpCircle, Target, Activity } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { NotificationsBell } from '@/components/notifications-bell'
+import { Button } from '@/components/ui/button'
 
 export default function CoachLayout({ children }: { children: React.ReactNode }) {
   return (
