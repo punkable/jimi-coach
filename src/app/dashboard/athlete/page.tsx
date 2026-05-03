@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import {
   Flame, Dumbbell, PlayCircle, AlertCircle,
   MessageSquare, TrendingUp, Zap, Calendar, Trophy,
-  Target, Star, StickyNote
+  Target, Star, StickyNote, LogOut
 } from 'lucide-react'
+import { signout } from '@/app/login/actions'
 import Link from 'next/link'
 import { StreakMascot } from '@/components/streak-mascot'
 import { AthleteStats } from './athlete-stats'
@@ -45,7 +46,8 @@ export default async function AthleteDashboard() {
   const plan = activeAssignment?.workout_plans
 
   const hasActivePlan = profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo"
-  const hasClassesLeft = profile?.total_classes === 0 || (profile?.classes_used < profile?.total_classes)
+  // Default to true if total_classes is not set (null/0) or if classes_used < total_classes
+  const hasClassesLeft = !profile?.total_classes || profile.total_classes === 0 || (profile?.classes_used < profile?.total_classes)
   const canTrain = hasActivePlan && hasClassesLeft
 
   const { data: results } = await supabase
@@ -141,7 +143,7 @@ export default async function AthleteDashboard() {
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
         
         <div className="relative flex items-center justify-between">
-          <div>
+          <div className="flex-1">
             <p className="text-muted-foreground text-sm md:text-base font-medium">{greeting},</p>
             <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-1 uppercase">
               {firstName}<span className="text-primary">.</span>
@@ -164,8 +166,15 @@ export default async function AthleteDashboard() {
             </div>
           </div>
           
-          <div className="hidden md:block">
-            <StreakMascot streak={currentStreak} />
+          <div className="flex items-center gap-3">
+            <form action={signout} className="md:hidden">
+              <Button variant="ghost" size="icon" type="submit" className="text-destructive hover:bg-destructive/10 rounded-xl">
+                <LogOut className="w-5 h-5" />
+              </Button>
+            </form>
+            <div className="hidden md:block">
+              <StreakMascot streak={currentStreak} />
+            </div>
           </div>
         </div>
       </div>
