@@ -430,10 +430,8 @@ export function BuilderClient({
                                   <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
                                 </Label>
                                 <Popover>
-                                  <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
-                                      <Video className="w-3 h-3" /> Añadir Video
-                                    </Button>
+                                  <PopoverTrigger render={<Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all" />}>
+                                    <Video className="w-3 h-3" /> Añadir Video
                                   </PopoverTrigger>
                                   <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
                                     <div className="p-3 border-b border-border/10 bg-secondary/10">
