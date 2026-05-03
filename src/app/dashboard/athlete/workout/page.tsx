@@ -28,6 +28,9 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
   const activeAssignment = assignments?.[0]
   if (!activeAssignment) return notFound()
 
+  const rawPlan = activeAssignment?.workout_plans
+  const plan = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan
+
   // Fetch all days for this plan
   const { data: days } = await supabase
     .from('workout_days')
@@ -54,7 +57,7 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
           </Link>
           <h1 className="text-3xl font-black uppercase tracking-tight">Elegir Día</h1>
           <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest mt-1">
-            {activeAssignment.workout_plans?.title}
+            {plan?.title}
           </p>
         </header>
 

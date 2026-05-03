@@ -9,6 +9,7 @@ import {
 import { signout } from '@/app/login/actions'
 import Link from 'next/link'
 import { StreakMascot } from '@/components/streak-mascot'
+import { AthleteGreeting } from './athlete-greeting'
 import { AthleteStats } from './athlete-stats'
 import { StartWorkoutCard } from './start-workout-card'
 
@@ -43,14 +44,20 @@ export default async function AthleteDashboard() {
     .limit(1)
 
   const activeAssignment = assignments?.[0]
-  const plan = activeAssignment?.workout_plans
+  const rawPlan = activeAssignment?.workout_plans
+  const plan = Array.isArray(rawPlan) ? rawPlan[0] : rawPlan
+  const planId = plan?.id
 
   // Fetch days for the active plan
-  const { data: planDays } = await supabase
-    .from('workout_days')
-    .select('*')
-    .eq('plan_id', plan?.id)
-    .order('day_of_week', { ascending: true })
+  let planDays = []
+  if (planId) {
+    const { data } = await supabase
+      .from('workout_days')
+      .select('*')
+      .eq('plan_id', planId)
+      .order('day_of_week', { ascending: true })
+    planDays = data || []
+  }
 
   const hasActivePlan = profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo"
   // Default to true if total_classes is not set (null/0) or if classes_used < total_classes
@@ -105,18 +112,6 @@ export default async function AthleteDashboard() {
     : null
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Atleta'
-  const hour = new Date().getHours()
-  const greeting = hour < 12 ? '¡Buenos días' : hour < 19 ? '¡Buenas tardes' : '¡Buenas noches'
-
-  const curiosidades = [
-    "¿Sabías que Fran (21-15-9 de Thrusters y Pull-Ups) fue uno de los primeros WODs diseñados por Greg Glassman?",
-    "El récord mundial de Murph (con chaleco de 20lb) es de 34:38 minutos, por Hunter McIntyre.",
-    "Levantar pesas pesadas mejora el reclutamiento de fibras musculares rápidas, haciéndote más explosivo.",
-    "La gimnasia en CrossFit mejora drásticamente tu propiocepción (conciencia espacial).",
-    "El RPE (Esfuerzo Percibido) es la mejor herramienta para autoregular tu intensidad diaria.",
-    "La hidratación adecuada puede mejorar tu rendimiento en el WOD hasta en un 20%."
-  ]
-  const datoCurioso = curiosidades[Math.floor(Math.random() * curiosidades.length)]
 
   if (!canTrain) {
     return (
@@ -146,15 +141,12 @@ export default async function AthleteDashboard() {
   return (
     <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 40px)' }}>
       {/* ── Hero Header ── */}
-      <div className="relative pt-10 pb-8 md:pt-14 md:pb-12 overflow-hidden rounded-3xl mb-8">
+      <div className="relative pt-10 pb-8 md:pt-14 md:pb-12 px-8 md:px-12 overflow-hidden rounded-[40px] mb-8 bg-secondary/10 border border-border/5">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
         
         <div className="relative flex items-center justify-between">
           <div className="flex-1">
-            <p className="text-muted-foreground text-sm md:text-base font-medium">{greeting},</p>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-1 uppercase">
-              {firstName}<span className="text-primary">.</span>
-            </h1>
+            <AthleteGreeting name={firstName} />
             <div className="mt-4 flex flex-wrap gap-2">
               {trainedToday ? (
                 <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-primary/30">
@@ -194,7 +186,6 @@ export default async function AthleteDashboard() {
           <AthleteStats 
             totalWorkouts={results?.length || 0} 
             currentStreak={currentStreak} 
-            trivia={datoCurioso}
           />
           
           {/* WhatsApp / Support Section on Desktop */}
