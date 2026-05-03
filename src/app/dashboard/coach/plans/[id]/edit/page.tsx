@@ -34,7 +34,7 @@ export default async function PlanEditPage({ params }: { params: Promise<{ id: s
     .order('name', { ascending: true })
 
   return (
-    <div className="p-4 md:p-8 h-[calc(100vh-4rem)] flex flex-col gap-4">
+    <div className="p-4 md:p-8 min-h-screen flex flex-col gap-6 bg-background/50">
       <header className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/coach/plans" className="text-muted-foreground hover:text-foreground">

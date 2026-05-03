@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
   Plus, Trash2, Dumbbell, Save, Loader2, 
-  Search, X, Calendar, GripVertical, Info, 
-  ChevronRight, Layout, Edit3
+  Search, X, Calendar, Layout, Edit3,
+  GripHorizontal, ChevronRight, Hash, Info
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -19,8 +19,7 @@ import {
   useSensor, 
   useSensors, 
   TouchSensor,
-  DragOverlay,
-  defaultDropAnimationSideEffects
+  useDraggable
 } from '@dnd-kit/core'
 import { 
   arrayMove, 
@@ -29,24 +28,49 @@ import {
   verticalListSortingStrategy 
 } from '@dnd-kit/sortable'
 import { SortableMovement } from './SortableMovement'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { motion, AnimatePresence } from 'framer-motion'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Badge } from '@/components/ui/badge'
 
 // Types
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
-type Movement = { 
-  id: string, 
-  exercise_id: string, 
-  exercise?: Exercise, 
-  sets: number, 
-  reps: string, 
-  weight_percentage: string, 
-  notes: string 
-}
+type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
 type Block = { id: string, name: string, type: string, workout_movements: Movement[] }
 type Day = { id: string, day_of_week: number, title: string, week_number: number, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
+
+// Draggable Exercise Item for Sidebar
+function DraggableExercise({ exercise }: { exercise: Exercise }) {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `lib-${exercise.id}`,
+    data: { type: 'library-item', exercise }
+  })
+  
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      {...listeners} 
+      {...attributes}
+      className="p-3 mb-2 rounded-xl bg-card border border-border/40 hover:border-primary/50 cursor-grab active:cursor-grabbing transition-all group shadow-sm hover:shadow-md"
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
+          <Dumbbell className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase truncate">{exercise.name}</p>
+          <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{exercise.category}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function BuilderClient({ 
   planId, 
@@ -59,7 +83,7 @@ export function BuilderClient({
   initialDays: any[], 
   library: Exercise[] 
 }) {
-  // Ensure all entities have IDs for DND
+  // Ensure all entities have IDs and normalized exercise relation
   const processInitialDays = (rawDays: any[]): Day[] => {
     return rawDays.map(d => ({
       ...d,
@@ -69,7 +93,9 @@ export function BuilderClient({
         id: b.id || genId(),
         workout_movements: (b.workout_movements || []).map((m: any) => ({
           ...m,
-          id: m.id || genId()
+          id: m.id || genId(),
+          // Supabase returns 'exercises', but we use 'exercise' in state
+          exercise: m.exercises || m.exercise
         }))
       }))
     }))
@@ -81,13 +107,9 @@ export function BuilderClient({
     description: initialPlan?.description || ''
   })
   
-  const [searchTerm, setSearchTerm] = useState('')
+  const [activeWeek, setActiveWeek] = useState<string>('1')
+  const [libSearch, setLibSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  
-  // Modal state
-  const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [targetBlock, setTargetBlock] = useState<{ dIdx: number, bIdx: number } | null>(null)
-  const [modalSearchTerm, setModalSearchTerm] = useState('')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -99,8 +121,26 @@ export function BuilderClient({
     const { active, over } = event
     if (!over) return
 
-    // If we are dragging within a block
-    // We need to find which block 'active' and 'over' belong to
+    // If dragging from library
+    if (active.data.current?.type === 'library-item') {
+      const exercise = active.data.current.exercise
+      // Find which block we are over
+      let overDIdx = -1, overBIdx = -1
+      
+      // We use naming convention for block drop targets: "block-drop-dIdx-bIdx"
+      if (typeof over.id === 'string' && over.id.startsWith('block-drop-')) {
+        const parts = over.id.split('-')
+        overDIdx = parseInt(parts[2])
+        overBIdx = parseInt(parts[3])
+      }
+
+      if (overDIdx !== -1) {
+        addMovement(overDIdx, overBIdx, exercise)
+      }
+      return
+    }
+
+    // Normal sorting logic
     let activeDIdx = -1, activeBIdx = -1, activeMIdx = -1
     let overDIdx = -1, overBIdx = -1, overMIdx = -1
 
@@ -116,7 +156,6 @@ export function BuilderClient({
 
     if (activeDIdx !== -1 && overDIdx !== -1) {
       if (activeDIdx === overDIdx && activeBIdx === overBIdx) {
-        // Same block sorting
         if (activeMIdx !== overMIdx) {
           setDays(prev => {
             const next = [...prev]
@@ -126,7 +165,6 @@ export function BuilderClient({
           })
         }
       } else {
-        // Between blocks move
         setDays(prev => {
           const next = [...prev]
           const sourceBlock = next[activeDIdx].workout_blocks[activeBIdx]
@@ -140,8 +178,8 @@ export function BuilderClient({
   }
 
   const addDay = (weekNum: number) => {
-    const daysInWeek = days.filter(d => d.week_number === weekNum).length
-    const nextDayNum = daysInWeek + 1
+    const weekDays = days.filter(d => d.week_number === weekNum)
+    const nextDayNum = weekDays.length + 1
     const newDay: Day = { 
       id: genId(), 
       week_number: weekNum, 
@@ -161,24 +199,26 @@ export function BuilderClient({
       title: 'Entrenamiento 1', 
       workout_blocks: [] 
     }])
+    setActiveWeek(nextWeek.toString())
   }
 
-  const addBlock = (dayIndex: number) => {
-    const newDays = [...days]
-    const blockCount = newDays[dayIndex].workout_blocks.length
-    const blockLetter = String.fromCharCode(65 + blockCount) // A, B, C...
-    newDays[dayIndex].workout_blocks.push({ 
+  const addBlock = (dayId: string) => {
+    const n = [...days]
+    const idx = n.findIndex(d => d.id === dayId)
+    const blockCount = n[idx].workout_blocks.length
+    const blockLetter = String.fromCharCode(65 + blockCount)
+    n[idx].workout_blocks.push({ 
       id: genId(), 
       name: `Bloque ${blockLetter}`, 
       type: 'strength', 
       workout_movements: [] 
     })
-    setDays(newDays)
+    setDays(n)
   }
 
   const addMovement = (dIdx: number, bIdx: number, exercise: Exercise) => {
-    const newDays = [...days]
-    newDays[dIdx].workout_blocks[bIdx].workout_movements.push({
+    const n = [...days]
+    n[dIdx].workout_blocks[bIdx].workout_movements.push({
       id: genId(),
       exercise_id: exercise.id,
       exercise: exercise,
@@ -187,368 +227,234 @@ export function BuilderClient({
       weight_percentage: '',
       notes: ''
     })
-    setDays(newDays)
-    setIsSearchOpen(false)
-    setModalSearchTerm('')
+    setDays(n)
   }
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      // Pass both structure and metadata to ensure total synchronization
       await savePlanStructure(planId, days, planMeta)
       alert('¡Planificación guardada con éxito!')
     } catch (e) {
       console.error(e)
-      alert('Error al guardar la planificación')
+      alert('Error al guardar')
     } finally {
       setIsSaving(false)
     }
   }
 
-  const modalFilteredLibrary = library.filter(ex => 
-    ex.name.toLowerCase().includes(modalSearchTerm.toLowerCase()) ||
-    ex.category.toLowerCase().includes(modalSearchTerm.toLowerCase())
+  const filteredLibrary = library.filter(ex => 
+    ex.name.toLowerCase().includes(libSearch.toLowerCase()) ||
+    ex.category.toLowerCase().includes(libSearch.toLowerCase())
   )
 
+  const currentWeekDays = days.filter(d => d.week_number === parseInt(activeWeek))
+  const totalWeeks = Array.from(new Set(days.map(d => d.week_number || 1))).sort((a,b) => a-b)
+
   return (
-    <div className="flex flex-1 gap-8 overflow-hidden h-full relative">
-      {/* ── Main Workspace ── */}
-      <div className="flex-1 overflow-y-auto pr-2 pb-32 scrollbar-hide space-y-12">
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <div className="flex h-full gap-6 overflow-hidden">
         
-        {/* Plan Header Info */}
-        <section className="glass rounded-[32px] p-8 border-primary/10 bg-primary/5">
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
-              <Layout className="w-8 h-8 text-primary-foreground" />
+        {/* ── Sidebar: Library ── */}
+        <aside className="w-80 flex flex-col gap-4 bg-background/40 border border-border/20 rounded-[24px] p-4 shrink-0 shadow-sm">
+          <div className="space-y-1">
+            <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <Dumbbell className="w-3 h-3" /> Biblioteca
+            </h3>
+            <p className="text-[10px] text-muted-foreground font-medium">Arrastra al bloque deseado.</p>
+          </div>
+          
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30" />
+            <Input 
+              placeholder="Buscar ejercicio..." 
+              className="h-9 text-xs bg-background/50 border-border/20 pl-9 rounded-xl"
+              value={libSearch}
+              onChange={(e) => setLibSearch(e.target.value)}
+            />
+          </div>
+
+          <ScrollArea className="flex-1 -mr-2 pr-2">
+            <div className="space-y-1">
+              {filteredLibrary.map(ex => (
+                <DraggableExercise key={ex.id} exercise={ex} />
+              ))}
             </div>
-            <div className="flex-1 space-y-4 w-full">
-              <div className="relative group">
+          </ScrollArea>
+          
+          <div className="pt-2 border-t border-border/10">
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving} 
+              className="w-full gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl shadow-lg shadow-primary/10"
+            >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              Guardar Plan
+            </Button>
+          </div>
+        </aside>
+
+        {/* ── Main Workspace ── */}
+        <main className="flex-1 flex flex-col gap-6 overflow-hidden">
+          
+          {/* Header & Week Tabs */}
+          <div className="bg-background/40 border border-border/20 rounded-[24px] p-6 space-y-6 shrink-0 shadow-sm">
+            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
+              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shrink-0">
+                <Layout className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
                 <Input 
-                  className="text-3xl font-black uppercase tracking-tight bg-transparent border-none p-0 focus-visible:ring-0 h-auto placeholder:opacity-30"
+                  className="text-xl font-black uppercase tracking-tight bg-transparent border-none p-0 h-auto focus-visible:ring-0 placeholder:opacity-20"
                   value={planMeta.title}
                   placeholder="NOMBRE DEL PLAN..."
                   onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
                 />
-                <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                   <Edit3 className="w-4 h-4 text-primary" />
-                </div>
+                <Input 
+                  className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 text-muted-foreground text-sm font-medium mt-1 placeholder:opacity-20"
+                  value={planMeta.description}
+                  placeholder="Añade una descripción corta del programa..."
+                  onChange={(e) => setPlanMeta({...planMeta, description: e.target.value})}
+                />
               </div>
-              <Textarea 
-                className="bg-background/40 border-none focus-visible:ring-1 focus-visible:ring-primary/20 rounded-xl resize-none font-medium text-muted-foreground"
-                value={planMeta.description}
-                placeholder="Describe el enfoque de este programa (objetivos, fase, etc)..."
-                onChange={(e) => setPlanMeta({...planMeta, description: e.target.value})}
-                rows={2}
-              />
-            </div>
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving} 
-              className="gap-2 shadow-2xl hover:scale-105 active:scale-95 transition-all bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-widest rounded-2xl px-8 h-14 shrink-0"
-            >
-              {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-              Guardar Cambios
-            </Button>
-          </div>
-        </section>
-
-        {/* Weeks & Days */}
-        {Array.from(new Set(days.map(d => d.week_number || 1))).sort((a,b) => a-b).map(weekNum => (
-          <div key={`week-${weekNum}`} className="space-y-8">
-            <div className="flex items-center justify-between sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-md">
-              <div className="flex items-center gap-4">
-                <div className="px-6 py-2 rounded-full bg-foreground text-background font-black uppercase tracking-[0.2em] text-xs">
-                  Semana {weekNum}
-                </div>
-                <div className="h-px w-24 bg-border/40" />
-              </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-destructive/50 hover:text-destructive hover:bg-destructive/10 font-bold uppercase text-[10px] tracking-widest"
-                onClick={() => setDays(days.filter(d => d.week_number !== weekNum))}
-              >
-                Eliminar Semana
+              <Button variant="outline" onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl px-6 border-primary/20 text-primary hover:bg-primary/5">
+                <Plus className="w-3.5 h-3.5" /> Nueva Semana
               </Button>
             </div>
-            
-            <div className="grid grid-cols-1 gap-12">
-              {days.filter(d => d.week_number === weekNum).map((day, dIdx) => (
-                <div key={day.id} className="space-y-6">
-                  {/* Day Header */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4 flex-1">
-                      <div className="w-12 h-12 rounded-2xl bg-secondary/50 border border-border/40 flex items-center justify-center font-black text-foreground shrink-0 shadow-sm">
-                        {day.day_of_week}
-                      </div>
-                      <Input 
-                        className="bg-transparent border-none font-black text-2xl p-0 h-auto focus-visible:ring-0 uppercase tracking-tighter w-full max-w-md" 
-                        value={day.title}
-                        onChange={(e) => {
-                          const n = [...days]; 
-                          const idx = n.findIndex(d => d.id === day.id);
-                          n[idx].title = e.target.value; 
-                          setDays(n);
-                        }}
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => {
-                          const n = [...days];
-                          const idx = n.findIndex(d => d.id === day.id);
-                          addBlock(idx);
-                        }} 
-                        className="gap-2 h-10 rounded-xl border-primary/30 text-primary hover:bg-primary/10 font-black uppercase tracking-widest text-[10px] px-5"
-                      >
-                        <Plus className="w-4 h-4" /> Bloque
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-10 w-10 text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 transition-all rounded-xl"
-                        onClick={() => setDays(days.filter(d => d.id !== day.id))}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
-                    </div>
-                  </div>
 
-                  {/* Blocks Grid */}
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {day.workout_blocks.map((block, bIdx) => (
-                      <Card key={block.id} className="glass-strong border-white/5 overflow-hidden rounded-[24px] flex flex-col shadow-xl transition-all hover:shadow-primary/5 hover:border-primary/20">
-                        <CardHeader className="py-4 px-6 flex flex-row items-center justify-between border-b border-border/20 bg-white/5 shrink-0">
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="w-2 h-6 bg-primary rounded-full" />
+            <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
+              <TabsList className="bg-secondary/20 p-1 rounded-xl h-12 border border-border/10 w-full md:w-auto justify-start overflow-x-auto overflow-y-hidden">
+                {totalWeeks.map(w => (
+                  <TabsTrigger 
+                    key={w} 
+                    value={w.toString()}
+                    className="rounded-lg font-black uppercase tracking-widest text-[10px] px-8 h-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
+                  >
+                    Semana {w}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Days Grid */}
+          <ScrollArea className="flex-1 -mr-4 pr-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 pb-12">
+              {currentWeekDays.map((day, dIdxInWeek) => {
+                const globalDIdx = days.findIndex(d => d.id === day.id)
+                return (
+                  <div key={day.id} className="flex flex-col gap-4">
+                    {/* Day Header */}
+                    <div className="flex items-center justify-between group">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-black px-2.5 h-6 rounded-lg text-[10px] shrink-0">
+                          DÍA {day.day_of_week}
+                        </Badge>
+                        <Input 
+                          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-black uppercase text-sm tracking-tight truncate w-full"
+                          value={day.title}
+                          onChange={(e) => {
+                            const n = [...days]; n[globalDIdx].title = e.target.value; setDays(n);
+                          }}
+                        />
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md" onClick={() => addBlock(day.id)}>
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:text-destructive" onClick={() => setDays(days.filter(d => d.id !== day.id))}>
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Blocks in Day */}
+                    <div className="space-y-4">
+                      {day.workout_blocks.map((block, bIdx) => (
+                        <Card key={block.id} className="border-border/30 bg-card/30 rounded-[20px] overflow-hidden shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/40">
+                          <div className="p-4 border-b border-border/10 bg-muted/20 flex items-center justify-between gap-3">
                             <input 
-                              className="bg-transparent font-black text-sm uppercase tracking-tight outline-none w-full focus:text-primary transition-colors" 
+                              className="bg-transparent font-black text-[10px] uppercase tracking-widest outline-none w-full focus:text-primary transition-colors" 
                               value={block.name}
                               onChange={(e) => {
-                                const n = [...days];
-                                const dIdxInArr = n.findIndex(d => d.id === day.id);
-                                n[dIdxInArr].workout_blocks[bIdx].name = e.target.value;
-                                setDays(n);
+                                const n = [...days]; n[globalDIdx].workout_blocks[bIdx].name = e.target.value; setDays(n);
                               }}
                             />
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <select 
-                              className="text-[10px] font-black uppercase tracking-widest bg-background/50 border border-border/20 rounded-xl px-3 py-1.5 outline-none hover:border-primary/40 transition-colors cursor-pointer"
-                              value={block.type}
-                              onChange={(e) => {
-                                const n = [...days];
-                                const dIdxInArr = n.findIndex(d => d.id === day.id);
-                                n[dIdxInArr].workout_blocks[bIdx].type = e.target.value;
-                                setDays(n);
-                              }}
-                            >
-                              <option value="warmup">Calentamiento</option>
-                              <option value="strength">Fuerza</option>
-                              <option value="gymnastics">Gimnasia</option>
-                              <option value="metcon">Metcon</option>
-                              <option value="accessory">Accesorio</option>
-                            </select>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/20 hover:text-destructive hover:bg-destructive/10 rounded-lg" onClick={() => {
-                              const n = [...days];
-                              const dIdxInArr = n.findIndex(d => d.id === day.id);
-                              n[dIdxInArr].workout_blocks.splice(bIdx, 1);
-                              setDays(n);
+                            <Button variant="ghost" size="icon" className="h-5 w-5 rounded-md opacity-20 hover:opacity-100 hover:text-destructive" onClick={() => {
+                              const n = [...days]; n[globalDIdx].workout_blocks.splice(bIdx, 1); setDays(n);
                             }}>
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
-                        </CardHeader>
-                        <CardContent className="p-0 flex-1 flex flex-col min-h-[160px] bg-card/20">
-                          <div className="flex-1">
-                            <DndContext 
-                              sensors={sensors} 
-                              collisionDetection={closestCenter} 
-                              onDragEnd={handleDragEnd}
-                            >
-                              <SortableContext 
-                                items={block.workout_movements.map(m => m.id)} 
-                                strategy={verticalListSortingStrategy}
-                              >
-                                <div className="divide-y divide-white/5">
-                                  {block.workout_movements.map((mov, mIdx) => (
-                                    <SortableMovement 
-                                      key={mov.id} 
-                                      id={mov.id} 
-                                      mov={mov} 
-                                      mIdx={mIdx}
-                                      updateSets={(val: string) => {
-                                        const n = [...days];
-                                        const dIdxInArr = n.findIndex(d => d.id === day.id);
-                                        n[dIdxInArr].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0;
-                                        setDays(n);
-                                      }}
-                                      updateReps={(val: string) => {
-                                        const n = [...days];
-                                        const dIdxInArr = n.findIndex(d => d.id === day.id);
-                                        n[dIdxInArr].workout_blocks[bIdx].workout_movements[mIdx].reps = val;
-                                        setDays(n);
-                                      }}
-                                      updateWeight={(val: string) => {
-                                        const n = [...days];
-                                        const dIdxInArr = n.findIndex(d => d.id === day.id);
-                                        n[dIdxInArr].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val;
-                                        setDays(n);
-                                      }}
-                                      removeMov={() => {
-                                        const n = [...days];
-                                        const dIdxInArr = n.findIndex(d => d.id === day.id);
-                                        n[dIdxInArr].workout_blocks[bIdx].workout_movements.splice(mIdx, 1);
-                                        setDays(n);
-                                      }}
-                                    />
-                                  ))}
-                                </div>
-                              </SortableContext>
-                            </DndContext>
+                          <div className="p-0">
+                            <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>
+                              <div className="divide-y divide-border/5">
+                                {block.workout_movements.map((mov, mIdx) => (
+                                  <SortableMovement 
+                                    key={mov.id} 
+                                    id={mov.id} 
+                                    mov={mov} 
+                                    mIdx={mIdx}
+                                    updateSets={(val: string) => {
+                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; setDays(n);
+                                    }}
+                                    updateReps={(val: string) => {
+                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; setDays(n);
+                                    }}
+                                    updateWeight={(val: string) => {
+                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; setDays(n);
+                                    }}
+                                    removeMov={() => {
+                                      const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); setDays(n);
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </SortableContext>
+                            
+                            {/* Visual Drop Zone for Library Items */}
                             {block.workout_movements.length === 0 && (
-                              <div className="flex-1 flex flex-col items-center justify-center py-12 text-center">
-                                <div className="w-12 h-12 rounded-2xl bg-secondary/20 flex items-center justify-center mb-3">
-                                  <Dumbbell className="w-6 h-6 text-muted-foreground/30" />
-                                </div>
-                                <p className="text-[10px] text-muted-foreground/50 font-black uppercase tracking-[0.2em]">Bloque Vacío</p>
+                              <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-border/10 m-3 rounded-xl">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
                               </div>
                             )}
                           </div>
-                          
-                          {/* Add movement button inside block */}
-                          <div className="p-4 border-t border-white/5 bg-white/5 mt-auto">
-                            <Button 
-                              variant="ghost" 
-                              className="w-full h-12 border-2 border-dashed border-white/5 hover:border-primary/40 hover:bg-primary/5 text-muted-foreground/40 hover:text-primary rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all"
-                              onClick={() => {
-                                const dIdxInArr = days.findIndex(d => d.id === day.id);
-                                setTargetBlock({ dIdx: dIdxInArr, bIdx })
-                                setIsSearchOpen(true)
-                              }}
-                            >
-                              <Plus className="w-4 h-4 mr-2" /> Añadir Ejercicio
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                        </Card>
+                      ))}
+                      
+                      <Button 
+                        variant="ghost" 
+                        className="w-full h-10 border border-dashed border-border/20 rounded-xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] transition-all text-muted-foreground/40"
+                        onClick={() => addBlock(day.id)}
+                      >
+                        <Plus className="w-3 h-3 mr-2" /> Añadir Bloque
+                      </Button>
+                    </div>
                   </div>
+                )
+              })}
+              
+              {/* Add Day Button Placeholder */}
+              <Button 
+                variant="ghost" 
+                className="h-[200px] border-2 border-dashed border-border/20 rounded-[32px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all"
+                onClick={() => addDay(parseInt(activeWeek))}
+              >
+                <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
+                  <Plus className="w-5 h-5" />
                 </div>
-              ))}
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-primary">Añadir Día {currentWeekDays.length + 1}</span>
+              </Button>
             </div>
-
-            <Button 
-              variant="outline" 
-              className="w-full py-10 border-2 border-dashed border-border/20 bg-background/20 hover:bg-primary/5 hover:text-primary hover:border-primary/30 transition-all rounded-[32px] group" 
-              onClick={() => addDay(weekNum)}
-            >
-              <div className="flex items-center justify-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all group-hover:scale-110">
-                  <Plus className="w-6 h-6 text-primary" />
-                </div>
-                <span className="text-sm font-black uppercase tracking-[0.2em]">Añadir entrenamiento a la semana</span>
-              </div>
-            </Button>
-          </div>
-        ))}
-
-        {days.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-32 text-center glass rounded-[40px] border-dashed border-2 border-border/30 bg-primary/5">
-            <Calendar className="w-20 h-20 text-primary/20 mb-8" />
-            <h2 className="text-3xl font-black uppercase tracking-tight mb-4">Planificación Nueva</h2>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-10 leading-relaxed">Define la estructura de entrenamiento por semanas. Podrás asignar este plan a múltiples atletas.</p>
-            <Button size="lg" onClick={addWeek} className="font-black uppercase tracking-widest rounded-[24px] px-12 h-16 shadow-2xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all">
-              Empezar Semana 1
-            </Button>
-          </div>
-        )}
-
-        <Button 
-          variant="default" 
-          size="lg" 
-          className="w-full py-12 text-xl font-black uppercase tracking-[0.3em] shadow-2xl hover:scale-[1.01] active:scale-[0.99] transition-all rounded-[40px] border-4 border-primary/10 bg-foreground text-background" 
-          onClick={addWeek}
-        >
-          <Plus className="w-8 h-8 mr-4" /> Crear Nueva Semana
-        </Button>
+          </ScrollArea>
+        </main>
       </div>
 
-      {/* ── Add Movement Modal ── */}
-      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] p-0 overflow-hidden border-white/10 rounded-[32px] glass-strong shadow-2xl">
-          <div className="p-8 pb-6 border-b border-white/5 bg-primary/5">
-            <DialogHeader className="mb-6">
-              <DialogTitle className="text-3xl font-black uppercase tracking-tighter flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Dumbbell className="w-6 h-6 text-primary-foreground" />
-                </div>
-                Explorar Biblioteca
-              </DialogTitle>
-            </DialogHeader>
-            <div className="relative">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-muted-foreground/30" />
-              <Input 
-                autoFocus
-                placeholder="Buscar por ejercicio o categoría..." 
-                className="bg-background/80 border-white/10 pl-14 h-16 rounded-2xl text-xl font-medium focus:ring-primary/20 focus:border-primary/30 transition-all"
-                value={modalSearchTerm}
-                onChange={(e) => setModalSearchTerm(e.target.value)}
-              />
-              {modalSearchTerm && (
-                <button 
-                  onClick={() => setModalSearchTerm('')}
-                  className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground/30 hover:text-primary transition-colors"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              )}
-            </div>
-          </div>
-          
-          <div className="max-h-[50vh] overflow-y-auto p-6 space-y-3 bg-black/20 scrollbar-hide">
-            {modalFilteredLibrary.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {modalFilteredLibrary.map(ex => (
-                  <button
-                    key={ex.id}
-                    onClick={() => targetBlock && addMovement(targetBlock.dIdx, targetBlock.bIdx, ex)}
-                    className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/40 hover:bg-primary/10 transition-all group text-left shadow-sm active:scale-95"
-                  >
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-secondary/40 flex items-center justify-center border border-white/5 group-hover:bg-primary/20 group-hover:border-primary/30 transition-all shrink-0">
-                        <Dumbbell className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
-                      </div>
-                      <div className="truncate">
-                        <p className="font-bold text-sm uppercase tracking-tight text-foreground/80 group-hover:text-foreground truncate">{ex.name}</p>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">{ex.category}</p>
-                      </div>
-                    </div>
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-primary/10 text-primary opacity-0 group-hover:opacity-100 group-hover:bg-primary group-hover:text-primary-foreground transition-all shrink-0 ml-2">
-                      <Plus className="w-4 h-4" />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="py-24 text-center">
-                <Search className="w-16 h-16 text-muted-foreground/10 mx-auto mb-6" />
-                <p className="text-muted-foreground font-black uppercase tracking-[0.3em] text-[10px]">Sin resultados en la biblioteca</p>
-              </div>
-            )}
-          </div>
-          <div className="p-6 bg-white/5 border-t border-white/5 flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">
-            <span>Resultados: {modalFilteredLibrary.length}</span>
-            <div className="flex items-center gap-2">
-              <Info className="w-3 h-3" />
-              <span>Haz clic para añadir al bloque</span>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {/* Helper info on drag */}
+      <div className="fixed bottom-6 right-6 bg-foreground text-background px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-4">
+        <Info className="w-4 h-4 text-primary" />
+        <span className="text-[10px] font-black uppercase tracking-widest">Tip: Selecciona una semana y arrastra ejercicios a los bloques.</span>
+      </div>
+    </DndContext>
   )
 }
