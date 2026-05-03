@@ -25,10 +25,30 @@ interface StartWorkoutCardProps {
 
 export function StartWorkoutCard({ plan, trainedToday }: StartWorkoutCardProps) {
   const [showConfirm, setShowConfirm] = useState(false)
+  const [hasProgress, setHasProgress] = useState(false)
   const router = useRouter()
 
+  useEffect(() => {
+    // Check if there is any workout progress for today in localStorage
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key?.startsWith('wod-progress-')) {
+          const saved = JSON.parse(localStorage.getItem(key) || '{}')
+          const isToday = new Date(saved.timestamp).toDateString() === new Date().toDateString()
+          if (isToday && (saved.sets || saved.blocks)) {
+            setHasProgress(true)
+            break
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error checking progress:', e)
+    }
+  }, [])
+
   const handleStartClick = (e: React.MouseEvent) => {
-    if (trainedToday) {
+    if (trainedToday && !hasProgress) {
       e.preventDefault()
       setShowConfirm(true)
     }
@@ -64,20 +84,20 @@ export function StartWorkoutCard({ plan, trainedToday }: StartWorkoutCardProps) 
                       <PlayCircle className="w-6 h-6 text-primary-foreground" />
                     </div>
                     <div>
-                      <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
-                        {trainedToday ? 'Volver a Entrenar' : 'Comenzar WOD'}
+                      <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight text-white">
+                        {hasProgress ? 'Reanudar Entrenamiento' : trainedToday ? 'Volver a Entrenar' : 'Comenzar WOD'}
                       </h3>
                       <p className="text-muted-foreground text-sm md:text-base font-medium">
-                        {trainedToday ? '¡Ya entrenaste hoy! ¿Quieres otra sesión?' : 'Pulsa para iniciar tu sesión de hoy.'}
+                        {hasProgress ? 'Tienes una sesión en curso. ¡Continúa donde quedaste!' : trainedToday ? '¡Ya entrenaste hoy! ¿Quieres otra sesión?' : 'Pulsa para iniciar tu sesión de hoy.'}
                       </p>
                     </div>
                   </div>
                 </div>
                 <Button 
                   size="lg" 
-                  className={`h-14 px-8 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl group-hover:scale-105 transition-transform ${trainedToday ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : ''}`}
+                  className={`h-14 px-8 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl group-hover:scale-105 transition-transform ${hasProgress ? 'bg-primary text-primary-foreground animate-pulse' : trainedToday ? 'bg-secondary text-secondary-foreground hover:bg-secondary/80' : ''}`}
                 >
-                  {trainedToday ? 'Nueva Sesión' : 'Entrenar Ahora'}
+                  {hasProgress ? 'Reanudar WOD' : trainedToday ? 'Nueva Sesión' : 'Entrenar Ahora'}
                 </Button>
               </div>
             </CardContent>

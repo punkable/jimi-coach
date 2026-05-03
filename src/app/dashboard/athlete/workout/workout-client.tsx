@@ -39,9 +39,15 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
-        const { sets, blocks } = JSON.parse(saved)
-        if (sets) setAllSetsData(sets)
-        if (blocks) setCompletedBlocks(blocks)
+        const { sets, blocks, timestamp } = JSON.parse(saved)
+        // Only resume if it's from today
+        const isToday = new Date(timestamp).toDateString() === new Date().toDateString()
+        if (isToday) {
+          if (sets) setAllSetsData(sets)
+          if (blocks) setCompletedBlocks(blocks)
+        } else {
+          localStorage.removeItem(storageKey)
+        }
       }
     } catch (e) {
       console.error('Error loading progress:', e)
@@ -53,7 +59,11 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   useEffect(() => {
     if (!day?.id || !isLoaded) return
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ sets: allSetsData, blocks: completedBlocks }))
+      localStorage.setItem(storageKey, JSON.stringify({ 
+        sets: allSetsData, 
+        blocks: completedBlocks,
+        timestamp: new Date().toISOString()
+      }))
     } catch (e) {
       console.error('Error saving progress:', e)
     }
@@ -351,6 +361,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
                             <WorkoutSetsList
                               movement={mov}
+                              initialSets={allSetsData[mov.id]}
                               onSetChange={(sets) => {
                                 setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
                                 const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
@@ -398,6 +409,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                   <div className="p-4">
                     <WorkoutSetsList
                       movement={{ id: `extra-${idx}`, exercises: mov, sets: 3 }}
+                      initialSets={allSetsData[`extra-${idx}`]}
                       onSetChange={(sets) => {
                         setAllSetsData(prev => ({ ...prev, [`extra-${idx}`]: sets }))
                       }}

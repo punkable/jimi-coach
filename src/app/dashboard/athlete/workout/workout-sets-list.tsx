@@ -205,16 +205,20 @@ function SortableSetRow({
 // ─── Main Component ────────────────────────────────────────────────────────────
 export function WorkoutSetsList({
   movement,
+  initialSets,
   onSetChange,
   onTimerStart,
 }: {
   movement: any
+  initialSets?: WorkoutSet[]
   onSetChange: (sets: WorkoutSet[]) => void
   onTimerStart: (seconds: number) => void
 }) {
   const trackingType: TrackingType = movement.exercises?.tracking_type || 'weight_reps'
 
   const buildInitialSets = (): WorkoutSet[] => {
+    if (initialSets && initialSets.length > 0) return initialSets
+
     const count = movement.sets || 1
     return Array.from({ length: count }, (_, i) => {
       let defaultReps: number | null = null

@@ -13,13 +13,27 @@ export default async function AthleteProgressPage() {
     .eq('athlete_id', user?.id)
     .order('achieved_at', { ascending: false })
 
-  const { data: results } = await supabase
+  const { data: results, error: resultsError } = await supabase
     .from('workout_results')
-    .select('id, completed_at, rpe, workout_plans(id, title)')
+    .select(`
+      id, 
+      completed_at, 
+      rpe, 
+      workout_days (
+        title,
+        workout_plans (
+          title
+        )
+      )
+    `)
     .eq('athlete_id', user?.id)
     .eq('completed', true)
     .order('completed_at', { ascending: false })
     .limit(10)
+
+  if (resultsError) {
+    console.error('Error fetching workout results:', resultsError)
+  }
 
   return (
     <div className="min-h-[100dvh] pb-10 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
@@ -79,7 +93,9 @@ export default async function AthleteProgressPage() {
                             {new Date(res.completed_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
                           </td>
                           <td className="px-6 py-5">
-                            <p className="text-sm font-bold truncate max-w-[200px]">{res.workout_plans?.title || 'WOD'}</p>
+                            <p className="text-sm font-bold truncate max-w-[200px]">
+                              {res.workout_days?.workout_plans?.title || res.workout_days?.title || 'WOD'}
+                            </p>
                           </td>
                           <td className="px-6 py-5 text-center">
                             <span className={`inline-flex items-center justify-center w-8 h-8 rounded-xl text-xs font-black ${

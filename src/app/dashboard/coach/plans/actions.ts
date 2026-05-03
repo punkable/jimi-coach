@@ -179,21 +179,33 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       // Current schema: workout_results.workout_day_id. 
       // So as long as DAY_ID is preserved, results are safe.
       
-      // For simplicity and to ensure order_index is perfect, we refresh movements in this block
-      await supabase.from('workout_movements').delete().eq('block_id', blockId)
+      // Handle Movements (UPSERT strategy to preserve athlete results linked to movement_id)
+      const existingMovements = (await supabase.from('workout_movements').select('id').eq('block_id', blockId)).data || []
+      const incomingMovementIds = block.workout_movements.map((m: any) => m.id).filter((id: string) => id?.length > 15)
       
-      const movementsToInsert = block.workout_movements.map((m: any, mIdx: number) => ({
-        block_id: blockId,
-        exercise_id: m.exercise_id,
-        sets: m.sets,
-        reps: m.reps,
-        weight_percentage: m.weight_percentage,
-        notes: m.notes,
-        order_index: mIdx
-      }))
+      const movementsToDelete = existingMovements.filter(m => !incomingMovementIds.includes(m.id)).map(m => m.id)
+      if (movementsToDelete.length > 0) {
+        await supabase.from('workout_movements').delete().in('id', movementsToDelete)
+      }
 
-      if (movementsToInsert.length > 0) {
-        await supabase.from('workout_movements').insert(movementsToInsert)
+      for (let mIdx = 0; mIdx < block.workout_movements.length; mIdx++) {
+        const m = block.workout_movements[mIdx]
+        const isNewMov = !m.id || m.id.length < 15
+        const movData = {
+          block_id: blockId,
+          exercise_id: m.exercise_id,
+          sets: m.sets,
+          reps: m.reps,
+          weight_percentage: m.weight_percentage,
+          notes: m.notes,
+          order_index: mIdx
+        }
+
+        if (isNewMov) {
+          await supabase.from('workout_movements').insert(movData)
+        } else {
+          await supabase.from('workout_movements').update(movData).eq('id', m.id)
+        }
       }
     }
   }
