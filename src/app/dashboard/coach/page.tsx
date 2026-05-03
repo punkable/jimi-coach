@@ -60,15 +60,22 @@ export default async function CoachDashboard() {
     return { month, athletes: cumulativeAthletes }
   })
 
-  // Fetch recent workout results (Last 7 days)
+  // Fetch recent workout results (Last 7 days) with athlete and workout info
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   const { data: recentResults } = await supabase
     .from('workout_results')
-    .select('id, completed_at, completed')
+    .select(`
+      id, 
+      completed_at, 
+      rpe,
+      profiles:athlete_id(full_name, avatar_url, emoji),
+      workout_days(title, workout_plans(title))
+    `)
     .gte('completed_at', sevenDaysAgo.toISOString())
     .eq('completed', true)
-    .order('completed_at', { ascending: true })
+    .order('completed_at', { ascending: false })
+    .limit(10)
 
   // Process Compliance Data
   const complianceMap = new Map<string, number>()
@@ -188,19 +195,60 @@ export default async function CoachDashboard() {
       <section>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-black uppercase tracking-tight">Últimos Resultados</h2>
-          <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest gap-2">
-            Ver Todos <ChevronRight className="w-3 h-3" />
-          </Button>
+          <Link href="/dashboard/coach/athletes">
+            <Button variant="ghost" className="text-[10px] font-black uppercase tracking-widest gap-2">
+              Ver Todos <ChevronRight className="w-3 h-3" />
+            </Button>
+          </Link>
         </div>
-        <Card className="glass rounded-3xl border-dashed border-2 border-border/40">
-          <CardContent className="p-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-secondary/30 flex items-center justify-center mx-auto mb-4">
-              <Activity className="w-8 h-8 text-muted-foreground/40" />
-            </div>
-            <h3 className="text-lg font-bold text-foreground">Esperando resultados</h3>
-            <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">Cuando tus alumnos completen sus entrenamientos de hoy, verás sus marcas y RPE aquí mismo.</p>
-          </CardContent>
-        </Card>
+        
+        {recentResults && recentResults.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {recentResults.map((result: any) => (
+              <div key={result.id} className="glass rounded-2xl p-4 border border-border/30 flex items-center gap-4 hover:border-primary/40 transition-all group">
+                <div className="relative">
+                  <div className="w-12 h-12 rounded-full bg-secondary/50 border border-border/30 flex items-center justify-center shrink-0 overflow-hidden">
+                    {result.profiles?.avatar_url ? (
+                      <img src={result.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-lg font-black text-muted-foreground">
+                        {result.profiles?.full_name?.[0]?.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 text-xs">{result.profiles?.emoji || '💪'}</div>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <p className="font-black text-sm uppercase tracking-tight truncate">{result.profiles?.full_name}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium truncate uppercase tracking-widest">
+                    {result.workout_days?.workout_plans?.title || 'WOD'} / {result.workout_days?.title}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[9px] font-black px-2 py-0.5 bg-primary/10 text-primary rounded-full uppercase tracking-widest">
+                      RPE {result.rpe || 'N/A'}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground font-bold">
+                      {new Date(result.completed_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </div>
+                </div>
+                
+                <ChevronRight className="w-4 h-4 text-muted-foreground/20 group-hover:text-primary transition-all" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Card className="glass rounded-3xl border-dashed border-2 border-border/40">
+            <CardContent className="p-16 text-center">
+              <div className="w-16 h-16 rounded-full bg-secondary/30 flex items-center justify-center mx-auto mb-4">
+                <Activity className="w-8 h-8 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-lg font-bold text-foreground">Esperando resultados</h3>
+              <p className="text-sm text-muted-foreground mt-2 max-w-sm mx-auto">Cuando tus alumnos completen sus entrenamientos de hoy, verás sus marcas y RPE aquí mismo.</p>
+            </CardContent>
+          </Card>
+        )}
       </section>
     </div>
   )
