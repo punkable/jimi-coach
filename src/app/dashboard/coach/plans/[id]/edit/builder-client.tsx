@@ -72,6 +72,20 @@ function DraggableExercise({ exercise }: { exercise: Exercise }) {
   )
 }
 
+import { useDroppable } from '@dnd-kit/core'
+
+function DroppableBlock({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
+  const { isOver, setNodeRef } = useDroppable({ id })
+  return (
+    <div 
+      ref={setNodeRef} 
+      className={`${className} transition-colors duration-200 ${isOver ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''}`}
+    >
+      {children}
+    </div>
+  )
+}
+
 export function BuilderClient({ 
   planId, 
   initialPlan, 
@@ -121,59 +135,57 @@ export function BuilderClient({
     const { active, over } = event
     if (!over) return
 
-    // If dragging from library
-    if (active.data.current?.type === 'library-item') {
-      const exercise = active.data.current.exercise
-      // Find which block we are over
-      let overDIdx = -1, overBIdx = -1
-      
-      // We use naming convention for block drop targets: "block-drop-dIdx-bIdx"
-      if (typeof over.id === 'string' && over.id.startsWith('block-drop-')) {
-        const parts = over.id.split('-')
-        overDIdx = parseInt(parts[2])
-        overBIdx = parseInt(parts[3])
-      }
+    // ID Formats:
+    // - Movement: "uuid"
+    // - Block Drop Zone: "block-dIdx-bIdx"
+    // - Library Item: "lib-uuid"
 
-      if (overDIdx !== -1) {
-        addMovement(overDIdx, overBIdx, exercise)
-      }
+    const isLibraryItem = active.data.current?.type === 'library-item'
+    
+    // 1. Identify Target Block
+    let overDIdx = -1, overBIdx = -1, overMIdx = -1
+    const overId = String(over.id)
+
+    if (overId.startsWith('block-')) {
+      const parts = overId.split('-')
+      overDIdx = parseInt(parts[1])
+      overBIdx = parseInt(parts[2])
+      overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
+    } else {
+      // It's a movement ID
+      days.forEach((d, di) => {
+        d.workout_blocks.forEach((b, bi) => {
+          const mi = b.workout_movements.findIndex(m => m.id === overId)
+          if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
+        })
+      })
+    }
+
+    if (overDIdx === -1) return
+
+    // 2. Handle Library Item Drop
+    if (isLibraryItem) {
+      const exercise = active.data.current.exercise
+      addMovement(overDIdx, overBIdx, exercise, overMIdx)
       return
     }
 
-    // Normal sorting logic
+    // 3. Handle Movement Sorting/Moving
     let activeDIdx = -1, activeBIdx = -1, activeMIdx = -1
-    let overDIdx = -1, overBIdx = -1, overMIdx = -1
-
     days.forEach((d, di) => {
       d.workout_blocks.forEach((b, bi) => {
         const mi = b.workout_movements.findIndex(m => m.id === active.id)
         if (mi !== -1) { activeDIdx = di; activeBIdx = bi; activeMIdx = mi; }
-        
-        const oi = b.workout_movements.findIndex(m => m.id === over.id)
-        if (oi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = oi; }
       })
     })
 
-    if (activeDIdx !== -1 && overDIdx !== -1) {
-      if (activeDIdx === overDIdx && activeBIdx === overBIdx) {
-        if (activeMIdx !== overMIdx) {
-          setDays(prev => {
-            const next = [...prev]
-            const block = next[activeDIdx].workout_blocks[activeBIdx]
-            block.workout_movements = arrayMove(block.workout_movements, activeMIdx, overMIdx)
-            return next
-          })
-        }
-      } else {
-        setDays(prev => {
-          const next = [...prev]
-          const sourceBlock = next[activeDIdx].workout_blocks[activeBIdx]
-          const destBlock = next[overDIdx].workout_blocks[overBIdx]
-          const [moved] = sourceBlock.workout_movements.splice(activeMIdx, 1)
-          destBlock.workout_movements.splice(overMIdx, 0, moved)
-          return next
-        })
-      }
+    if (activeDIdx !== -1) {
+      setDays(prev => {
+        const next = JSON.parse(JSON.stringify(prev)) // deep clone for safety
+        const [moved] = next[activeDIdx].workout_blocks[activeBIdx].workout_movements.splice(activeMIdx, 1)
+        next[overDIdx].workout_blocks[overBIdx].workout_movements.splice(overMIdx, 0, moved)
+        return next
+      })
     }
   }
 
@@ -216,9 +228,9 @@ export function BuilderClient({
     setDays(n)
   }
 
-  const addMovement = (dIdx: number, bIdx: number, exercise: Exercise) => {
-    const n = [...days]
-    n[dIdx].workout_blocks[bIdx].workout_movements.push({
+  const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number) => {
+    const n = JSON.parse(JSON.stringify(days))
+    const newMov = {
       id: genId(),
       exercise_id: exercise.id,
       exercise: exercise,
@@ -226,7 +238,13 @@ export function BuilderClient({
       reps: '10',
       weight_percentage: '',
       notes: ''
-    })
+    }
+    
+    if (typeof atIdx === 'number') {
+      n[dIdx].workout_blocks[bIdx].workout_movements.splice(atIdx, 0, newMov)
+    } else {
+      n[dIdx].workout_blocks[bIdx].workout_movements.push(newMov)
+    }
     setDays(n)
   }
 
@@ -386,7 +404,7 @@ export function BuilderClient({
                               <Trash2 className="w-3 h-3" />
                             </Button>
                           </div>
-                          <div className="p-0">
+                          <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px]">
                             <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>
                               <div className="divide-y divide-border/5">
                                 {block.workout_movements.map((mov, mIdx) => (
@@ -414,11 +432,11 @@ export function BuilderClient({
                             
                             {/* Visual Drop Zone for Library Items */}
                             {block.workout_movements.length === 0 && (
-                              <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-border/10 m-3 rounded-xl">
+                              <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-border/10 m-3 rounded-xl pointer-events-none">
                                 <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
                               </div>
                             )}
-                          </div>
+                          </DroppableBlock>
                         </Card>
                       ))}
                       
