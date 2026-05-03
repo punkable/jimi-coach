@@ -110,10 +110,7 @@ export default async function FeedPage() {
                     )}
 
                     {/* Fist Bump */}
-                    <form action={async () => {
-                      'use server'
-                      await toggleFistBump(entry.id, isBumped)
-                    }} className="mt-3">
+                    <form action={toggleFistBump.bind(null, entry.id, isBumped)} className="mt-3">
                       <button
                         type="submit"
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-[11px] font-black uppercase tracking-widest transition-all active:scale-95 ${
