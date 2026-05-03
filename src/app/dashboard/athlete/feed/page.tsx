@@ -16,16 +16,19 @@ export default async function FeedPage() {
   // 1. Get the plans assigned to the current user and their social settings
   const { data: myPlans } = await supabase
     .from('assigned_plans')
-    .select('plan_id, workout_plans(is_community_enabled)')
+    .select('plan_id, assigned_by, workout_plans(is_community_enabled)')
     .eq('athlete_id', user?.id)
 
-  // 2. Identify which plans have community enabled
+  // 2. Identify which plans have community enabled and who the coaches are
   const socialPlanIds = myPlans
     ?.filter((p: any) => p.workout_plans?.is_community_enabled)
     .map(p => p.plan_id) || []
+  
+  // We should also always see announcements from our coach(es)
+  const coachIds = Array.from(new Set(myPlans?.map((p: any) => p.assigned_by).filter(Boolean))) as string[]
 
   // 3. Get all athletes that share these "social" plans
-  let peerIds: string[] = [user?.id as string]
+  let peerIds: string[] = [user?.id as string, ...coachIds]
   if (socialPlanIds.length > 0) {
     const { data: peers } = await supabase
       .from('assigned_plans')
@@ -33,7 +36,8 @@ export default async function FeedPage() {
       .in('plan_id', socialPlanIds)
     
     if (peers) {
-      peerIds = Array.from(new Set(peers.map(p => p.athlete_id)))
+      const uniquePeers = Array.from(new Set(peers.map(p => p.athlete_id)))
+      peerIds = Array.from(new Set([...peerIds, ...uniquePeers]))
     }
   }
 
