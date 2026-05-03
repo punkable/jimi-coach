@@ -381,12 +381,13 @@ export function BuilderClient({
                   <div key={day.id} className="flex flex-col gap-4">
                     {/* Day Header */}
                     <div className="flex items-center justify-between group">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-black px-2.5 h-6 rounded-lg text-[10px] shrink-0">
-                          DÍA {day.day_of_week}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-black px-2.5 h-6 rounded-lg text-[9px] shrink-0 uppercase">
+                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
                         </Badge>
                         <Input 
-                          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-black uppercase text-sm tracking-tight truncate w-full"
+                          placeholder="Añadir subtítulo (ej: Pierna, Descanso...)"
+                          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-bold text-sm tracking-tight truncate w-full placeholder:opacity-30"
                           value={day.title}
                           onChange={(e) => {
                             const n = [...days]; n[globalDIdx].title = e.target.value; setDays(n);

@@ -355,7 +355,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     </div>
                     
                     {/* Routine Description */}
-                    {!isCompleted && block.description && (
+                    {block.description && (
                       <div className="px-4 py-4 bg-secondary/5 bg-gradient-to-br from-primary/5 to-transparent border-b border-border/10">
                         <SmartRoutineText 
                           text={block.description} 

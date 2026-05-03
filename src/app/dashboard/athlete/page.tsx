@@ -45,6 +45,13 @@ export default async function AthleteDashboard() {
   const activeAssignment = assignments?.[0]
   const plan = activeAssignment?.workout_plans
 
+  // Fetch days for the active plan
+  const { data: planDays } = await supabase
+    .from('workout_days')
+    .select('*')
+    .eq('plan_id', plan?.id)
+    .order('day_of_week', { ascending: true })
+
   const hasActivePlan = profile?.subscription_plan && profile.subscription_plan !== "Sin Plan Activo"
   // Default to true if total_classes is not set (null/0) or if classes_used < total_classes
   const hasClassesLeft = !profile?.total_classes || profile.total_classes === 0 || (profile?.classes_used < profile?.total_classes)
@@ -182,7 +189,7 @@ export default async function AthleteDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: WOD & Stats */}
         <div className="lg:col-span-8 space-y-8">
-          <StartWorkoutCard plan={plan} trainedToday={!!trainedToday} />
+          <StartWorkoutCard plan={plan} planDays={planDays || []} trainedToday={!!trainedToday} />
 
           <AthleteStats 
             totalWorkouts={results?.length || 0} 

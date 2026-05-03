@@ -75,7 +75,8 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
                       
                       <div className="flex-1 min-w-0">
                         <h3 className="font-black text-base uppercase tracking-tight group-hover:text-primary transition-colors truncate">
-                          {day.title || defaultName}
+                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
+                          {day.title && <span className="text-muted-foreground/60"> — {day.title}</span>}
                         </h3>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[9px] text-muted-foreground font-black uppercase tracking-widest">
