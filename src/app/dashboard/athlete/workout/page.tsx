@@ -1,8 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { WorkoutClient } from './workout-client'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { ArrowLeft, PlayCircle } from 'lucide-react'
+import Link from 'next/link'
 
-export default async function WorkoutPage() {
+export const revalidate = 0
+
+export default async function WorkoutPage(props: { searchParams: Promise<{ dayId?: string }> }) {
+  const searchParams = await props.searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -21,19 +28,64 @@ export default async function WorkoutPage() {
   const activeAssignment = assignments?.[0]
   if (!activeAssignment) return notFound()
 
-  // For the MVP, we just fetch the days and blocks for this plan
-  // In a real scenario, we'd filter by "Today's" date, but we'll just pull the first day with content
+  // Fetch all days for this plan
   const { data: days } = await supabase
     .from('workout_days')
     .select('*, workout_blocks(*, workout_movements(*, exercises(*)))')
     .eq('plan_id', activeAssignment.plan_id)
     .order('day_of_week', { ascending: true })
 
-  const todayData = days?.[0] // MVP: just take Day 1
+  if (!days || days.length === 0) return notFound()
+
+  const selectedDayId = searchParams.dayId
+  const todayData = selectedDayId 
+    ? days.find(d => d.id === selectedDayId)
+    : null
+
+  // If no day selected, show the selection UI
+  if (!todayData) {
+    return (
+      <div className="flex-1 flex flex-col bg-background p-6 md:max-w-lg md:mx-auto md:w-full md:border-x md:border-border/40 min-h-screen">
+        <header className="mb-8 pt-4">
+          <Link href="/dashboard/athlete">
+            <Button variant="ghost" size="icon" className="rounded-full mb-4">
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+          </Link>
+          <h1 className="text-3xl font-black uppercase tracking-tight">Elegir Día</h1>
+          <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest mt-1">
+            {activeAssignment.workout_plans?.title}
+          </p>
+        </header>
+
+        <div className="space-y-4">
+          {days.map((day) => (
+            <Link key={day.id} href={`/dashboard/athlete/workout?dayId=${day.id}`}>
+              <Card className="glass hover:border-primary/50 transition-all active:scale-[0.98] group mb-4">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div>
+                    <h3 className="font-black text-lg uppercase tracking-tight group-hover:text-primary transition-colors">
+                      {day.title || `Día ${day.day_of_week}`}
+                    </h3>
+                    <p className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">
+                      Semana {day.week_number} · {day.workout_blocks?.length || 0} Bloques
+                    </p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+                    <PlayCircle className="w-6 h-6" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   // Fetch PRs for today's exercises
   const exerciseIds: string[] = []
-  todayData?.workout_blocks?.forEach((block: any) => {
+  todayData.workout_blocks?.forEach((block: any) => {
     block.workout_movements?.forEach((mov: any) => {
       if (mov.exercises?.id) exerciseIds.push(mov.exercises.id)
     })

@@ -206,14 +206,30 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               </p>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`rounded-full w-9 h-9 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
-            onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
-          >
-            {activeTab === 'tools' ? <X className="w-4 h-4" /> : <Timer className="w-4 h-4" />}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full w-9 h-9 text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                if (confirm('¿Quieres reiniciar la sesión? Se borrará el progreso actual de este día.')) {
+                  localStorage.removeItem(storageKey)
+                  window.location.reload()
+                }
+              }}
+              title="Reiniciar Sesión"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`rounded-full w-9 h-9 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
+              onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
+            >
+              {activeTab === 'tools' ? <X className="w-4 h-4" /> : <Timer className="w-4 h-4" />}
+            </Button>
+          </div>
         </div>
         {/* Progress bar */}
         {activeTab === 'workout' && (() => {
