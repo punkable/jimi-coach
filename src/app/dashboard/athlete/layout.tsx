@@ -18,16 +18,46 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
 
   return (
     // Use 100dvh for mobile browsers; avoid 100vh which ignores browser chrome
-    <div className={`flex flex-col bg-background ${isWorkout ? 'h-[100dvh]' : 'min-h-[100dvh]'}`}>
-      <main className="flex-1 overflow-y-auto" style={isWorkout ? {} : { paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
-        {children}
+    <div className={`flex bg-background ${isWorkout ? 'h-[100dvh]' : 'min-h-[100dvh]'}`}>
+      {/* Sidebar for Desktop — hidden during workout or on mobile */}
+      {!isWorkout && (
+        <aside className="hidden md:flex flex-col w-64 border-r border-border/40 bg-card/40 backdrop-blur-xl shrink-0">
+          <div className="p-8">
+            <Link href="/dashboard/athlete">
+              <Image src="/images/logo.png" alt="Jimi.coach" width={140} height={40} className="object-contain" />
+            </Link>
+          </div>
+          <nav className="flex-1 px-4 space-y-1">
+            {navItems.map(({ href, icon: Icon, label, exact }) => {
+              const isActive = exact ? pathname === href : pathname.startsWith(href)
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-semibold ${
+                    isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                  }`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </Link>
+              )
+            })}
+          </nav>
+        </aside>
+      )}
+
+      <main className={`flex-1 flex flex-col relative overflow-hidden ${isWorkout ? '' : 'pb-16 md:pb-0'}`}>
+        <div className="flex-1 overflow-y-auto">
+          {children}
+        </div>
       </main>
 
-      {/* Bottom Nav — hidden during workout */}
+      {/* Bottom Nav — hidden during workout or on desktop */}
       {!isWorkout && (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-border/30"
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-t border-border/30"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          <div className="h-16 flex items-center justify-around px-2 max-w-lg mx-auto">
+          <div className="h-16 flex items-center justify-around px-2">
             {navItems.map(({ href, icon: Icon, label, exact }) => {
               const isActive = exact ? pathname === href : pathname.startsWith(href)
               return (
@@ -38,12 +68,7 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
                     isActive ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
-                  <div className="relative">
-                    <Icon className={`h-[22px] w-[22px] transition-all duration-200 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
-                    {isActive && (
-                      <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary" />
-                    )}
-                  </div>
+                  <Icon className={`h-[22px] w-[22px] transition-all duration-200 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
                   <span className={`text-[10px] font-semibold mt-1 transition-opacity ${isActive ? 'opacity-100' : 'opacity-50'}`}>
                     {label}
                   </span>

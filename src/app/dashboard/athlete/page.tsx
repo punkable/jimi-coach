@@ -122,176 +122,165 @@ export default async function AthleteDashboard() {
   }
 
   return (
-    <div className="min-h-[100dvh] pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
+    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
       {/* ── Hero Header ── */}
-      <div className="relative px-4 pt-10 pb-6 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
-
-        <div className="relative flex items-start justify-between">
+      <div className="relative pt-6 pb-8 md:pt-10 md:pb-12 overflow-hidden rounded-3xl mb-8">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+        
+        <div className="relative flex items-center justify-between">
           <div>
-            <p className="text-muted-foreground text-sm font-medium">{greeting},</p>
-            <h1 className="text-3xl font-black tracking-tight mt-0.5">
+            <p className="text-muted-foreground text-sm md:text-base font-medium">{greeting},</p>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight mt-1 uppercase">
               {firstName}<span className="text-primary">.</span>
             </h1>
-            {trainedToday ? (
-              <p className="text-xs text-primary/80 font-semibold mt-1.5 flex items-center gap-1">
-                <Zap className="w-3 h-3" /> Ya entrenaste hoy — ¡excelente!
-              </p>
-            ) : (
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {currentStreak > 0 ? `🔥 ${currentStreak} días seguidos` : 'El WOD de hoy te espera.'}
-              </p>
-            )}
-          </div>
-
-          {currentStreak > 0 && (
-            <div className="flex flex-col items-center bg-primary/10 border border-primary/20 rounded-2xl px-3 py-2">
-              <Flame className="w-5 h-5 text-primary" />
-              <span className="text-xl font-black text-primary leading-none">{currentStreak}</span>
-              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">racha</span>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {trainedToday ? (
+                <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-primary/30">
+                  <Zap className="w-3 h-3 fill-primary" /> Ya entrenaste hoy
+                </span>
+              ) : (
+                <span className="bg-secondary/50 text-muted-foreground px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-border/40">
+                  <Calendar className="w-3 h-3" /> WOD Pendiente
+                </span>
+              )}
+              {currentStreak > 0 && (
+                <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-orange-500/30">
+                  <Flame className="w-3 h-3 fill-orange-400" /> {currentStreak} Días
+                </span>
+              )}
             </div>
-          )}
+          </div>
+          
+          <div className="hidden md:block">
+            <StreakMascot streak={currentStreak} />
+          </div>
         </div>
       </div>
 
-      <div className="px-4 space-y-4">
-        {/* ── Quick Stats Row ── */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="glass rounded-2xl p-3 text-center">
-            <Trophy className="w-4 h-4 text-primary mx-auto mb-1" />
-            <p className="text-lg font-black leading-none">{results?.length ?? 0}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Entrenos</p>
-          </div>
-          <div className="glass rounded-2xl p-3 text-center">
-            <Flame className="w-4 h-4 text-orange-500 mx-auto mb-1" />
-            <p className="text-lg font-black leading-none">{currentStreak}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Días racha</p>
-          </div>
-          <div className="glass rounded-2xl p-3 text-center">
-            <TrendingUp className="w-4 h-4 text-green-500 mx-auto mb-1" />
-            <p className="text-lg font-black leading-none">{avgRpe ?? '—'}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">RPE medio</p>
-          </div>
-        </div>
-
-        {/* ── WOD Card ── */}
-        {plan ? (
-          <div className="glass rounded-2xl overflow-hidden">
-            <div className="h-1 bg-gradient-to-r from-primary via-primary/70 to-transparent" />
-            <div className="p-4">
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Plan Activo</span>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left Column: WOD & Stats */}
+        <div className="lg:col-span-8 space-y-8">
+          {/* Main Action Card */}
+          <section>
+            <div className="flex items-center justify-between mb-4 px-1">
+              <h2 className="text-xl font-black uppercase tracking-tight">Tu Entrenamiento</h2>
+              {plan && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{plan.title}</span>}
+            </div>
+            
+            <Link href="/dashboard/athlete/workout" className="block group">
+              <Card className="glass overflow-hidden border-primary/20 group-hover:border-primary/50 transition-all duration-300 relative">
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Dumbbell className="w-32 h-32 -rotate-12" />
+                </div>
+                <CardContent className="p-8 md:p-12">
+                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.4)]">
+                          <PlayCircle className="w-6 h-6 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
+                            {trainedToday ? 'WOD Completado' : 'Comenzar WOD'}
+                          </h3>
+                          <p className="text-muted-foreground text-sm md:text-base font-medium">
+                            {trainedToday ? '¡Buen trabajo! Nos vemos mañana.' : 'Pulsa para iniciar tu sesión de hoy.'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <Button size="lg" disabled={trainedToday} className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl group-hover:scale-105 transition-transform">
+                      {trainedToday ? '¡Logrado!' : 'Entrenar Ahora'}
+                    </Button>
                   </div>
-                  <h2 className="text-xl font-black tracking-tight">{plan.title}</h2>
-                  {plan.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{plan.description}</p>
-                  )}
-                </div>
-                <div className="shrink-0 w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center">
-                  <Dumbbell className="w-6 h-6 text-primary" />
-                </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </section>
+
+          <AthleteStats totalWorkouts={results?.length || 0} currentStreak={currentStreak} />
+          
+          {/* WhatsApp / Support Section on Desktop */}
+          <div className="hidden lg:flex glass rounded-3xl p-8 items-center justify-between gap-6 border-green-500/10 bg-green-500/5">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-green-500/20 flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-green-500" />
               </div>
-
-              {plan.level && (
-                <span className="inline-block text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-primary/10 text-primary mb-4">
-                  {plan.level}
-                </span>
-              )}
-
-              <Link href="/dashboard/athlete/workout">
-                <Button
-                  className="w-full h-14 text-base font-black uppercase tracking-widest rounded-xl gap-2.5 shadow-[0_4px_24px_rgba(var(--primary),0.4)] active:scale-95 transition-transform"
-                  disabled={trainedToday}
-                >
-                  <PlayCircle className="w-5 h-5" />
-                  {trainedToday ? 'Entrenamiento Completado ✓' : 'Iniciar WOD'}
-                </Button>
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="glass rounded-2xl p-8 flex flex-col items-center text-center gap-3">
-            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center">
-              <Dumbbell className="w-8 h-8 text-muted-foreground opacity-40" />
-            </div>
-            <div>
-              <h3 className="font-bold">Sin plan asignado</h3>
-              <p className="text-sm text-muted-foreground mt-1 max-w-[220px]">
-                Tu coach aún no ha configurado tu planificación.
-              </p>
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight">Soporte Directo</h3>
+                <p className="text-muted-foreground text-sm">¿Dudas con el entrenamiento? Escríbele a tu coach.</p>
+              </div>
             </div>
             <a href="http://wa.me/56972878295" target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" size="sm" className="gap-2 rounded-full">
-                <MessageSquare className="w-3.5 h-3.5" /> Escribir al Coach
+              <Button className="bg-[#25D366] hover:bg-[#20b858] text-white gap-2 h-12 px-6 rounded-xl font-bold uppercase tracking-widest text-xs">
+                WhatsApp
               </Button>
             </a>
           </div>
-        )}
+        </div>
 
-        {/* ── Coach Insights ── */}
-        {insights && insights.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 px-1">
-              <Star className="w-3.5 h-3.5 text-primary" />
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Del Coach</h3>
+        {/* Right Column: Coach Insights & Streak Mascot on Mobile */}
+        <div className="lg:col-span-4 space-y-8">
+          <section className="glass rounded-3xl p-6 md:p-8">
+            <div className="flex items-center gap-2 mb-6">
+              <Target className="w-5 h-5 text-primary" />
+              <h2 className="text-xl font-black uppercase tracking-tight">Coach Insights</h2>
             </div>
-            {insights.map((insight: any) => {
-              const Icon = insightIconMap[insight.type] || StickyNote
-              const colorClass = insightColorMap[insight.type] || insightColorMap.note
-              return (
-                <div key={insight.id} className={`rounded-2xl p-4 border bg-gradient-to-br ${colorClass} flex gap-3`}>
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-current/10`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-black text-sm uppercase tracking-tight leading-tight">{insight.title}</p>
-                      {insight.target_value && (
-                        <span className="text-xs font-black shrink-0 bg-background/20 border border-white/10 px-2 py-0.5 rounded-lg">
-                          → {insight.target_value}
-                        </span>
-                      )}
+            
+            {insights && insights.length > 0 ? (
+              <div className="space-y-4">
+                {insights.map((insight: any) => {
+                  const Icon = insightIconMap[insight.type] || StickyNote
+                  const colorClass = insightColorMap[insight.type] || insightColorMap.note
+                  return (
+                    <div 
+                      key={insight.id}
+                      className={`p-4 rounded-2xl border bg-gradient-to-br ${colorClass} flex gap-4`}
+                    >
+                      <div className="shrink-0 pt-1">
+                        <Icon className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-bold text-sm leading-tight uppercase tracking-tight truncate">{insight.title}</h4>
+                          {insight.target_value && (
+                            <span className="text-[10px] font-black shrink-0 bg-background/20 px-2 py-0.5 rounded-lg">
+                              {insight.target_value}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs opacity-80 mt-1 leading-relaxed">{insight.body}</p>
+                      </div>
                     </div>
-                    {insight.body && (
-                      <p className="text-xs opacity-70 mt-1 leading-relaxed">{insight.body}</p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-12 px-4 border-2 border-dashed border-border/30 rounded-3xl">
+                <Star className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest leading-relaxed">
+                  Tu coach te asignará<br />metas pronto
+                </p>
+              </div>
+            )}
+          </section>
 
-        {/* ── Streak Mascot ── */}
-        {currentStreak > 0 && (
-          <div className="glass rounded-2xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Flame className="w-4 h-4 text-primary" />
-              <h3 className="font-bold text-sm">Tu Racha</h3>
-            </div>
+          {/* Mobile Streak Display */}
+          <div className="lg:hidden">
             <StreakMascot streak={currentStreak} />
           </div>
-        )}
 
-        {/* ── Stats ── */}
-        <AthleteStats totalWorkouts={results?.length || 0} currentStreak={currentStreak} />
-
-        {/* ── Coach Support ── */}
-        <div className="glass rounded-2xl p-4 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="font-bold text-sm">¿Dudas con el WOD?</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Escríbele directamente al coach.</p>
-          </div>
-          <a href="http://wa.me/56972878295" target="_blank" rel="noopener noreferrer">
-            <Button className="bg-[#25D366] hover:bg-[#20b858] text-white gap-1.5 rounded-full text-xs px-4 h-9 shadow-[0_4px_12px_rgba(37,211,102,0.35)]">
-              <MessageSquare className="w-3.5 h-3.5" />
-              WhatsApp
-            </Button>
-          </a>
+          <section className="glass rounded-3xl p-6 md:p-8 bg-primary/5 border-primary/20">
+            <h3 className="text-lg font-black uppercase tracking-tight mb-4">Ayuda Técnica</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-6">
+              ¿Tienes dudas con un movimiento? Graba tu técnica y súbela en el WOD para que tu coach la revise.
+            </p>
+            <Link href="/dashboard/athlete/profile">
+              <Button variant="outline" className="w-full h-12 rounded-xl text-xs font-bold uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/10">
+                Ver Mi Perfil
+              </Button>
+            </Link>
+          </section>
         </div>
       </div>
     </div>

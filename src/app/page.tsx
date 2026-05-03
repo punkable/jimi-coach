@@ -83,62 +83,101 @@ export default function LandingPage() {
 
       {/* ── Hero ── */}
       <section className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden">
-        {/* Hero background image */}
-        <div className="absolute inset-0">
+        {/* Background Layer */}
+        <div className="absolute inset-0 z-0">
           <Image
             src="/images/hero.png"
             alt="Atleta CrossFit"
             fill
             priority
-            className="object-cover object-center"
+            className="object-cover object-center scale-105 md:scale-100 transition-transform duration-[10s]"
             sizes="100vw"
           />
-          {/* Dark overlay for readability */}
-          <div className="absolute inset-0 bg-background/70" />
-          {/* Gradient fade to background at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-background to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/60 to-background" />
         </div>
 
-        {/* Ambient glows on top of image */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[300px] rounded-full bg-primary/20 blur-[120px]" />
+        {/* Dynamic Glows */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+          <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
+          <div className="absolute top-[40%] -right-[10%] w-[30%] h-[50%] rounded-full bg-blue-500/10 blur-[150px]" />
         </div>
 
-        <div className="relative z-10 text-center px-6 max-w-4xl mx-auto pt-24">
-          {/* Pill badge */}
-          <div className="inline-flex items-center gap-2 bg-primary/15 border border-primary/30 rounded-full px-4 py-1.5 mb-8 backdrop-blur-sm">
-            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-primary">Plataforma CrossFit Premium</span>
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 md:px-10 flex flex-col lg:flex-row items-center gap-12 lg:gap-20 pt-20">
+          <div className="flex-1 text-center lg:text-left">
+            {/* Pill badge */}
+            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8 backdrop-blur-md">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary">Plataforma CrossFit Elite</span>
+            </div>
+
+            <h1 className="text-6xl md:text-8xl lg:text-[120px] font-black tracking-tighter leading-[0.85] uppercase mb-8">
+              Tu Mejor<br />
+              <span className="text-primary italic">Versión</span><br />
+              Empieza Aquí.
+            </h1>
+
+            <p className="text-muted-foreground text-base md:text-lg lg:text-xl leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
+              Registra cada levantamiento, supera tus límites y mantente conectado con tu coach. La herramienta definitiva para atletas de alto rendimiento.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
+              <Link href="/login" className="w-full sm:w-auto">
+                <Button className="w-full sm:w-auto h-16 px-10 text-base font-black uppercase tracking-widest rounded-2xl gap-3 shadow-[0_12px_40px_rgba(var(--primary),0.4)] active:scale-95 transition-all">
+                  Empezar Ahora
+                  <ArrowRight className="w-5 h-5" />
+                </Button>
+              </Link>
+              <a href="#features" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto h-16 px-10 text-base font-bold uppercase tracking-widest rounded-2xl backdrop-blur-xl border-white/10 hover:bg-white/5 transition-all">
+                  Explorar Box
+                </Button>
+              </a>
+            </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.9] uppercase mb-8">
-            Entrena<br />
-            <span className="text-primary">Sin</span><br />
-            Límites.
-          </h1>
-
-          <p className="text-muted-foreground text-base md:text-xl leading-relaxed mb-10 max-w-lg mx-auto">
-            Tu coach y tu WOD siempre en el bolsillo. Registra cada serie, sigue tu progreso y mantén la racha.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-            <Link href="/login">
-              <Button className="h-14 px-8 text-base font-black uppercase tracking-widest rounded-2xl gap-2 shadow-[0_8px_30px_rgba(var(--primary),0.5)] active:scale-95 transition-transform">
-                Acceder Ahora
-                <ArrowRight className="w-5 h-5" />
-              </Button>
-            </Link>
-            <a href="#features">
-              <Button variant="outline" className="h-14 px-8 text-base font-bold uppercase tracking-widest rounded-2xl backdrop-blur-sm border-border/40 hover:bg-white/5">
-                Ver Cómo Funciona
-              </Button>
-            </a>
+          {/* Desktop Floating Mockup Element */}
+          <div className="hidden lg:block flex-1 relative h-[600px] w-full">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-[40px] border border-white/10 backdrop-blur-sm overflow-hidden shadow-2xl rotate-3 translate-x-10 translate-y-10" />
+            <div className="absolute inset-0 bg-background/40 rounded-[40px] border border-white/20 backdrop-blur-md overflow-hidden shadow-2xl flex flex-col p-8">
+              <div className="flex items-center justify-between mb-8">
+                <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center">
+                  <Zap className="w-6 h-6 text-primary" />
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Racha Actual</p>
+                  <p className="text-2xl font-black text-primary">14 DÍAS 🔥</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="h-20 rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                      <Target className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold uppercase text-xs">Fran (21-15-9)</span>
+                  </div>
+                  <span className="text-xl font-black">2:45</span>
+                </div>
+                <div className="h-20 rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center justify-between opacity-60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                      <TrendingUp className="w-5 h-5" />
+                    </div>
+                    <span className="font-bold uppercase text-xs">Back Squat (1RM)</span>
+                  </div>
+                  <span className="text-xl font-black">140kg</span>
+                </div>
+              </div>
+              <div className="mt-auto pt-8 flex items-center justify-center">
+                <div className="w-1 h-12 rounded-full bg-gradient-to-b from-primary to-transparent opacity-40 animate-bounce" />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Scroll cue */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-40">
-          <div className="w-px h-10 bg-gradient-to-b from-transparent to-foreground/60 animate-pulse" />
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 opacity-20 hidden md:flex">
+          <div className="w-px h-16 bg-gradient-to-b from-transparent to-foreground/60" />
         </div>
       </section>
 
