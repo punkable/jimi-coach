@@ -56,8 +56,8 @@ export default async function AthleteProfilePage() {
             </div>
             <div className="glass rounded-[24px] p-6 text-center border-amber-500/10">
               <Medal className="w-5 h-5 text-amber-500 mx-auto mb-2" />
-              <p className="text-2xl font-black leading-none">{profile?.total_classes ?? 0}</p>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Clases</p>
+              <p className="text-xl font-black leading-none truncate px-2">{profile?.subscription_plan || 'Sin Plan'}</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Membresía</p>
             </div>
           </div>
 

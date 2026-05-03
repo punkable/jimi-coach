@@ -23,36 +23,27 @@ export default function SubscriptionCard({ profile }: { profile: any }) {
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <p className="text-sm text-muted-foreground uppercase tracking-widest font-bold mb-1">Plan Actual</p>
-          <div className="text-2xl font-black uppercase text-foreground">
-            {plan}
+          <p className="text-sm text-muted-foreground uppercase tracking-widest font-bold mb-1">Estado</p>
+          <div className="flex items-center gap-3">
+            <div className="text-2xl font-black uppercase text-foreground">
+              {plan !== 'Sin plan activo' ? 'Activa' : 'Inactiva'}
+            </div>
+            {plan !== 'Sin plan activo' && (
+              <span className="flex h-6 items-center gap-1.5 px-3 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
+                <CheckCircle2 className="w-3 h-3" /> {plan}
+              </span>
+            )}
           </div>
         </div>
 
-        {total > 0 && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm font-bold uppercase tracking-wider">
-              <span>Clases Usadas: {used}</span>
-              <span className="text-primary">Disponibles: {remaining}</span>
-            </div>
-            <div className="h-3 w-full bg-secondary/50 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-500 ease-out" 
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground text-right mt-1">
-              De un total de {total} clases
-            </p>
-          </div>
-        )}
-
-        {total === 0 && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-secondary/20 p-3 rounded-md">
-            <Activity className="w-4 h-4" />
-            No tienes un paquete de clases activo. Habla con el coach.
-          </div>
-        )}
+        <div className="flex items-center gap-3 text-sm text-muted-foreground bg-secondary/10 p-4 rounded-2xl border border-border/10">
+          <Activity className="w-5 h-5 text-primary/50" />
+          <p className="text-xs leading-relaxed">
+            {plan !== 'Sin plan activo' 
+              ? 'Tienes acceso ilimitado a tus WODs y seguimiento de progreso.' 
+              : 'Habla con tu coach para activar tu membresía y comenzar a entrenar.'}
+          </p>
+        </div>
       </CardContent>
     </Card>
   )
