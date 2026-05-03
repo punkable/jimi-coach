@@ -2,11 +2,25 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import {
   Flame, Dumbbell, PlayCircle, AlertCircle,
-  MessageSquare, TrendingUp, Zap, Calendar, Clock, Trophy
+  MessageSquare, TrendingUp, Zap, Calendar, Trophy,
+  Target, Star, StickyNote
 } from 'lucide-react'
 import Link from 'next/link'
 import { StreakMascot } from '@/components/streak-mascot'
 import { AthleteStats } from './athlete-stats'
+
+const insightIconMap: Record<string, any> = {
+  goal: Target,
+  benchmark: Zap,
+  achievement: Trophy,
+  note: StickyNote,
+}
+const insightColorMap: Record<string, string> = {
+  goal: 'from-blue-500/20 to-blue-500/5 border-blue-500/20 text-blue-400',
+  benchmark: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
+  achievement: 'from-green-500/20 to-green-500/5 border-green-500/20 text-green-400',
+  note: 'from-primary/20 to-primary/5 border-primary/20 text-primary',
+}
 
 export default async function AthleteDashboard() {
   const supabase = await createClient()
@@ -39,6 +53,17 @@ export default async function AthleteDashboard() {
     .eq('completed', true)
     .order('created_at', { ascending: false })
 
+  // Fetch coach insights visible to this athlete
+  const { data: insights } = await supabase
+    .from('coach_insights')
+    .select('*')
+    .or(`athlete_id.eq.${user?.id},athlete_id.is.null`)
+    .eq('is_archived', false)
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
+    .order('is_pinned', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(5)
+
   // Streak calculation
   let currentStreak = 0
   if (results && results.length > 0) {
@@ -60,11 +85,8 @@ export default async function AthleteDashboard() {
     }
   }
 
-  // Today check
   const todayStr2 = new Date().toISOString().split('T')[0]
   const trainedToday = results?.some(r => r.created_at.startsWith(todayStr2))
-
-  // Avg RPE of last 5
   const last5 = results?.slice(0, 5) ?? []
   const avgRpe = last5.length > 0
     ? Math.round(last5.reduce((a, r) => a + (r.rpe || 0), 0) / last5.length)
@@ -76,7 +98,8 @@ export default async function AthleteDashboard() {
 
   if (!canTrain) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center gap-6">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] p-6 text-center gap-6"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="w-24 h-24 rounded-full bg-destructive/10 flex items-center justify-center">
           <AlertCircle className="w-12 h-12 text-destructive" />
         </div>
@@ -99,12 +122,11 @@ export default async function AthleteDashboard() {
   }
 
   return (
-    <div className="min-h-screen pb-4">
+    <div className="min-h-[100dvh] pb-4" style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
       {/* ── Hero Header ── */}
       <div className="relative px-4 pt-10 pb-6 overflow-hidden">
-        {/* Background glow */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute top-0 right-0 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full bg-primary/8 blur-3xl pointer-events-none" />
 
         <div className="relative flex items-start justify-between">
           <div>
@@ -123,7 +145,6 @@ export default async function AthleteDashboard() {
             )}
           </div>
 
-          {/* Streak badge */}
           {currentStreak > 0 && (
             <div className="flex flex-col items-center bg-primary/10 border border-primary/20 rounded-2xl px-3 py-2">
               <Flame className="w-5 h-5 text-primary" />
@@ -157,7 +178,6 @@ export default async function AthleteDashboard() {
         {/* ── WOD Card ── */}
         {plan ? (
           <div className="glass rounded-2xl overflow-hidden">
-            {/* Colored top bar */}
             <div className="h-1 bg-gradient-to-r from-primary via-primary/70 to-transparent" />
             <div className="p-4">
               <div className="flex items-start justify-between gap-3 mb-3">
@@ -184,7 +204,7 @@ export default async function AthleteDashboard() {
 
               <Link href="/dashboard/athlete/workout">
                 <Button
-                  className="w-full h-13 text-base font-black uppercase tracking-widest rounded-xl gap-2.5 shadow-[0_4px_24px_rgba(var(--primary),0.4)] active:scale-95 transition-transform"
+                  className="w-full h-14 text-base font-black uppercase tracking-widest rounded-xl gap-2.5 shadow-[0_4px_24px_rgba(var(--primary),0.4)] active:scale-95 transition-transform"
                   disabled={trainedToday}
                 >
                   <PlayCircle className="w-5 h-5" />
@@ -209,6 +229,40 @@ export default async function AthleteDashboard() {
                 <MessageSquare className="w-3.5 h-3.5" /> Escribir al Coach
               </Button>
             </a>
+          </div>
+        )}
+
+        {/* ── Coach Insights ── */}
+        {insights && insights.length > 0 && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <Star className="w-3.5 h-3.5 text-primary" />
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Del Coach</h3>
+            </div>
+            {insights.map((insight: any) => {
+              const Icon = insightIconMap[insight.type] || StickyNote
+              const colorClass = insightColorMap[insight.type] || insightColorMap.note
+              return (
+                <div key={insight.id} className={`rounded-2xl p-4 border bg-gradient-to-br ${colorClass} flex gap-3`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-current/10`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-black text-sm uppercase tracking-tight leading-tight">{insight.title}</p>
+                      {insight.target_value && (
+                        <span className="text-xs font-black shrink-0 bg-background/20 border border-white/10 px-2 py-0.5 rounded-lg">
+                          → {insight.target_value}
+                        </span>
+                      )}
+                    </div>
+                    {insight.body && (
+                      <p className="text-xs opacity-70 mt-1 leading-relaxed">{insight.body}</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         )}
 
