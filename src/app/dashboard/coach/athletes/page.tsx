@@ -56,9 +56,12 @@ export default async function AthletesPage() {
                 athletes.map((athlete) => (
                   <TableRow key={athlete.id}>
                     <TableCell className="font-medium">
-                      <div className="flex flex-col">
-                        <span>{athlete.full_name || 'Sin nombre'}</span>
-                        <span className="text-xs text-muted-foreground">{athlete.phone || 'Sin teléfono'}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{athlete.emoji || '💪'}</span>
+                        <div className="flex flex-col">
+                          <span>{athlete.full_name || 'Sin nombre'}</span>
+                          <span className="text-xs text-muted-foreground">{athlete.phone || 'Sin teléfono'}</span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>{athlete.email}</TableCell>

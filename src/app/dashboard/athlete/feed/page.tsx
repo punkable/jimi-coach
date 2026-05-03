@@ -16,12 +16,12 @@ export default async function FeedPage() {
   const { data: feedEntries } = await supabase
     .from('activity_feed')
     .select(`
-      *,
-      profiles:athlete_id(full_name, avatar_url),
+      id, type, content, created_at,
+      profiles:athlete_id(full_name, avatar_url, emoji),
       fist_bumps(from_athlete_id)
     `)
     .order('created_at', { ascending: false })
-    .limit(40)
+    .limit(30)
 
   return (
     <div className="min-h-[100dvh]" style={{ paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' }}>
@@ -48,14 +48,19 @@ export default async function FeedPage() {
               <div key={entry.id} className="glass rounded-2xl p-4 border border-border/30">
                 <div className="flex gap-3">
                   {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-secondary/50 border border-border/30 flex items-center justify-center shrink-0 overflow-hidden">
-                    {entry.profiles?.avatar_url ? (
-                      <img src={entry.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-lg font-black text-muted-foreground leading-none">
-                        {entry.profiles?.full_name?.[0]?.toUpperCase() || '?'}
-                      </span>
-                    )}
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-secondary/50 border border-border/30 flex items-center justify-center shrink-0 overflow-hidden">
+                      {entry.profiles?.avatar_url ? (
+                        <img src={entry.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-black text-muted-foreground leading-none">
+                          {entry.profiles?.full_name?.[0]?.toUpperCase() || '?'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 text-xs filter drop-shadow-sm">
+                      {entry.profiles?.emoji || '💪'}
+                    </div>
                   </div>
 
                   <div className="flex-1 min-w-0">

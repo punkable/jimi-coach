@@ -13,15 +13,16 @@ const prData = [
   { name: 'May', BackSquat: 120, Snatch: 75 },
 ]
 
-const curisidades = [
-  "¿Sabías que Fran (21-15-9 de Thrusters y Pull-Ups) fue uno de los primeros WODs diseñados por Greg Glassman en su garaje?",
-  "El récord mundial de Murph (con chaleco de 20lb) es de 34:38 minutos, por Hunter McIntyre.",
-  "Levantar pesas pesadas no te hace 'lento', de hecho, mejora el reclutamiento de fibras musculares rápidas, haciéndote más explosivo.",
-  "La gimnasia en CrossFit no solo desarrolla fuerza abdominal, sino que mejora drásticamente tu propiocepción (conciencia espacial)."
-]
-
-export function AthleteStats({ totalWorkouts = 0, currentStreak = 0 }: { totalWorkouts: number, currentStreak: number }) {
-  const datoCurioso = curisidades[Math.floor(Math.random() * curisidades.length)]
+export function AthleteStats({ 
+  totalWorkouts = 0, 
+  currentStreak = 0,
+  trivia = ""
+}: { 
+  totalWorkouts: number, 
+  currentStreak: number,
+  trivia?: string 
+}) {
+  const datoCurioso = trivia || "Levantar pesas mejora tu salud."
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">

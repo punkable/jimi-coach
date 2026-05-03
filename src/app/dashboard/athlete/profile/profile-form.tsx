@@ -17,8 +17,11 @@ export default function ProfileForm({ profile }: { profile: any }) {
     height: profile?.height_cm || '',
     snatchRm: profile?.snatch_rm || '',
     shirtSize: profile?.shirt_size || '',
-    birthDate: profile?.birth_date || ''
+    birthDate: profile?.birth_date || '',
+    emoji: profile?.emoji || '💪'
   })
+
+  const emojis = ['💪', '🔥', '🦁', '🦍', '🏋️', '⚡', '🏆', '💎', '🚀', '🥊', '🌪️', '🧿', '🦴', '🦈', '🦅', '🎯']
   
   const [isSaving, setIsSaving] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -40,7 +43,8 @@ export default function ProfileForm({ profile }: { profile: any }) {
         height: formData.height ? parseInt(formData.height) : null,
         snatchRm: formData.snatchRm ? parseFloat(formData.snatchRm) : null,
         shirtSize: formData.shirtSize,
-        birthDate: formData.birthDate || null
+        birthDate: formData.birthDate || null,
+        emoji: formData.emoji
       })
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
@@ -56,14 +60,37 @@ export default function ProfileForm({ profile }: { profile: any }) {
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2 uppercase tracking-widest text-primary">
           <Settings className="w-5 h-5" />
-          Datos Físicos y Personales
+          Perfil y Preferencias
         </CardTitle>
         <CardDescription>
-          Mantén tu información al día para una mejor planificación
+          Personaliza tu identidad y mantén tus datos al día
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-6">
+          {/* Emoji Picker Section */}
+          <div className="space-y-3">
+            <label className="text-xs font-black uppercase text-muted-foreground tracking-[0.2em]">Tu Identificador (Emoji)</label>
+            <div className="grid grid-cols-8 gap-2">
+              {emojis.map((em) => (
+                <button
+                  key={em}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, emoji: em })}
+                  className={`text-2xl p-2 rounded-xl transition-all ${
+                    formData.emoji === em 
+                      ? 'bg-primary/20 border-2 border-primary scale-110 shadow-[0_0_15px_rgba(var(--primary),0.3)]' 
+                      : 'bg-background/50 border border-white/5 hover:bg-white/5'
+                  }`}
+                >
+                  {em}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="h-px bg-border/20 w-full" />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Nombre Completo</label>
@@ -103,9 +130,9 @@ export default function ProfileForm({ profile }: { profile: any }) {
             {isSaving ? (
               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
             ) : success ? (
-              <><CheckCircle2 className="w-4 h-4 mr-2 text-green-400" /> ¡Guardado!</>
+              <><CheckCircle2 className="w-4 h-4 mr-2 text-green-400" /> ¡Perfil Actualizado!</>
             ) : (
-              <><Save className="w-4 h-4 mr-2" /> Guardar Cambios</>
+              <><Save className="w-4 h-4 mr-2" /> Guardar Perfil</>
             )}
           </Button>
         </form>

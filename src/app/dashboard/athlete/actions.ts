@@ -85,7 +85,8 @@ export async function updateProfile(data: {
   height: number | null,
   snatchRm: number | null,
   shirtSize: string,
-  birthDate: string | null
+  birthDate: string | null,
+  emoji?: string
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -101,7 +102,8 @@ export async function updateProfile(data: {
       height_cm: data.height,
       snatch_rm: data.snatchRm,
       shirt_size: data.shirtSize,
-      birth_date: data.birthDate
+      birth_date: data.birthDate,
+      emoji: data.emoji
     })
     .eq('id', user.id)
 
@@ -111,5 +113,6 @@ export async function updateProfile(data: {
   }
 
   revalidatePath('/dashboard/athlete', 'layout')
+  revalidatePath('/dashboard/athlete/ranking')
   return { success: true }
 }

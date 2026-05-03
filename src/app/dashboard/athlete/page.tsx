@@ -9,6 +9,7 @@ import {
 import Link from 'next/link'
 import { StreakMascot } from '@/components/streak-mascot'
 import { AthleteStats } from './athlete-stats'
+import { StartWorkoutCard } from './start-workout-card'
 
 const insightIconMap: Record<string, any> = {
   goal: Target,
@@ -29,13 +30,13 @@ export default async function AthleteDashboard() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, full_name, subscription_plan, total_classes, classes_used, avatar_url, emoji')
     .eq('id', user?.id)
     .single()
 
   const { data: assignments } = await supabase
     .from('assigned_plans')
-    .select('*, workout_plans(*)')
+    .select('id, workout_plans(id, title, description)')
     .eq('athlete_id', user?.id)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -53,11 +54,12 @@ export default async function AthleteDashboard() {
     .eq('athlete_id', user?.id)
     .eq('completed', true)
     .order('completed_at', { ascending: false })
+    .limit(100)
 
   // Fetch coach insights visible to this athlete
   const { data: insights } = await supabase
     .from('coach_insights')
-    .select('*')
+    .select('id, type, title, content, is_pinned, created_at')
     .or(`athlete_id.eq.${user?.id},athlete_id.is.null`)
     .eq('is_archived', false)
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
@@ -97,6 +99,16 @@ export default async function AthleteDashboard() {
   const hour = new Date().getHours()
   const greeting = hour < 12 ? '¡Buenos días' : hour < 19 ? '¡Buenas tardes' : '¡Buenas noches'
 
+  const curiosidades = [
+    "¿Sabías que Fran (21-15-9 de Thrusters y Pull-Ups) fue uno de los primeros WODs diseñados por Greg Glassman?",
+    "El récord mundial de Murph (con chaleco de 20lb) es de 34:38 minutos, por Hunter McIntyre.",
+    "Levantar pesas pesadas mejora el reclutamiento de fibras musculares rápidas, haciéndote más explosivo.",
+    "La gimnasia en CrossFit mejora drásticamente tu propiocepción (conciencia espacial).",
+    "El RPE (Esfuerzo Percibido) es la mejor herramienta para autoregular tu intensidad diaria.",
+    "La hidratación adecuada puede mejorar tu rendimiento en el WOD hasta en un 20%."
+  ]
+  const datoCurioso = curiosidades[Math.floor(Math.random() * curiosidades.length)]
+
   if (!canTrain) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[100dvh] p-6 text-center gap-6"
@@ -123,9 +135,9 @@ export default async function AthleteDashboard() {
   }
 
   return (
-    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
+    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 40px)' }}>
       {/* ── Hero Header ── */}
-      <div className="relative pt-6 pb-8 md:pt-10 md:pb-12 overflow-hidden rounded-3xl mb-8">
+      <div className="relative pt-10 pb-8 md:pt-14 md:pb-12 overflow-hidden rounded-3xl mb-8">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
         
         <div className="relative flex items-center justify-between">
@@ -137,7 +149,7 @@ export default async function AthleteDashboard() {
             <div className="mt-4 flex flex-wrap gap-2">
               {trainedToday ? (
                 <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-primary/30">
-                  <Zap className="w-3 h-3 fill-primary" /> Ya entrenaste hoy
+                  <Zap className="w-3 h-3 fill-primary" /> Entrenado
                 </span>
               ) : (
                 <span className="bg-secondary/50 text-muted-foreground px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-border/40">
@@ -161,45 +173,13 @@ export default async function AthleteDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: WOD & Stats */}
         <div className="lg:col-span-8 space-y-8">
-          {/* Main Action Card */}
-          <section>
-            <div className="flex items-center justify-between mb-4 px-1">
-              <h2 className="text-xl font-black uppercase tracking-tight">Tu Entrenamiento</h2>
-              {plan && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{plan.title}</span>}
-            </div>
-            
-            <Link href="/dashboard/athlete/workout" className="block group">
-              <Card className="glass overflow-hidden border-primary/20 group-hover:border-primary/50 transition-all duration-300 relative">
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Dumbbell className="w-32 h-32 -rotate-12" />
-                </div>
-                <CardContent className="p-8 md:p-12">
-                  <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(var(--primary),0.4)]">
-                          <PlayCircle className="w-6 h-6 text-primary-foreground" />
-                        </div>
-                        <div>
-                          <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tight">
-                            {trainedToday ? 'WOD Completado' : 'Comenzar WOD'}
-                          </h3>
-                          <p className="text-muted-foreground text-sm md:text-base font-medium">
-                            {trainedToday ? '¡Buen trabajo! Nos vemos mañana.' : 'Pulsa para iniciar tu sesión de hoy.'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                    <Button size="lg" disabled={trainedToday} className="h-14 px-8 rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl group-hover:scale-105 transition-transform">
-                      {trainedToday ? '¡Logrado!' : 'Entrenar Ahora'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </section>
+          <StartWorkoutCard plan={plan} trainedToday={!!trainedToday} />
 
-          <AthleteStats totalWorkouts={results?.length || 0} currentStreak={currentStreak} />
+          <AthleteStats 
+            totalWorkouts={results?.length || 0} 
+            currentStreak={currentStreak} 
+            trivia={datoCurioso}
+          />
           
           {/* WhatsApp / Support Section on Desktop */}
           <div className="hidden lg:flex glass rounded-3xl p-8 items-center justify-between gap-6 border-green-500/10 bg-green-500/5">
