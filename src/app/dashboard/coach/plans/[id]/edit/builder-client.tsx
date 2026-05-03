@@ -6,10 +6,9 @@ import { Button } from '@/components/ui/button'
 import { 
   Plus, Trash2, Dumbbell, Save, Loader2, 
   Search, X, Calendar, Layout, Edit3,
-  GripHorizontal, ChevronRight, Hash, Info
+  GripHorizontal, ChevronRight, Hash, Info, Video
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { savePlanStructure } from '../../actions'
 import { 
   DndContext, 
@@ -33,6 +32,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Textarea } from '@/components/ui/textarea'
 
 // Types
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
