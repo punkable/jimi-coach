@@ -189,14 +189,18 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
         const blockData = {
           workout_day_id: dayId,
           name: block.name || 'Sin nombre',
-          description: block.description || '',
+          description: block.description || '', // EXPLICIT MAPPING FOR TEXT ROUTINES
           type: block.type || 'strength',
-          timer_type: block.timer_type,
-          timer_config: block.timer_config,
+          timer_type: block.timer_type || null,
+          timer_config: block.timer_config || {},
           order_index: i
         }
 
-        console.log(`SAVING BLOCK ${block.id}:`, { name: blockData.name, descLength: blockData.description?.length })
+        console.log(`[PERSISTENCE] Saving Block: ${block.id}`, {
+          hasDesc: !!block.description,
+          descLength: block.description?.length || 0,
+          type: blockData.type
+        })
 
         let blockId = block.id
         if (isNewBlock) {

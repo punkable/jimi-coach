@@ -178,10 +178,14 @@ export function WorkoutSetsList({
 }) {
   const trackingType: TrackingType = movement.exercises?.tracking_type || 'weight_reps'
 
-  // Percentage Calculation Logic
+  // Percentage Calculation Logic - Robust parsing
   const pb = prs?.[movement.exercises?.id]
   const percentageStr = movement.weight_percentage ? String(movement.weight_percentage) : null
-  const percentageNum = percentageStr ? parseFloat(percentageStr.replace('%', '')) : null
+  
+  // Extract first number found in string (handles "80%", "80-85%", "target: 80")
+  const match = percentageStr?.match(/(\d+(?:\.\d+)?)/)
+  const percentageNum = match ? parseFloat(match[0]) : null
+  
   const calculatedWeight = (pb && percentageNum) ? Math.round(pb.weight * percentageNum / 100) : null
 
   const buildInitialSets = (): WorkoutSet[] => {

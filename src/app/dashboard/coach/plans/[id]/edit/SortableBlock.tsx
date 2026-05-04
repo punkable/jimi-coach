@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripHorizontal, Trash2, Video, Edit3 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 export function SortableBlock({ id, children, block, onRemove, onRename }: any) {
   const {

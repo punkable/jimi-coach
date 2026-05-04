@@ -115,11 +115,14 @@ export function BuilderClient({
         id: b.id || genId(),
         timer_type: b.timer_type || null,
         timer_config: b.timer_config || {},
-        workout_movements: (b.workout_movements || []).map((m: any) => ({
-          ...m,
-          id: m.id || genId(),
-          exercise: Array.isArray(m.exercises) ? m.exercises[0] : (m.exercises || m.exercise)
-        }))
+        workout_movements: (b.workout_movements || []).map((m: any) => {
+          const ex = m.exercises || m.exercise
+          return {
+            ...m,
+            id: m.id || genId(),
+            exercise: Array.isArray(ex) ? ex[0] : ex
+          }
+        })
       }))
     }))
   }
@@ -138,15 +141,25 @@ export function BuilderClient({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [editingBlocks, setEditingBlocks] = useState<Record<string, boolean>>({})
 
+  // Track changes to planMeta
+  useEffect(() => {
+    if (planMeta.title !== (initialPlan?.title || '') || 
+        planMeta.description !== (initialPlan?.description || '') ||
+        planMeta.is_community_enabled !== (initialPlan?.is_community_enabled ?? true)) {
+      setHasUnsavedChanges(true)
+    }
+  }, [planMeta, initialPlan])
+
   // Immutable state update helper
+  // Immutable state update helper with deep cloning safety
   const updateDays = (updater: Day[] | ((prev: Day[]) => Day[])) => {
     setDays(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
-      // Robust debug log to track description persistence
-      console.log('DAYS UPDATED - DESC CHECK:', next.map(d => d.workout_blocks.map(b => b.description?.substring(0, 10))))
-      return next
+      // Deep clone to ensure React detects changes in nested objects
+      const clonedNext = JSON.parse(JSON.stringify(next))
+      setHasUnsavedChanges(true)
+      return clonedNext
     })
-    setHasUnsavedChanges(true)
   }
 
   const sensors = useSensors(
