@@ -694,13 +694,20 @@ export function BuilderClient({
                                                   key={ex.id}
                                                   className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
                                                   onClick={() => {
-                                                      const tag = `[${ex.name}]`
-                                                      const n = JSON.parse(JSON.stringify(days))
-                                                      const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
-                                                      n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
-                                                      updateDays(n)
-                                                      setOpenPopoverId(null)
-                                                    }}
+                                                    const tagName = `[${ex.name}]`
+                                                    updateDays(prev => {
+                                                      const n = JSON.parse(JSON.stringify(prev))
+                                                      const dIdx = n.findIndex(d => d.id === day.id)
+                                                      if (dIdx !== -1) {
+                                                        const currentDesc = n[dIdx].workout_blocks[bIdx].description || ''
+                                                        n[dIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tagName
+                                                      }
+                                                      return n
+                                                    })
+                                                    setOpenPopoverId(null)
+                                                    // Automatically enable editing if it wasn't
+                                                    setEditingBlocks(prev => ({ ...prev, [block.id]: true }))
+                                                  }}
                                                   >
                                                     <div className="flex flex-col">
                                                       <span className="uppercase tracking-tight">{ex.name}</span>
@@ -729,9 +736,15 @@ export function BuilderClient({
                                       className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
                                       value={block.description || ''}
                                       onChange={(e) => {
-                                        const n = JSON.parse(JSON.stringify(days))
-                                        n[globalDIdx].workout_blocks[bIdx].description = e.target.value
-                                        updateDays(n)
+                                        const val = e.target.value
+                                        updateDays(prev => {
+                                          const n = JSON.parse(JSON.stringify(prev))
+                                          const dIdx = n.findIndex(d => d.id === day.id)
+                                          if (dIdx !== -1) {
+                                            n[dIdx].workout_blocks[bIdx].description = val
+                                          }
+                                          return n
+                                        })
                                       }}
                                     />
                                     <div className="flex justify-end">

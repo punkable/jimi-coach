@@ -27,6 +27,7 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
           <NavItem href="/dashboard/coach/plans" icon={Calendar} label="Planificaciones" pathname={pathname} />
           <NavItem href="/dashboard/coach/insights" icon={Target} label="Insights" pathname={pathname} />
           <NavItem href="/dashboard/coach/library" icon={Library} label="Biblioteca" pathname={pathname} />
+          <NavItem href="/dashboard/coach/memberships" icon={Crown} label="Modalidades" pathname={pathname} />
           <NavItem href="/dashboard/coach/reviews" icon={Video} label="Revisiones" pathname={pathname} />
           <NavItem href="/dashboard/coach/feed" icon={Activity} label="Box Feed" pathname={pathname} />
           
