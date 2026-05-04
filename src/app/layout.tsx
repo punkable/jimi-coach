@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Outfit, Roboto_Mono } from "next/font/google";
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -18,8 +17,8 @@ export const metadata: Metadata = {
   title: "LDRFIT",
   description: "Plataforma de entrenamiento para atletas y coaches de CrossFit.",
   icons: {
-    icon: '/icon.png',
-    apple: '/icon.png',
+    icon: '/images/isotipo.svg',
+    apple: '/images/isotipo.png',
   },
   appleWebApp: {
     capable: true,
@@ -51,7 +50,6 @@ export default function RootLayout({
         <TooltipProvider delay={300}>
           {children}
         </TooltipProvider>
-        <SpeedInsights />
       </body>
     </html>
   );

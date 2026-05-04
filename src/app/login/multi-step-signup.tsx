@@ -13,18 +13,23 @@ import { User, Activity, Dumbbell, ArrowRight, ArrowLeft, Loader2 } from 'lucide
 export function MultiStepSignup({ error }: { error?: string }) {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [localError, setLocalError] = useState<string | undefined>(error)
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    // Reset submitting state if error or message changes in the URL
     setIsSubmitting(false)
   }, [searchParams])
 
-  // Store data in state to populate hidden inputs so AnimatePresence doesn't destroy the data
   const [formDataState, setFormDataState] = useState({
-    full_name: '', email: '', password: '',
-    weight_kg: '', height_cm: '', birth_date: '',
-    snatch_rm: '', shirt_size: '', bio: ''
+    full_name: '',
+    email: '',
+    password: '',
+    weight_kg: '',
+    height_cm: '',
+    birth_date: '',
+    snatch_rm: '',
+    shirt_size: '',
+    bio: '',
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -32,9 +37,8 @@ export function MultiStepSignup({ error }: { error?: string }) {
   }
 
   const nextStep = () => {
-    // Validate Step 1 before moving to Step 2
+    const form = document.getElementById('signup-form') as HTMLFormElement
     if (step === 1) {
-      const form = document.getElementById('signup-form') as HTMLFormElement
       const fn = form.querySelector('#full_name') as HTMLInputElement
       const em = form.querySelector('#email') as HTMLInputElement
       const pw = form.querySelector('#password') as HTMLInputElement
@@ -43,9 +47,7 @@ export function MultiStepSignup({ error }: { error?: string }) {
         return
       }
     }
-    // Validate Step 2 before moving to Step 3
     if (step === 2) {
-      const form = document.getElementById('signup-form') as HTMLFormElement
       const wk = form.querySelector('#weight_kg') as HTMLInputElement
       const hc = form.querySelector('#height_cm') as HTMLInputElement
       const bd = form.querySelector('#birth_date') as HTMLInputElement
@@ -54,175 +56,157 @@ export function MultiStepSignup({ error }: { error?: string }) {
         return
       }
     }
-    setStep((prev) => Math.min(prev + 1, 3))
+    setStep(prev => Math.min(prev + 1, 3))
   }
 
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 1))
-
-  const [localError, setLocalError] = useState<string | undefined>(error)
+  const prevStep = () => setStep(prev => Math.max(prev - 1, 1))
 
   return (
-    <div className="relative overflow-hidden w-full h-full">
-      {/* Progress Bar */}
+    <div className="relative overflow-hidden w-full">
       <div className="flex gap-2 mb-6 px-1">
-        {[1, 2, 3].map((s) => (
-          <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${step >= s ? 'bg-primary' : 'bg-primary/20'}`} />
+        {[1, 2, 3].map(s => (
+          <div key={s} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${step >= s ? 'bg-primary' : 'bg-secondary'}`} />
         ))}
       </div>
 
       {localError && (
-        <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md font-medium">
+        <div className="mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-2xl font-medium">
           {localError}
         </div>
       )}
 
-      <form id="signup-form" action={async (data) => {
-        setIsSubmitting(true)
-        setLocalError(undefined)
-        const result = await signup(data)
-        if (result?.error) {
-          setLocalError(result.error)
-          setIsSubmitting(false)
-        }
-      }} className="relative min-h-[350px]">
-        
-        {/* Hidden inputs to ensure all data is submitted when form action fires */}
-        <input type="hidden" name="full_name" value={formDataState.full_name} />
-        <input type="hidden" name="email" value={formDataState.email} />
-        <input type="hidden" name="password" value={formDataState.password} />
-        <input type="hidden" name="weight_kg" value={formDataState.weight_kg} />
-        <input type="hidden" name="height_cm" value={formDataState.height_cm} />
-        <input type="hidden" name="birth_date" value={formDataState.birth_date} />
-        <input type="hidden" name="snatch_rm" value={formDataState.snatch_rm} />
-        <input type="hidden" name="shirt_size" value={formDataState.shirt_size} />
-        <input type="hidden" name="bio" value={formDataState.bio} />
+      <form
+        id="signup-form"
+        action={async data => {
+          setIsSubmitting(true)
+          setLocalError(undefined)
+          const result = await signup(data)
+          if (result?.error) {
+            setLocalError(result.error)
+            setIsSubmitting(false)
+          }
+        }}
+        className="relative min-h-[390px]"
+      >
+        {Object.entries(formDataState).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
 
         <AnimatePresence mode="wait">
           {step === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4 absolute w-full"
-            >
-              <div className="flex items-center gap-2 mb-2 text-primary font-bold">
-                <User className="w-5 h-5" /> Paso 1: Tu Cuenta
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="full_name">Nombre completo</Label>
-                <Input id="full_name" placeholder="John Doe" value={formDataState.full_name} onChange={handleChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="atleta@ejemplo.com" value={formDataState.email} onChange={handleChange} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" value={formDataState.password} onChange={handleChange} required />
-              </div>
-            </motion.div>
+            <StepShell key="step1" icon={User} eyebrow="Paso 1" title="Tu cuenta" color="primary">
+              <Field label="Nombre completo">
+                <Input id="full_name" placeholder="Nombre y apellido" value={formDataState.full_name} onChange={handleChange} required className="h-12 rounded-2xl bg-secondary/55" />
+              </Field>
+              <Field label="Email">
+                <Input id="email" type="email" placeholder="atleta@ejemplo.com" value={formDataState.email} onChange={handleChange} required className="h-12 rounded-2xl bg-secondary/55" />
+              </Field>
+              <Field label="Contraseña">
+                <Input id="password" type="password" placeholder="••••••••" value={formDataState.password} onChange={handleChange} required className="h-12 rounded-2xl bg-secondary/55" />
+              </Field>
+            </StepShell>
           )}
 
           {step === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4 absolute w-full"
-            >
-              <div className="flex items-center gap-2 mb-2 text-primary font-bold">
-                <Activity className="w-5 h-5" /> Paso 2: Datos Físicos
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                El coach necesita estos datos básicos para calcular tus pesos y enviarte un plan acorde a tu edad y contextura.
+            <StepShell key="step2" icon={Activity} eyebrow="Paso 2" title="Datos físicos" color="athlete">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Tu coach usa estos datos para ajustar cargas, progresiones y contexto del entrenamiento.
               </p>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="weight_kg">Peso (Kg)</Label>
-                  <Input id="weight_kg" type="number" step="0.1" placeholder="Ej: 75.5" value={formDataState.weight_kg} onChange={handleChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="height_cm">Altura (Cm)</Label>
-                  <Input id="height_cm" type="number" placeholder="Ej: 175" value={formDataState.height_cm} onChange={handleChange} required />
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Peso kg">
+                  <Input id="weight_kg" type="number" step="0.1" placeholder="75.5" value={formDataState.weight_kg} onChange={handleChange} required className="h-12 rounded-2xl bg-secondary/55" />
+                </Field>
+                <Field label="Altura cm">
+                  <Input id="height_cm" type="number" placeholder="175" value={formDataState.height_cm} onChange={handleChange} required className="h-12 rounded-2xl bg-secondary/55" />
+                </Field>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="birth_date">Fecha de Nacimiento</Label>
-                <Input id="birth_date" type="date" value={formDataState.birth_date} onChange={handleChange} required />
-              </div>
-            </motion.div>
+              <Field label="Fecha de nacimiento">
+                <Input id="birth_date" type="date" value={formDataState.birth_date} onChange={handleChange} required className="h-12 rounded-2xl bg-secondary/55" />
+              </Field>
+            </StepShell>
           )}
 
           {step === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 20, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4 absolute w-full"
-            >
-              <div className="flex items-center gap-2 mb-2 text-primary font-bold">
-                <Dumbbell className="w-5 h-5" /> Paso 3: Perfil CrossFit (Opcional)
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Puedes rellenar esto ahora para ahorrar tiempo o dejarlo para después en tu perfil.
+            <StepShell key="step3" icon={Dumbbell} eyebrow="Paso 3" title="Perfil CrossFit" color="strength">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Puedes completar estos datos ahora o editarlos después desde tu perfil.
               </p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="snatch_rm">RM Snatch (Kg)</Label>
-                  <Input id="snatch_rm" type="number" step="0.1" placeholder="Opcional" value={formDataState.snatch_rm} onChange={handleChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="shirt_size">Talla de Polera</Label>
-                  <select id="shirt_size" className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1" value={formDataState.shirt_size} onChange={handleChange}>
-                    <option className="bg-background text-foreground" value="">Seleccionar...</option>
-                    <option className="bg-background text-foreground" value="XS">XS</option>
-                    <option className="bg-background text-foreground" value="S">S</option>
-                    <option className="bg-background text-foreground" value="M">M</option>
-                    <option className="bg-background text-foreground" value="L">L</option>
-                    <option className="bg-background text-foreground" value="XL">XL</option>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="RM Snatch">
+                  <Input id="snatch_rm" type="number" step="0.1" placeholder="Opcional" value={formDataState.snatch_rm} onChange={handleChange} className="h-12 rounded-2xl bg-secondary/55" />
+                </Field>
+                <Field label="Talla">
+                  <select id="shirt_size" className="flex h-12 w-full rounded-2xl border border-input bg-secondary/55 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring" value={formDataState.shirt_size} onChange={handleChange}>
+                    <option className="bg-background text-foreground" value="">Seleccionar</option>
+                    {['XS', 'S', 'M', 'L', 'XL'].map(size => (
+                      <option key={size} className="bg-background text-foreground" value={size}>{size}</option>
+                    ))}
                   </select>
-                </div>
+                </Field>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Biografía o Notas Médicas</Label>
-                <Textarea id="bio" placeholder="¿Alguna lesión importante? ¿Cuentanos de ti?" className="resize-none h-20" value={formDataState.bio} onChange={handleChange} />
-              </div>
-
-              {error && <p className="text-sm text-destructive font-medium mt-2">{error}</p>}
-            </motion.div>
+              <Field label="Notas para tu coach">
+                <Textarea id="bio" placeholder="Lesiones, objetivos, experiencia o contexto importante." className="resize-none h-22 rounded-2xl bg-secondary/55" value={formDataState.bio} onChange={handleChange} />
+              </Field>
+            </StepShell>
           )}
         </AnimatePresence>
 
-        {/* Fixed Navigation Buttons at bottom */}
-        <div className="absolute bottom-0 left-0 w-full flex gap-2 pt-4 bg-card/80 backdrop-blur">
+        <div className="absolute bottom-0 left-0 w-full flex gap-2 pt-4 bg-card/90 backdrop-blur">
           {step > 1 && (
-            <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={prevStep} disabled={isSubmitting} className="h-12 rounded-2xl">
               <ArrowLeft className="w-4 h-4 mr-2" /> Atrás
             </Button>
           )}
-          
           {step < 3 ? (
-            <Button type="button" className="flex-1 font-bold" onClick={nextStep}>
+            <Button type="button" className="flex-1 h-12 rounded-2xl font-black uppercase tracking-widest text-xs" onClick={nextStep}>
               Siguiente <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
-            <Button type="submit" className="flex-1 font-bold" disabled={isSubmitting}>
+            <Button type="submit" className="flex-1 h-12 rounded-2xl font-black uppercase tracking-widest text-xs" disabled={isSubmitting}>
               {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-              Finalizar y Crear Cuenta
+              Crear cuenta
             </Button>
           )}
         </div>
       </form>
     </div>
+  )
+}
+
+function Field({ label, children }: { label: string, children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <Label className="section-title">{label}</Label>
+      {children}
+    </div>
+  )
+}
+
+function StepShell({ icon: Icon, eyebrow, title, color, children }: { icon: any, eyebrow: string, title: string, color: string, children: React.ReactNode }) {
+  const colorMap: Record<string, string> = {
+    primary: 'text-primary bg-primary/10 border-primary/20',
+    athlete: 'text-[var(--athlete)] bg-[var(--athlete)]/10 border-[var(--athlete)]/20',
+    strength: 'text-[var(--strength)] bg-[var(--strength)]/10 border-[var(--strength)]/20',
+  }
+
+  return (
+    <motion.div
+      initial={{ x: 18, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: -18, opacity: 0 }}
+      transition={{ duration: 0.2 }}
+      className="space-y-4 absolute w-full"
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${colorMap[color]}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+        <div>
+          <p className="section-title">{eyebrow}</p>
+          <h3 className="text-lg font-black uppercase tracking-tight">{title}</h3>
+        </div>
+      </div>
+      {children}
+    </motion.div>
   )
 }

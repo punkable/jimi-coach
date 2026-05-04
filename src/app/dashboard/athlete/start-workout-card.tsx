@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
-  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap, Trophy
+  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap, Video
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +29,29 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
 
   const selectedDay = planDays[selectedDayIdx]
   const dayNames = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']
+  const selectedBlocks = selectedDay?.workout_blocks ?? []
+  const selectedMovements = selectedBlocks.flatMap((block: any) => block.workout_movements ?? [])
+  const videoCount = selectedMovements.filter((movement: any) => movement.exercises?.video_url || movement.exercise?.video_url).length
+  const mainTimer = selectedBlocks.find((block: any) => block.timer_type && block.timer_type !== 'none')?.timer_type
+  const blockTypes = Array.from(new Set<string>(selectedBlocks.map((block: any) => block.type).filter(Boolean)))
+  const blockTypeLabels: Record<string, string> = {
+    warmup: 'Calentamiento',
+    strength: 'Fuerza',
+    metcon: 'Metcon',
+    gymnastics: 'Gimnasia',
+    cooldown: 'Vuelta a calma',
+    wod: 'WOD',
+  }
+  const focusLabel =
+    selectedDay?.title ||
+    blockTypes.map((type: string) => blockTypeLabels[type] || type).slice(0, 2).join(' + ') ||
+    'Entrenamiento del dia'
+  const timerLabel = mainTimer
+    ? `Timer ${String(mainTimer).toUpperCase()}`
+    : `${selectedBlocks.length} ${selectedBlocks.length === 1 ? 'bloque' : 'bloques'} listos`
+  const mediaLabel = videoCount > 0
+    ? `${videoCount} ${videoCount === 1 ? 'video tecnico' : 'videos tecnicos'}`
+    : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'} del plan`
 
   return (
     <section className="space-y-6">
@@ -98,11 +121,11 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
                     </h3>
                     <div className="flex items-center justify-center md:justify-start gap-3">
                       <span className="text-primary font-black uppercase tracking-[0.2em] text-[11px]">
-                        {selectedDay.title || 'Sesión Programada'}
+                        {focusLabel}
                       </span>
                       <div className="h-1 w-1 rounded-full bg-white/20" />
                       <span className="text-white/40 font-bold uppercase tracking-widest text-[9px]">
-                        {selectedDay.workout_blocks?.length || 0} Bloques
+                        {trainedToday ? 'Completado hoy' : 'Pendiente por registrar'}
                       </span>
                     </div>
                   </div>
@@ -112,13 +135,17 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
                   <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
                     <Zap className="w-4 h-4 text-primary fill-primary/20" />
                     <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      CrossFit Elite
+                      {timerLabel}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
-                    <Trophy className="w-4 h-4 text-[var(--strength)]" />
+                    {trainedToday ? (
+                      <CheckCircle2 className="w-4 h-4 text-[var(--strength)]" />
+                    ) : (
+                      <Video className="w-4 h-4 text-[var(--strength)]" />
+                    )}
                     <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      Progreso Real
+                      {trainedToday ? 'Resultado guardado' : mediaLabel}
                     </span>
                   </div>
                 </div>

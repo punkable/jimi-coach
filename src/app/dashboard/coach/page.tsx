@@ -1,6 +1,5 @@
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Activity, Plus, Dumbbell, TrendingUp, Calendar, ChevronRight, Video, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -101,22 +100,20 @@ export default async function CoachDashboard() {
   }))
 
   return (
-    <div className="p-6 md:p-12 space-y-12 max-w-7xl mx-auto relative">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-[radial-gradient(circle_at_50%_0%,rgba(204,255,0,0.08)_0%,transparent_70%)] pointer-events-none" />
-
+    <div className="p-4 md:p-8 xl:p-10 space-y-8 max-w-7xl mx-auto relative">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 relative z-10">
         <div className="flex items-center gap-8">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full animate-pulse" />
-            <Image src="/images/ready.png" alt="Rex Ready" width={110} height={110} className="object-contain hidden md:block relative z-10" />
+            <Image src="/images/ready.png" alt="Rex Ready" width={110} height={110} className="rex-art hidden md:block relative z-10" />
           </div>
           <div>
             <div className="flex items-center gap-2 text-primary mb-3">
               <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
-              <span className="text-[11px] font-black uppercase tracking-[0.3em]">Command Center</span>
+              <span className="text-[11px] font-black uppercase tracking-[0.3em]">Centro de coaching</span>
             </div>
             <h1 className="text-5xl font-black tracking-tighter uppercase leading-none">Coach {profile?.full_name?.split(' ')[0] || ''}</h1>
-            <p className="text-muted-foreground/60 text-sm font-bold uppercase tracking-widest mt-3">Elite Performance Management</p>
+            <p className="text-muted-foreground text-sm font-semibold mt-3">Planifica, revisa y acompaña a tus atletas desde un solo lugar.</p>
           </div>
         </div>
         <div className="flex gap-4">
@@ -163,7 +160,7 @@ export default async function CoachDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
         <div className="lg:col-span-2 space-y-8">
-          <section className="bg-white/[0.03] border border-white/5 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl">
+          <section className="ios-panel p-6 md:p-8">
             <div className="flex items-center justify-between mb-10">
               <h2 className="text-2xl font-black uppercase tracking-tight">Actividad de Atletas</h2>
               <div className="flex items-center gap-3 px-4 py-2 bg-primary/10 rounded-full border border-primary/20">
@@ -176,18 +173,18 @@ export default async function CoachDashboard() {
         </div>
 
         <div className="space-y-8">
-          <section className="bg-white/[0.03] border border-white/5 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl flex flex-col h-full">
+          <section className="ios-panel p-6 md:p-8 flex flex-col h-full">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-black uppercase tracking-tight">Registro de Actividad</h2>
             </div>
             <div className="space-y-5 flex-1">
               <PostFeedForm />
               <div className="space-y-3">
-                <QuickActionLink href="/dashboard/coach/athletes" label="Panel de Alumnos" icon={Users} />
-                <QuickActionLink href="/dashboard/coach/plans" label="Gestor de Rutinas" icon={Calendar} />
-                <QuickActionLink href="/dashboard/coach/library" label="Base de Datos" icon={Dumbbell} />
-                <QuickActionLink href="/dashboard/coach/insights" label="Metas y Feedback" icon={Target} />
-                <QuickActionLink href="/dashboard/coach/reviews" label="Correcciones" icon={Video} />
+                <QuickActionLink href="/dashboard/coach/athletes" label="Alumnos" icon={Users} color="athlete" />
+                <QuickActionLink href="/dashboard/coach/plans" label="Planificaciones" icon={Calendar} color="coach" />
+                <QuickActionLink href="/dashboard/coach/library" label="Biblioteca técnica" icon={Dumbbell} color="gymnastics" />
+                <QuickActionLink href="/dashboard/coach/insights" label="Metas y feedback" icon={Target} color="metcon" />
+                <QuickActionLink href="/dashboard/coach/reviews" label="Revisión de videos" icon={Video} color="review" />
               </div>
             </div>
             <div className="mt-8 pt-8 border-t border-white/5">
@@ -276,7 +273,7 @@ function StatCard({ title, value, icon: Icon, trend, color }: { title: string, v
   }
 
   return (
-    <div className="bg-white/[0.02] border border-white/5 rounded-[32px] p-7 backdrop-blur-3xl group hover:border-primary/30 transition-all duration-500 shadow-xl">
+    <div className="ios-panel p-6 group hover:-translate-y-0.5 transition-all duration-300">
       <div className="flex items-center justify-between mb-6">
         <div className={`p-3.5 rounded-[18px] border ${colorMap[color]} transition-all duration-500 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(var(--primary),0.2)]`}>
           <Icon className="w-6 h-6" />
@@ -286,17 +283,26 @@ function StatCard({ title, value, icon: Icon, trend, color }: { title: string, v
           <div className="h-0.5 w-8 bg-primary/20 rounded-full mt-1" />
         </div>
       </div>
-      <p className="text-[11px] font-black uppercase tracking-[0.25em] text-white/30 mb-2">{title}</p>
-      <p className="text-4xl font-black tracking-tighter text-white">{value}</p>
+      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground mb-2">{title}</p>
+      <p className="text-4xl font-black tracking-tight text-foreground">{value}</p>
     </div>
   )
 }
 
-function QuickActionLink({ href, label, icon: Icon }: { href: string, label: string, icon: any }) {
+function QuickActionLink({ href, label, icon: Icon, color = 'coach' }: { href: string, label: string, icon: any, color?: string }) {
+  const colorMap: Record<string, string> = {
+    coach: 'text-[var(--coach)] bg-[var(--coach)]/10 border-[var(--coach)]/20',
+    athlete: 'text-[var(--athlete)] bg-[var(--athlete)]/10 border-[var(--athlete)]/20',
+    gymnastics: 'text-[var(--gymnastics)] bg-[var(--gymnastics)]/10 border-[var(--gymnastics)]/20',
+    metcon: 'text-[var(--metcon)] bg-[var(--metcon)]/10 border-[var(--metcon)]/20',
+    review: 'text-[var(--review)] bg-[var(--review)]/10 border-[var(--review)]/20',
+  }
   return (
-    <Link href={href} className="flex items-center justify-between p-4 rounded-2xl bg-secondary/30 hover:bg-secondary/50 border border-transparent hover:border-border/50 transition-all group">
+    <Link href={href} className="flex items-center justify-between p-4 rounded-2xl bg-secondary/45 hover:bg-secondary border border-border/40 transition-all group">
       <div className="flex items-center gap-3">
-        <Icon className="w-4.5 h-4.5 text-muted-foreground group-hover:text-primary transition-colors" />
+        <div className={`w-9 h-9 rounded-xl border flex items-center justify-center ${colorMap[color] || colorMap.coach}`}>
+          <Icon className="w-4.5 h-4.5" />
+        </div>
         <span className="text-sm font-bold text-foreground/80 group-hover:text-foreground transition-colors">{label}</span>
       </div>
       <ChevronRight className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary group-hover:translate-x-1 transition-all" />

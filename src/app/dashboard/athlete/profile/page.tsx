@@ -28,7 +28,7 @@ export default async function AthleteProfilePage() {
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString().split('T')[0]
     if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      const checkDate = new Date(uniqueDates[0])
+      let checkDate = new Date(uniqueDates[0])
       currentStreak = 1
       for (let i = 1; i < uniqueDates.length; i++) {
         checkDate.setDate(checkDate.getDate() - 1)
@@ -45,17 +45,17 @@ export default async function AthleteProfilePage() {
           
           {/* Quick stats grid */}
           <div className="grid grid-cols-3 gap-4 max-w-4xl mx-auto">
-            <div className="glass rounded-[24px] p-6 text-center border-primary/10">
+            <div className="ios-panel p-6 text-center border-primary/10">
               <Dumbbell className="w-5 h-5 text-primary mx-auto mb-2" />
               <p className="text-2xl font-black leading-none">{results?.length ?? 0}</p>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">WODs</p>
             </div>
-            <div className="glass rounded-[24px] p-6 text-center border-orange-500/10">
+            <div className="ios-panel p-6 text-center border-orange-500/10">
               <Flame className="w-5 h-5 text-orange-500 mx-auto mb-2" />
               <p className="text-2xl font-black leading-none">{currentStreak}</p>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Racha</p>
             </div>
-            <div className="glass rounded-[24px] p-6 text-center border-amber-500/10">
+            <div className="ios-panel p-6 text-center border-amber-500/10">
               <Medal className="w-5 h-5 text-amber-500 mx-auto mb-2" />
               <p className="text-xl font-black leading-none truncate px-2">{profile?.subscription_plan || 'Sin Plan'}</p>
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Membresía</p>
@@ -79,7 +79,7 @@ export default async function AthleteProfilePage() {
               </Button>
             </form>
             <div className="flex flex-col items-center gap-3">
-              <Image src="/images/poker.png" alt="Rex Poker" width={60} height={60} className="object-contain opacity-50" />
+              <Image src="/images/poker.png" alt="Rex Poker" width={60} height={60} className="rex-art opacity-55" />
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">LDRFIT v1.2</p>
             </div>
           </div>

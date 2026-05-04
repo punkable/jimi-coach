@@ -54,7 +54,7 @@ export default async function AthleteDashboard() {
   if (planId) {
     const { data } = await supabase
       .from('workout_days')
-      .select('*, workout_blocks(*)')
+      .select('*, workout_blocks(*, workout_movements(*, exercises(id, name, video_url, category)))')
       .eq('plan_id', planId)
       .eq('is_published', true)
       .order('day_of_week', { ascending: true })
@@ -92,7 +92,7 @@ export default async function AthleteDashboard() {
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString().split('T')[0]
     if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      const checkDate = new Date(uniqueDates[0])
+      let checkDate = new Date(uniqueDates[0])
       currentStreak = 1
       for (let i = 1; i < uniqueDates.length; i++) {
         checkDate.setDate(checkDate.getDate() - 1)
@@ -105,6 +105,9 @@ export default async function AthleteDashboard() {
 
   const todayStr2 = new Date().toISOString().split('T')[0]
   const trainedToday = results?.some(r => r.completed_at.startsWith(todayStr2))
+  const calendarDay = new Date().getDay()
+  const trainingDayOfWeek = calendarDay === 0 ? 7 : calendarDay
+  const todayPlanDay = planDays.find((day: any) => day.day_of_week === trainingDayOfWeek)
   const last5 = results?.slice(0, 5) ?? []
   const avgRpe = last5.length > 0
     ? Math.round(last5.reduce((a, r) => a + (r.rpe || 0), 0) / last5.length)
@@ -136,19 +139,16 @@ export default async function AthleteDashboard() {
   }
 
   return (
-    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto relative" style={{ paddingTop: 'max(env(safe-area-inset-top), 40px)' }}>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(204,255,0,0.05)_0%,transparent_70%)] pointer-events-none" />
-
+    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto relative" style={{ paddingTop: 'max(env(safe-area-inset-top), 32px)' }}>
       {/* ── Hero Header ── */}
-      <div className="relative pt-10 pb-8 md:pt-20 md:pb-16 px-5 sm:px-8 md:px-16 overflow-hidden rounded-[28px] md:rounded-[40px] mb-8 md:mb-10 bg-white/[0.02] border border-white/5 backdrop-blur-3xl shadow-[0_30px_100px_rgba(0,0,0,0.4)]">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
-        <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="relative pt-8 pb-8 md:pt-12 md:pb-12 px-6 md:px-10 overflow-hidden rounded-[32px] mb-8 surface">
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)]" />
         
-        <div className="relative flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 text-primary mb-4 min-w-0">
+        <div className="relative flex items-center justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 text-primary mb-4">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.24em] sm:tracking-[0.4em] truncate">Plan Actual: {plan?.title || 'Personalizado'}</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Plan Actual: {plan?.title || 'Personalizado'}</span>
             </div>
             <AthleteGreeting name={firstName} />
             <div className="mt-6 flex flex-wrap gap-3">
@@ -157,8 +157,9 @@ export default async function AthleteDashboard() {
                   <Zap className="w-3.5 h-3.5 fill-primary" /> Hoy: Entrenado
                 </div>
               ) : (
-                <div className="bg-white/5 text-white/40 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/5">
-                  <Calendar className="w-3.5 h-3.5" /> Sesión Programada
+                <div className="bg-white/5 text-white/60 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {todayPlanDay ? `Hoy toca: ${todayPlanDay.title || 'Entrenamiento del dia'}` : 'Elige un dia para entrenar'}
                 </div>
               )}
               {currentStreak > 0 && (
@@ -169,12 +170,12 @@ export default async function AthleteDashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-3 sm:gap-6 shrink-0">
+          <div className="flex items-center gap-6">
             <div className="relative group">
               <div className="absolute inset-0 bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               <div className="relative transform hover:scale-110 transition-transform duration-700">
-                <Image src="/images/train.png" alt="Rex Training" width={140} height={140} className="object-contain hidden lg:block" />
-                <Image src="/images/train.png" alt="Rex Training" width={80} height={80} className="object-contain lg:hidden" />
+                <Image src="/images/train.png" alt="Rex Training" width={140} height={140} className="rex-art hidden lg:block" />
+                <Image src="/images/train.png" alt="Rex Training" width={80} height={80} className="rex-art lg:hidden" />
               </div>
             </div>
             <form action={signout} className="md:hidden">
@@ -269,13 +270,13 @@ export default async function AthleteDashboard() {
           </div>
 
           <section className="glass rounded-3xl p-6 md:p-8 bg-primary/5 border-primary/20">
-            <h3 className="text-lg font-black uppercase tracking-tight mb-4">Biblioteca</h3>
+            <h3 className="text-lg font-black uppercase tracking-tight mb-4">Ayuda Técnica</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-              Revisa videos y claves de movimiento. Si necesitas corrección, sube tu video al finalizar el WOD.
+              ¿Tienes dudas con un movimiento? Graba tu técnica y súbela en el WOD para que tu coach la revise.
             </p>
-            <Link href="/dashboard/athlete/library">
+            <Link href="/dashboard/athlete/profile">
               <Button variant="outline" className="w-full h-12 rounded-xl text-xs font-bold uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/10">
-                Abrir Biblioteca
+                Ver Mi Perfil
               </Button>
             </Link>
           </section>

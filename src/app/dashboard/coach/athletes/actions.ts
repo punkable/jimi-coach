@@ -40,21 +40,7 @@ export async function createAthlete(formData: FormData) {
   }
 
   // Ensure their profile is explicitly an athlete (the trigger does this, but we enforce it here)
-  await supabaseAdmin
-    .from('profiles')
-    .update({
-      role: 'athlete',
-      managed_by: profile?.role === 'coach' ? user.id : null,
-    })
-    .eq('id', authData.user.id)
-
-  if (profile?.role === 'coach') {
-    await supabaseAdmin.from('coach_athletes').upsert({
-      coach_id: user.id,
-      athlete_id: authData.user.id,
-      assigned_by: user.id,
-    })
-  }
+  await supabaseAdmin.from('profiles').update({ role: 'athlete' }).eq('id', authData.user.id)
 
   revalidatePath('/dashboard/coach/athletes')
   redirect('/dashboard/coach/athletes')
@@ -159,39 +145,11 @@ export async function assignWorkoutPlan(athleteId: string, planId: string | null
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
-    throw new Error('Not authorized')
-  }
-
   if (!planId || planId === 'no-plan') {
-    let deleteQuery = supabase.from('assigned_plans').delete().eq('athlete_id', athleteId)
-    if (profile?.role === 'coach') deleteQuery = deleteQuery.eq('assigned_by', user.id)
-    await deleteQuery
+    await supabase.from('assigned_plans').delete().eq('athlete_id', athleteId)
     revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
     revalidatePath('/dashboard/athlete')
     return { success: true }
-  }
-
-  if (profile?.role === 'coach') {
-    const [{ data: relationship }, { data: plan }] = await Promise.all([
-      supabase
-        .from('coach_athletes')
-        .select('athlete_id')
-        .eq('coach_id', user.id)
-        .eq('athlete_id', athleteId)
-        .single(),
-      supabase
-        .from('workout_plans')
-        .select('id')
-        .eq('id', planId)
-        .eq('created_by', user.id)
-        .single(),
-    ])
-
-    if (!relationship || !plan) {
-      throw new Error('Not authorized')
-    }
   }
 
   // Check if already assigned

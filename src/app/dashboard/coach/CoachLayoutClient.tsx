@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Users, Library, Calendar, LayoutDashboard, Settings, LogOut, Video, Crown, HelpCircle, Target, Activity, ShieldCheck, Calculator } from 'lucide-react'
+import { Users, Library, Calendar, LayoutDashboard, Settings, LogOut, Video, Crown, HelpCircle, Target, Activity, ShieldCheck } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { NotificationsBell } from '@/components/notifications-bell'
 import { Button } from '@/components/ui/button'
@@ -14,18 +14,17 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
   return (
     <div className="flex min-h-screen bg-background overflow-hidden">
       {/* Sidebar for Desktop */}
-      <aside className="hidden md:flex flex-col w-64 border-r border-border/40 bg-card/40 backdrop-blur-xl">
-        <div className="p-8">
+      <aside className="hidden md:flex flex-col w-72 border-r border-border/70 bg-card/90 backdrop-blur-xl">
+        <div className="p-7">
             <Link href="/dashboard/coach" className="flex items-center gap-2">
-              <Image src="/images/logotipo.png" alt="LDRFIT" width={140} height={40} className="object-contain" />
+              <Image src="/images/logofinal.svg" alt="LDRFIT" width={148} height={42} className="brand-logo" />
             </Link>
-          <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-2">Coach Panel</p>
+          <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-2">Coach Studio</p>
         </div>
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <NavItem href="/dashboard/coach" icon={LayoutDashboard} label="Dashboard" pathname={pathname} />
-          <NavItem href="/dashboard/coach/athletes" icon={Users} label={isAdmin ? 'Usuarios' : 'Alumnos'} pathname={pathname} />
+          <NavItem href="/dashboard/coach/athletes" icon={Users} label="Alumnos" pathname={pathname} />
           <NavItem href="/dashboard/coach/plans" icon={Calendar} label="Planificaciones" pathname={pathname} />
-          <NavItem href="/dashboard/coach/tools" icon={Calculator} label="Tools" pathname={pathname} />
           <NavItem href="/dashboard/coach/insights" icon={Target} label="Insights" pathname={pathname} />
           <NavItem href="/dashboard/coach/library" icon={Library} label="Biblioteca" pathname={pathname} />
           <NavItem href="/dashboard/coach/memberships" icon={Crown} label="Modalidades" pathname={pathname} />
@@ -53,9 +52,9 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
-        <div className="h-14 w-full flex items-center justify-between px-4 md:px-8 border-b border-border/30 shrink-0 bg-background/50 backdrop-blur-xl z-40">
+        <div className="h-14 w-full flex items-center justify-between px-4 md:px-8 border-b border-border/60 shrink-0 bg-background/80 backdrop-blur-xl z-40">
           <div className="md:hidden">
-            <Image src="/images/isotipo.png" alt="Logo" width={24} height={24} className="opacity-80" />
+            <Image src="/images/isotipoblanco.svg" alt="Logo" width={26} height={26} className="brand-logo opacity-85" />
           </div>
           <div className="flex items-center gap-4">
             <NotificationsBell />
@@ -72,10 +71,9 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
       </main>
 
       {/* Mobile Bottom Nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-nav-safe border-t border-border/30 bg-background/90 backdrop-blur-xl px-1 flex items-center justify-around z-50 pb-safe">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 h-nav-safe border-t border-border/60 bg-background/95 backdrop-blur-xl px-1 flex items-center justify-around z-50 pb-safe">
         <MobileNavItem href="/dashboard/coach" icon={LayoutDashboard} label="Inicio" pathname={pathname} />
-        <MobileNavItem href="/dashboard/coach/athletes" icon={Users} label={isAdmin ? 'Usuarios' : 'Alumnos'} pathname={pathname} />
-        <MobileNavItem href="/dashboard/coach/tools" icon={Calculator} label="Tools" pathname={pathname} />
+        <MobileNavItem href="/dashboard/coach/athletes" icon={Users} label="Alumnos" pathname={pathname} />
         <MobileNavItem href="/dashboard/coach/feed" icon={Activity} label="Feed" pathname={pathname} />
         <MobileNavItem href="/dashboard/coach/plans" icon={Calendar} label="Planes" pathname={pathname} />
         {isAdmin && <MobileNavItem href="/dashboard/coach/staff" icon={ShieldCheck} label="Staff" pathname={pathname} />}
@@ -90,12 +88,12 @@ function NavItem({ href, icon: Icon, label, variant = 'default', pathname }: { h
   return (
     <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-black uppercase tracking-widest ${
       isActive 
-        ? 'bg-primary text-primary-foreground shadow-[0_0_20px_rgba(204,255,0,0.2)] scale-[1.02]' 
+        ? 'bg-foreground text-background shadow-[0_12px_28px_rgba(0,0,0,0.18)] scale-[1.02]' 
         : variant === 'default'
-          ? 'text-muted-foreground hover:text-foreground hover:bg-white/5'
-          : 'text-muted-foreground/60 hover:text-foreground hover:bg-white/5'
+          ? 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+          : 'text-muted-foreground/70 hover:text-foreground hover:bg-secondary'
     }`}>
-      <Icon className={`h-4 w-4 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
+      <Icon className={`h-4 w-4 ${isActive ? 'stroke-[2.5] text-primary' : 'stroke-[1.7]'}`} />
       {label}
     </Link>
   )
@@ -105,9 +103,9 @@ function MobileNavItem({ href, icon: Icon, label, pathname }: { href: string, ic
   const isActive = pathname === href || (href !== '/dashboard/coach' && pathname.startsWith(href))
   
   return (
-    <Link href={href} className={`flex flex-col items-center justify-center gap-1.5 min-w-[54px] py-2 transition-all duration-500 relative ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+    <Link href={href} className={`flex flex-col items-center justify-center gap-1.5 min-w-[64px] py-2 transition-all duration-500 relative ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
       {isActive && (
-        <div className="absolute -top-1 w-12 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(204,255,0,0.8)]" />
+        <div className="absolute -top-1 w-12 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(147,213,0,0.55)]" />
       )}
       <Icon className={`h-6 w-6 transition-all duration-300 ${isActive ? 'stroke-[2.5] scale-110 drop-shadow-[0_0_8px_rgba(204,255,0,0.4)]' : 'stroke-[1.5]'}`} />
       <span className={`text-[8px] font-black uppercase tracking-[0.15em] transition-all ${isActive ? 'opacity-100' : 'opacity-40'}`}>{label}</span>

@@ -16,7 +16,7 @@ export default function HelpCenterPage() {
               Aprende a sacarle el máximo provecho a la plataforma LDRFIT con Rex, tu asistente.
             </p>
           </div>
-          <Image src="/images/support.png" alt="Rex Support" width={80} height={80} className="object-contain" />
+          <Image src="/images/support.png" alt="Rex Support" width={80} height={80} className="rex-art" />
         </div>
       </header>
 

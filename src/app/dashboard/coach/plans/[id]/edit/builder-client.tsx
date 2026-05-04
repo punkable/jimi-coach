@@ -1,17 +1,16 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { useState, useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { 
   Plus, Trash2, Dumbbell, Save, Loader2, 
-  Search, X, Calendar, Layout, Edit3,
-  GripHorizontal, ChevronRight, Hash, Info, Video,
+  Search, Layout, Edit3,
+  Hash, Video,
   Eye, EyeOff, CheckCircle2, Timer as TimerIcon
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { savePlanStructure, toggleWeekStatus } from '../../actions'
+import { savePlanStructure, toggleWeekStatus, updateBlockDescription } from '../../actions'
 import { 
   DndContext, 
   closestCenter, 
@@ -31,7 +30,6 @@ import {
 import { SortableMovement } from './SortableMovement'
 import { SortableBlock } from './SortableBlock'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
@@ -40,22 +38,33 @@ import { Textarea } from '@/components/ui/textarea'
 import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 
 // Types
-type Exercise = { id: string, name: string, category: string, difficulty_level: string }
+type Exercise = { id: string, name: string, category?: string | null, difficulty_level?: string | null, video_url?: string | null }
 type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
 type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[], timer_type?: string, timer_config?: any }
 type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
 
-// Draggable Exercise Item for Sidebar
-function DraggableExercise({ exercise }: { exercise: Exercise }) {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+// Sidebar Exercise Item with Drag & Copy Tag Support
+function LibraryItem({ exercise }: { exercise: Exercise }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `lib-${exercise.id}`,
     data: { type: 'library-item', exercise }
   })
   
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyTag = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const tag = `[${exercise.name}]`
+    navigator.clipboard.writeText(tag)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 999
   } : undefined
 
   return (
@@ -64,17 +73,38 @@ function DraggableExercise({ exercise }: { exercise: Exercise }) {
       style={style} 
       {...listeners} 
       {...attributes}
-      className="p-3 mb-2 rounded-xl bg-card border border-border/40 hover:border-primary/50 cursor-grab active:cursor-grabbing transition-all group shadow-sm hover:shadow-md"
+      className={cn(
+        "group relative p-3 mb-2 rounded-2xl bg-card/80 border border-border/70 hover:border-primary/40 cursor-grab active:cursor-grabbing transition-all hover:shadow-[0_12px_32px_rgba(15,23,42,0.16)]",
+        isDragging && "opacity-50 ring-2 ring-primary ring-offset-4 ring-offset-background"
+      )}
     >
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-secondary/50 flex items-center justify-center shrink-0">
-          <Dumbbell className="w-4 h-4 text-muted-foreground/40 group-hover:text-primary transition-colors" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:bg-primary/20 transition-colors">
+            <Dumbbell className="w-5 h-5 text-primary" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black uppercase truncate text-foreground tracking-tight">{exercise.name}</p>
+            <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">{exercise.category || 'General'}</p>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase truncate">{exercise.name}</p>
-          <p className="text-[9px] font-black uppercase text-muted-foreground/40 tracking-widest">{exercise.category}</p>
-        </div>
+
+        <button
+          onClick={handleCopyTag}
+          className={cn(
+            "h-8 px-2 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all",
+            copied 
+              ? "bg-green-500/20 text-green-500 border border-green-500/30" 
+              : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent"
+          )}
+        >
+          {copied ? <CheckCircle2 className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
+          {copied ? 'Copiado' : 'Etiqueta'}
+        </button>
       </div>
+      
+      {/* Visual Indicator of Draggable */}
+      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
     </div>
   )
 }
@@ -128,6 +158,17 @@ export function BuilderClient({
   }
 
   const [days, setDays] = useState<Day[]>(processInitialDays(initialDays))
+  const daysRef = useRef<Day[]>(processInitialDays(initialDays))
+  const [routineDrafts, setRoutineDrafts] = useState<Record<string, string>>(() => {
+    const drafts: Record<string, string> = {}
+    daysRef.current.forEach(day => {
+      day.workout_blocks.forEach(block => {
+        drafts[block.id] = block.description || ''
+      })
+    })
+    return drafts
+  })
+  const routineDraftsRef = useRef<Record<string, string>>(routineDrafts)
   const [planMeta, setPlanMeta] = useState({
     title: initialPlan?.title || '',
     description: initialPlan?.description || '',
@@ -140,6 +181,10 @@ export function BuilderClient({
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [editingBlocks, setEditingBlocks] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    routineDraftsRef.current = routineDrafts
+  }, [routineDrafts])
 
   // Track changes to planMeta
   useEffect(() => {
@@ -157,9 +202,39 @@ export function BuilderClient({
       const next = typeof updater === 'function' ? updater(prev) : updater
       // Deep clone to ensure React detects changes in nested objects
       const clonedNext = JSON.parse(JSON.stringify(next))
+      daysRef.current = clonedNext
       setHasUnsavedChanges(true)
       return clonedNext
     })
+  }
+
+  const rebuildRoutineDrafts = (nextDays: Day[]) => {
+    const drafts: Record<string, string> = {}
+    nextDays.forEach(day => {
+      day.workout_blocks.forEach(block => {
+        drafts[block.id] = block.description || ''
+      })
+    })
+    routineDraftsRef.current = drafts
+    setRoutineDrafts(drafts)
+  }
+
+  const mergeRoutineDraftsIntoDays = (sourceDays: Day[]) => {
+    const drafts = routineDraftsRef.current
+    return JSON.parse(JSON.stringify(sourceDays)).map((day: Day) => ({
+      ...day,
+      workout_blocks: day.workout_blocks.map((block: Block) => ({
+        ...block,
+        description: drafts[block.id] ?? block.description ?? ''
+      }))
+    }))
+  }
+
+  const updateRoutineDraft = (blockId: string, value: string) => {
+    const nextDrafts = { ...routineDraftsRef.current, [blockId]: value }
+    routineDraftsRef.current = nextDrafts
+    setRoutineDrafts(nextDrafts)
+    setHasUnsavedChanges(true)
   }
 
   const sensors = useSensors(
@@ -350,13 +425,19 @@ export function BuilderClient({
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      const res = await savePlanStructure(planId, days, planMeta)
+      const daysToSave = mergeRoutineDraftsIntoDays(daysRef.current)
+      daysRef.current = daysToSave
+      const res = await savePlanStructure(planId, daysToSave, planMeta)
       if (res.success && res.days) {
-        setDays(processInitialDays(res.days))
+        const processedDays = processInitialDays(res.days)
+        const hydratedDays = mergeRoutineDraftsIntoDays(processedDays)
+        daysRef.current = hydratedDays
+        setDays(hydratedDays)
+        rebuildRoutineDrafts(hydratedDays)
         setHasUnsavedChanges(false)
         alert('¡Planificación guardada con éxito!')
       } else {
-        throw new Error('No se recibió la estructura actualizada')
+        throw new Error(res.error || 'No se recibió la estructura actualizada')
       }
     } catch (e: any) {
       console.error(e)
@@ -368,8 +449,27 @@ export function BuilderClient({
 
   const filteredLibrary = library.filter(ex => 
     ex.name.toLowerCase().includes(libSearch.toLowerCase()) ||
-    ex.category.toLowerCase().includes(libSearch.toLowerCase())
+    (ex.category || '').toLowerCase().includes(libSearch.toLowerCase())
   )
+
+  const confirmBlockDescription = async (blockId: string, description: string) => {
+    setEditingBlocks(prev => ({ ...prev, [blockId]: false }))
+
+    if (blockId.length < 15) return
+
+    const latestDescription = routineDraftsRef.current[blockId] ?? description ?? ''
+    updateRoutineDraft(blockId, latestDescription)
+
+    try {
+      const res = await updateBlockDescription(blockId, latestDescription)
+      if (!res.success) throw new Error(res.error || 'No se pudo guardar el texto')
+      if (typeof res.description === 'string') updateRoutineDraft(blockId, res.description)
+    } catch (e: any) {
+      console.error(e)
+      setEditingBlocks(prev => ({ ...prev, [blockId]: true }))
+      alert(`Error al guardar el texto de la rutina: ${e.message || 'Error desconocido'}`)
+    }
+  }
 
   const currentWeekDays = days.filter(d => d.week_number === parseInt(activeWeek))
   const isWeekPublished = currentWeekDays.every(d => d.is_published)
@@ -379,6 +479,7 @@ export function BuilderClient({
     const newStatus = !isWeekPublished
     // Optimistic update
     const n = days.map(d => d.week_number === parseInt(activeWeek) ? { ...d, is_published: newStatus } : d)
+    daysRef.current = n
     setDays(n)
     
     try {
@@ -387,27 +488,28 @@ export function BuilderClient({
       console.error(e)
       alert('Error al actualizar estado de la semana')
       // Rollback
+      daysRef.current = days
       setDays(days)
     }
   }
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="flex h-full gap-6 overflow-hidden">
+      <div className="grid grid-cols-1 xl:grid-cols-[20rem_minmax(0,1fr)] gap-4 items-start overflow-visible">
         
         {/* ── Sidebar: Library ── */}
-        <aside className="w-96 flex flex-col gap-6 bg-[#0a0a0a] border-r border-white/5 p-6 shrink-0 shadow-2xl relative z-20">
+        <aside className="w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 h-[360px] xl:h-[calc(100dvh-11rem)] xl:min-h-[460px]">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
           
-          <div className="relative z-10 space-y-6">
-            <div className="pb-6 border-b border-white/5">
+          <div className="relative z-10 space-y-4 p-4 border-b border-border/60">
+            <div>
               <Button 
                 onClick={handleSave} 
                 disabled={isSaving} 
-                className={`w-full gap-3 font-black uppercase tracking-[0.2em] text-[10px] h-16 rounded-[24px] transition-all relative ${
+                className={`w-full gap-3 font-black uppercase tracking-[0.16em] text-[10px] h-12 rounded-2xl transition-all relative ${
                   hasUnsavedChanges 
-                    ? 'bg-white text-black hover:bg-white/90 shadow-[0_20px_50px_rgba(255,255,255,0.1)] ring-2 ring-primary ring-offset-4 ring-offset-black' 
-                    : 'bg-white/5 hover:bg-white/10 text-white/40 shadow-none border border-white/5'
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_16px_34px_rgba(147,213,0,0.20)] ring-2 ring-primary/30 ring-offset-2 ring-offset-background' 
+                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground shadow-none border border-border/70'
                 }`}
               >
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
@@ -421,102 +523,106 @@ export function BuilderClient({
               </Button>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Dumbbell className="w-3.5 h-3.5" /> Biblioteca de Ejercicios
-                </h3>
-                <Badge variant="outline" className="text-[8px] font-black border-white/10 text-white/30">{library.length} ITEMS</Badge>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-xl font-black tracking-tight uppercase text-foreground">Biblioteca</h3>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Arrastra o copia etiquetas</p>
+                </div>
+                <Badge variant="outline" className="text-[8px] font-black border-border/70 text-muted-foreground">{library.length} items</Badge>
               </div>
-              <p className="text-[10px] text-white/30 font-medium leading-relaxed">
-                Arrastra ejercicios a los bloques para construir tu rutina.
-              </p>
             </div>
             
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
               <Input 
-                placeholder="Buscar movimiento..." 
-                className="h-12 text-xs bg-white/5 border-white/10 pl-11 rounded-2xl focus:border-primary/50 transition-all placeholder:text-white/10"
+                placeholder="Buscar ejercicio..." 
+                className="h-11 bg-background/55 border-border/70 rounded-2xl pl-10 text-sm focus:ring-primary/20 transition-all"
                 value={libSearch}
                 onChange={(e) => setLibSearch(e.target.value)}
               />
             </div>
           </div>
 
-          <ScrollArea className="flex-1 -mr-4 pr-4">
-            <div className="space-y-2 pb-10">
-              {filteredLibrary.map(ex => (
-                <DraggableExercise key={ex.id} exercise={ex} />
+          <div className="flex-1 min-h-0 relative z-10 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+            <div className="p-4 space-y-2">
+              {filteredLibrary.map((ex) => (
+                <LibraryItem key={ex.id} exercise={ex} />
               ))}
               {filteredLibrary.length === 0 && (
-                <div className="py-20 text-center space-y-3 opacity-20">
-                  <Search className="w-10 h-10 mx-auto" />
-                  <p className="text-[10px] font-black uppercase tracking-widest">No se encontraron resultados</p>
+                <div className="py-12 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mx-auto">
+                    <Search className="w-6 h-6 text-muted-foreground/20" />
+                  </div>
+                  <p className="text-xs text-muted-foreground/40 font-medium italic">No se encontraron resultados</p>
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
+          
+          <div className="relative z-10 p-3 bg-background/35 border-t border-border/60">
+            <p className="text-[9px] text-center text-muted-foreground uppercase font-bold">{filteredLibrary.length} ejercicios disponibles</p>
+          </div>
         </aside>
 
         {/* ── Main Workspace ── */}
-        <main className="flex-1 flex flex-col gap-6 overflow-hidden">
+        <main className="flex flex-col gap-4 overflow-visible min-w-0">
           
           {/* Header & Week Tabs */}
-          <div className="bg-[#161616] border border-white/5 rounded-[32px] p-8 space-y-8 shrink-0 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full -z-10 group-hover:bg-primary/10 transition-colors duration-700" />
+          <div className="ios-panel p-4 md:p-5 space-y-5 shrink-0 overflow-hidden group">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)]" />
             
-            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-              <div className="w-16 h-16 rounded-[24px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 shadow-[0_0_30px_rgba(var(--primary),0.1)]">
-                <Layout className="w-8 h-8 text-primary" />
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                <Layout className="w-6 h-6 text-primary" />
               </div>
-              <div className="flex-1 space-y-4 w-full">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex-1 space-y-3 w-full min-w-0">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-3">
                   <div className="space-y-1.5 flex-1 group/title relative">
                     <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Título del Programa</Label>
                     <Input 
-                      className="bg-black/40 border-white/10 hover:border-primary/40 focus:border-primary h-12 rounded-xl text-xl font-black tracking-tight transition-all placeholder:text-white/5 shadow-inner"
+                      className="bg-background/55 border-border/70 hover:border-primary/40 focus:border-primary h-11 rounded-xl text-base md:text-lg font-black tracking-tight transition-all"
                       value={planMeta.title}
                       placeholder="Ej: Programa de Fuerza Pro..."
                       onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
                     />
                   </div>
-                  <div className="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-white/10 self-start md:self-auto">
+                  <div className="flex items-center gap-3 bg-background/55 p-3 rounded-2xl border border-border/70 self-start lg:self-auto shrink-0">
                     <Switch 
                       id="community-mode" 
                       checked={planMeta.is_community_enabled}
                       onCheckedChange={(checked) => setPlanMeta({...planMeta, is_community_enabled: checked})}
                     />
-                    <Label htmlFor="community-mode" className="text-[9px] font-black uppercase tracking-widest cursor-pointer select-none">
-                      Feed Comunitario {planMeta.is_community_enabled ? 'ON' : 'OFF'}
+                    <Label htmlFor="community-mode" className="text-[9px] font-black uppercase tracking-widest cursor-pointer select-none whitespace-nowrap">
+                      Feed comunitario {planMeta.is_community_enabled ? 'ON' : 'OFF'}
                     </Label>
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Descripción y Objetivos</Label>
                   <Input 
-                    className="bg-black/20 border-white/5 hover:border-white/10 focus:border-primary/50 h-10 rounded-xl text-sm font-medium transition-all placeholder:text-white/5"
+                    className="bg-background/45 border-border/60 hover:border-primary/30 focus:border-primary/50 h-10 rounded-xl text-sm font-medium transition-all"
                     value={planMeta.description}
                     placeholder="Añade una descripción corta del programa..."
                     onChange={(e) => setPlanMeta({...planMeta, description: e.target.value})}
                   />
                 </div>
               </div>
-              <Button onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-14 rounded-2xl px-8 bg-primary text-black hover:bg-primary/90 shadow-2xl shadow-primary/20 shrink-0">
+              <Button onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-11 rounded-2xl px-5 shrink-0">
                 <Plus className="w-4 h-4" /> Nueva Semana
               </Button>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full pt-4 border-t border-white/5">
-              <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full md:w-auto">
-                <TabsList className="bg-black/40 p-1.5 rounded-2xl h-14 border border-white/10 w-full md:w-auto justify-start overflow-x-auto overflow-y-hidden shadow-inner">
+            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between w-full pt-4 border-t border-border/60">
+              <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full lg:w-auto min-w-0">
+                <TabsList className="bg-background/55 p-1.5 rounded-2xl h-auto min-h-12 border border-border/70 w-full lg:w-auto justify-start overflow-x-auto overflow-y-hidden">
                   {totalWeeks.map(w => {
                     const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
                     return (
                       <TabsTrigger 
                         key={w} 
                         value={w.toString()}
-                        className="rounded-xl font-black uppercase tracking-widest text-[11px] px-10 h-full data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-lg transition-all flex items-center gap-3"
+                        className="rounded-xl font-black uppercase tracking-widest text-[10px] px-4 md:px-6 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
                       >
                         Semana {w}
                         {!isWPublished && (
@@ -528,9 +634,9 @@ export function BuilderClient({
                 </TabsList>
               </Tabs>
 
-              <div className="flex items-center gap-5 bg-black/20 p-3 rounded-[24px] border border-white/5 shadow-xl">
-                <div className="flex flex-col items-end px-3">
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Visibilidad Semana {activeWeek}</span>
+              <div className="w-full lg:w-auto flex flex-col sm:flex-row sm:items-center gap-3 bg-background/45 p-3 rounded-2xl border border-border/70">
+                <div className="flex flex-col sm:items-end px-1 sm:px-3">
+                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Visibilidad semana {activeWeek}</span>
                   <span className={cn(
                     "text-[11px] font-black uppercase tracking-widest mt-0.5",
                     isWeekPublished ? "text-primary" : "text-amber-500"
@@ -542,8 +648,8 @@ export function BuilderClient({
                   onClick={handleToggleWeekPublish}
                   variant={isWeekPublished ? "outline" : "default"}
                   className={cn(
-                    "h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px] gap-3 transition-all shadow-2xl",
-                    isWeekPublished ? "border-white/10 hover:bg-white/5" : "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
+                    "h-11 rounded-2xl px-5 font-black uppercase tracking-widest text-[10px] gap-3 transition-all sm:ml-auto",
+                    isWeekPublished ? "border-border/70 hover:bg-secondary" : "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
                   )}
                 >
                   {isWeekPublished ? (
@@ -557,25 +663,25 @@ export function BuilderClient({
           </div>
 
           {/* Days Grid */}
-          <ScrollArea className="flex-1 -mr-4 pr-4 bg-[#0a0a0a] p-8 rounded-[48px] border border-white/5 shadow-2xl overflow-hidden">
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-10 pb-16">
+          <div className="overflow-visible pr-1 xl:pr-2">
+            <div className="grid grid-cols-1 2xl:grid-cols-2 gap-4 pb-24">
               {currentWeekDays.map((day) => {
                 const globalDIdx = days.findIndex(d => d.id === day.id)
                 return (
-                  <div key={day.id} className="flex flex-col gap-8 bg-[#161616] rounded-[40px] p-8 border border-white/10 shadow-2xl hover:border-primary/30 transition-all group/day relative overflow-hidden ring-1 ring-white/5">
-                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover/day:bg-primary transition-all duration-500" />
+                  <div key={day.id} className="flex flex-col gap-5 ios-panel p-4 md:p-5 hover:border-primary/30 transition-all group/day relative overflow-hidden">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)] opacity-75" />
                     
                     {/* Day Header */}
-                    <div className="flex items-center justify-between pb-8 border-b border-white/5">
-                      <div className="flex items-center gap-6 min-w-0 flex-1">
-                        <div className="px-6 py-3 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[12px] shrink-0 uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(var(--primary),0.1)]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
+                        <div className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[11px] shrink-0 uppercase tracking-[0.16em] w-fit">
                           {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
                         </div>
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Foco del Día</Label>
+                        <div className="flex-1 space-y-1 min-w-0">
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Título visible del entrenamiento</Label>
                           <Input 
-                            placeholder="Añadir enfoque (ej: Pierna, Descanso...)"
-                            className="bg-black/20 border-white/5 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full placeholder:opacity-10 rounded-xl"
+                            placeholder="Ej: Tren superior, WOD largo, Descanso activo..."
+                            className="bg-background/55 border-border/70 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full rounded-xl"
                             value={day.title}
                             onChange={(e) => {
                               const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n);
@@ -583,11 +689,11 @@ export function BuilderClient({
                           />
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md" onClick={() => addBlock(day.id)}>
+                      <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon-sm" className="rounded-xl" onClick={() => addBlock(day.id)}>
                           <Plus className="w-3 h-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:text-destructive" onClick={() => updateDays(days.filter(d => d.id !== day.id))}>
+                        <Button variant="ghost" size="icon-sm" className="rounded-xl hover:text-destructive" onClick={() => updateDays(days.filter(d => d.id !== day.id))}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
@@ -595,7 +701,7 @@ export function BuilderClient({
 
                     {/* Blocks in Day */}
                     <SortableContext items={day.workout_blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                      <div className="space-y-6">
+                      <div className="space-y-4">
                         {day.workout_blocks.map((block, bIdx) => (
                           <SortableBlock 
                             key={block.id} 
@@ -625,14 +731,19 @@ export function BuilderClient({
                               })
                             }}
                           >
-                            <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
+                            <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-1 md:p-2">
                               {/* Routine Description Area */}
-                              <div className="mb-4 space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                                    <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
-                                  </Label>
-                                  <div className="flex items-center gap-2">
+                              <div className="mb-4 space-y-3 rounded-2xl border border-[var(--gymnastics)]/20 bg-[var(--gymnastics)]/5 p-3 md:p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                  <div>
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-[var(--gymnastics)] flex items-center gap-2">
+                                      <Edit3 className="w-3 h-3" /> Rutina libre del WOD
+                                    </Label>
+                                    <p className="text-[11px] text-muted-foreground font-semibold mt-1 leading-relaxed max-w-2xl">
+                                      Usa este cuadro para partes variables: rounds, formatos, notas del coach o listas tipo "10 pull ups, 20 wall balls". Al insertar un ejercicio de la biblioteca queda como etiqueta con video para el alumno.
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <Popover>
                                       <PopoverTrigger render={
                                         <Button variant="ghost" size="sm" className={cn(
@@ -658,7 +769,7 @@ export function BuilderClient({
                                                   key={t.id || 'none'}
                                                   variant={block.timer_type === t.id ? 'default' : 'secondary'}
                                                   size="sm"
-                                                  className="h-8 text-[9px] font-bold uppercase"
+                                                  className="h-8 text-[9px] font-bold uppercase rounded-xl"
                                                   onClick={() => {
                                                     const n = JSON.parse(JSON.stringify(days))
                                                     n[globalDIdx].workout_blocks[bIdx].timer_type = t.id
@@ -682,7 +793,7 @@ export function BuilderClient({
                                                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">Tiempo (Minutos)</Label>
                                                   <Input 
                                                     type="number" 
-                                                    className="h-8 text-xs" 
+                                                    className="h-9 text-xs rounded-xl" 
                                                     value={block.timer_config?.minutes || 15}
                                                     onChange={e => {
                                                       const n = JSON.parse(JSON.stringify(days))
@@ -697,7 +808,7 @@ export function BuilderClient({
                                                   <Label className="text-[10px] font-bold uppercase text-muted-foreground">Minutos Totales</Label>
                                                   <Input 
                                                     type="number" 
-                                                    className="h-8 text-xs" 
+                                                    className="h-9 text-xs rounded-xl" 
                                                     value={block.timer_config?.rounds || 10}
                                                     onChange={e => {
                                                       const n = JSON.parse(JSON.stringify(days))
@@ -711,7 +822,7 @@ export function BuilderClient({
                                                 <div className="grid grid-cols-2 gap-3">
                                                   <div className="space-y-1.5">
                                                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Rondas</Label>
-                                                    <Input type="number" className="h-8 text-xs" value={block.timer_config?.rounds || 8} onChange={e => {
+                                                    <Input type="number" className="h-9 text-xs rounded-xl" value={block.timer_config?.rounds || 8} onChange={e => {
                                                       const n = JSON.parse(JSON.stringify(days))
                                                       n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, rounds: parseInt(e.target.value) }
                                                       updateDays(n)
@@ -719,7 +830,7 @@ export function BuilderClient({
                                                   </div>
                                                   <div className="space-y-1.5">
                                                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Trabajo (seg)</Label>
-                                                    <Input type="number" className="h-8 text-xs" value={block.timer_config?.work || 20} onChange={e => {
+                                                    <Input type="number" className="h-9 text-xs rounded-xl" value={block.timer_config?.work || 20} onChange={e => {
                                                       const n = JSON.parse(JSON.stringify(days))
                                                       n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, work: parseInt(e.target.value) }
                                                       updateDays(n)
@@ -727,7 +838,7 @@ export function BuilderClient({
                                                   </div>
                                                   <div className="space-y-1.5">
                                                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Descanso (seg)</Label>
-                                                    <Input type="number" className="h-8 text-xs" value={block.timer_config?.rest || 10} onChange={e => {
+                                                    <Input type="number" className="h-9 text-xs rounded-xl" value={block.timer_config?.rest || 10} onChange={e => {
                                                       const n = JSON.parse(JSON.stringify(days))
                                                       n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, rest: parseInt(e.target.value) }
                                                       updateDays(n)
@@ -740,147 +851,128 @@ export function BuilderClient({
                                         </div>
                                       </PopoverContent>
                                     </Popover>
-                                    {!editingBlocks[block.id] && block.description && (
+                                    <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
+                                      <PopoverTrigger render={
+                                        <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-[var(--gymnastics)]/25 text-[var(--gymnastics)] hover:bg-[var(--gymnastics)]/10 transition-all">
+                                          <Video className="w-3 h-3" /> Añadir Ejercicio
+                                        </Button>
+                                      } />
+                                      <PopoverContent className="w-[min(20rem,calc(100vw-2rem))] p-0 rounded-2xl overflow-hidden border-border/70 shadow-2xl bg-card" align="end">
+                                        <div className="p-4 border-b border-border/60 bg-background/35">
+                                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-3">Inserta una etiqueta con video</p>
+                                          <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                            <Input
+                                              placeholder="Buscar ejercicio..."
+                                              className="h-10 text-xs pl-9 bg-background/55 border-border/70 rounded-xl"
+                                              onChange={(e) => setLibSearch(e.target.value)}
+                                              value={libSearch}
+                                              autoFocus
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="h-72 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
+                                          <div className="p-2 space-y-1">
+                                            {filteredLibrary.map(ex => (
+                                              <button
+                                                key={ex.id}
+                                                type="button"
+                                                className="w-full text-left px-3 py-3 text-[10px] font-bold hover:bg-[var(--gymnastics)]/10 rounded-xl transition-all flex items-center justify-between gap-3 group"
+                                                onClick={() => {
+                                                  const tagName = `[${ex.name}]`
+                                                  const currentDesc = routineDraftsRef.current[block.id] ?? block.description ?? ''
+                                                  updateRoutineDraft(block.id, currentDesc + (currentDesc ? '\n' : '') + tagName)
+                                                  setOpenPopoverId(null)
+                                                  setEditingBlocks(prev => ({ ...prev, [block.id]: true }))
+                                                }}
+                                              >
+                                                <div className="min-w-0">
+                                                  <span className="block uppercase tracking-tight text-foreground truncate">{ex.name}</span>
+                                                  <span className="block text-[8px] opacity-40 font-black uppercase tracking-widest">{ex.category || 'General'}</span>
+                                                </div>
+                                                <div className="w-7 h-7 rounded-lg bg-[var(--gymnastics)]/10 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                                                  <Plus className="w-3.5 h-3.5 text-[var(--gymnastics)]" />
+                                                </div>
+                                              </button>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                    {editingBlocks[block.id] === false && (routineDrafts[block.id] || block.description) && (
                                       <Button 
                                         variant="ghost" 
                                         size="sm" 
                                         className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl text-muted-foreground hover:text-primary transition-all"
                                         onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
                                       >
-                                        <Edit3 className="w-3 h-3" /> Editar Texto
+                                        <Edit3 className="w-3 h-3" /> Editar rutina
                                       </Button>
-                                    )}
-                                    {(editingBlocks[block.id] || !block.description) && (
-                                      <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
-                                        <PopoverTrigger render={
-                                          <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
-                                            <Video className="w-3 h-3" /> Vincular Video
-                                          </Button>
-                                        } />
-                                        <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
-                                          <div className="p-3 border-b border-border/10 bg-secondary/10">
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
-                                            <div className="relative">
-                                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
-                                              <Input 
-                                                placeholder="Buscar en biblioteca..." 
-                                                className="h-9 text-xs pl-9 bg-background/50 border-border/20 rounded-xl" 
-                                                onChange={(e) => setLibSearch(e.target.value)}
-                                                value={libSearch}
-                                                autoFocus
-                                              />
-                                            </div>
-                                          </div>
-                                          <ScrollArea className="h-64">
-                                            <div className="p-1.5 space-y-0.5">
-                                              {filteredLibrary.slice(0, 50).map(ex => (
-                                                <button
-                                                  key={ex.id}
-                                                  className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
-                                                  onClick={() => {
-                                                    const tagName = `[${ex.name}]`
-                                                    updateDays((prev: Day[]) => {
-                                                      const n: Day[] = JSON.parse(JSON.stringify(prev))
-                                                      const dIdx = n.findIndex((d: Day) => d.id === day.id)
-                                                      const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
-                                                      if (dIdx !== -1 && bIdx !== -1) {
-                                                        const currentDesc = n[dIdx].workout_blocks[bIdx].description || ''
-                                                        n[dIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? '\n' : '') + tagName
-                                                      }
-                                                      return n
-                                                    })
-                                                    setOpenPopoverId(null)
-                                                    setEditingBlocks(prev => ({ ...prev, [block.id]: true }))
-                                                  }}
-                                                >
-                                                  <div className="flex flex-col">
-                                                    <span className="uppercase tracking-tight">{ex.name}</span>
-                                                    <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
-                                                  </div>
-                                                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <Plus className="w-3.5 h-3.5 text-primary" />
-                                                  </div>
-                                                </button>
-                                              ))}
-                                            </div>
-                                          </ScrollArea>
-                                        </PopoverContent>
-                                      </Popover>
                                     )}
                                   </div>
                                 </div>
 
-                                {(editingBlocks[block.id] || !block.description) ? (
-                                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                    <Textarea 
-                                      placeholder="Ej: AMRAP 15 min de:
-    10 Pull Ups
-    5 Snatch
-    20 Box Jumps"
-                                      className="min-h-[160px] bg-black/40 border border-white/10 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner text-white placeholder:text-white/10"
-                                      value={block.description || ''}
-                                      onChange={(e) => {
-                                        const val = e.target.value
-                                        updateDays((prev: Day[]) => {
-                                          const n = [...prev]
-                                          const dIdx = n.findIndex(d => d.id === day.id)
-                                          if (dIdx === -1) return prev
-                                          const nextBlocks = [...n[dIdx].workout_blocks]
-                                          const bIdx = nextBlocks.findIndex(b => b.id === block.id)
-                                          if (bIdx === -1) return prev
-                                          nextBlocks[bIdx] = { ...nextBlocks[bIdx], description: val }
-                                          n[dIdx] = { ...n[dIdx], workout_blocks: nextBlocks }
-                                          return n
-                                        })
-                                      }}
-                                    />
-                                    <div className="flex justify-end">
+                                {((editingBlocks[block.id] ?? true) || !(routineDrafts[block.id] || block.description)) ? (
+                                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
+                                    <div className="relative group">
+                                      <Textarea 
+                                        placeholder={"Ejemplo:\nAMRAP 12'\n10 [Pull Up]\n20 [Wall Ball]\n30 DU\n\nNotas: mantener ritmo sostenible y grabar última ronda si hay dudas técnicas."}
+                                        className="min-h-[180px] bg-background/55 border border-border/70 focus:border-primary/40 text-[15px] font-semibold leading-relaxed resize-y rounded-2xl p-4 transition-all"
+                                        value={routineDrafts[block.id] ?? block.description ?? ''}
+                                        onFocus={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
+                                        onChange={(e) => updateRoutineDraft(block.id, e.target.value)}
+                                      />
+                                      <div className="absolute top-4 right-4 flex gap-2">
+                                         <div className="px-2 py-1 bg-primary/10 border border-primary/20 rounded-md text-[8px] font-black text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                                           Rutina libre
+                                         </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 px-1">
+                                      <p className="text-[10px] text-muted-foreground font-medium italic">Puedes escribir sin confirmar. Usa vista previa solo para revisar etiquetas y videos; Guardar planificación persiste todo.</p>
                                       <Button 
                                         size="sm" 
                                         variant="default" 
-                                        className="h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest px-6 gap-2 bg-white text-black hover:bg-white/90 shadow-lg"
-                                        onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: false }))}
+                                        className="h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest px-5 gap-2"
+                                        onClick={() => confirmBlockDescription(block.id, routineDraftsRef.current[block.id] ?? block.description ?? '')}
                                       >
-                                        <CheckCircle2 className="w-4 h-4" /> Finalizar Edición
+                                        <CheckCircle2 className="w-4 h-4" /> Ver preview
                                       </Button>
                                     </div>
                                   </div>
                                 ) : (
-                                  <div className="p-4 bg-secondary/5 border border-border/10 rounded-[16px] group relative">
-                                    <SmartRoutineText 
-                                      text={block.description} 
-                                      exercises={library} 
-                                      blockExercises={block.workout_movements.map((m: any) => m.exercise)}
-                                      onVideoClick={(url, name) => {
-                                        // Preview video for coach too
-                                        window.open(url, '_blank')
-                                      }}
-                                    />
-                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        className="h-6 w-6 rounded-md bg-background/80 shadow-sm"
-                                        onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
-                                      >
-                                        <Edit3 className="w-3 h-3" />
-                                      </Button>
+                                  <div className="group relative">
+                                    <div className="p-4 bg-background/55 border border-border/70 rounded-2xl hover:border-primary/30 transition-all cursor-pointer"
+                                         onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}>
+                                      <SmartRoutineText 
+                                        text={routineDrafts[block.id] ?? block.description ?? ''} 
+                                        exercises={library} 
+                                        blockExercises={block.workout_movements.map((m: any) => m.exercise)}
+                                        onVideoClick={(url) => window.open(url, '_blank')}
+                                      />
+                                      
+                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-background/45 rounded-2xl backdrop-blur-[1px]">
+                                         <div className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl">
+                                            <Edit3 className="w-3 h-3" /> Editar rutina
+                                         </div>
+                                      </div>
                                     </div>
                                   </div>
                                 )}
 
-                                <p className="text-[8px] text-muted-foreground/40 font-medium italic px-1">
-                                  El alumno verá un icono de video <Video className="w-2 h-2 inline" /> junto a los nombres de ejercicios vinculados.
+                                <p className="text-[8px] text-muted-foreground font-medium italic px-1">
+                                  Este texto es para rutinas libres y formatos variables. Los movimientos estructurados de abajo son opcionales y sirven para series, reps y cargas medibles.
                                 </p>
                               </div>
 
-                              <div className="border-t border-border/10 pt-4 mb-2 flex items-center justify-between">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/50">Movimientos Estructurados</Label>
+                              <div className="border-t border-border/60 pt-4 mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos estructurados</Label>
                                 <span className="text-[8px] font-medium text-muted-foreground/30 italic">(Opcional: Series/Reps)</span>
                               </div>
 
                               <SortableContext items={block.workout_movements.map(m => m.id)} strategy={verticalListSortingStrategy}>
-                                <div className="divide-y divide-border/5">
+                                <div className="space-y-2">
                                   {block.workout_movements.map((mov, mIdx) => (
                                     <SortableMovement 
                                       key={mov.id} 
@@ -938,7 +1030,7 @@ export function BuilderClient({
                               
                               {/* Visual Drop Zone for Library Items */}
                               {block.workout_movements.length === 0 && (
-                                <div className="py-6 flex flex-col items-center justify-center border-2 border-dashed border-border/10 m-3 rounded-xl pointer-events-none">
+                                <div className="py-6 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl pointer-events-none bg-background/25">
                                   <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
                                 </div>
                               )}
@@ -950,7 +1042,7 @@ export function BuilderClient({
                     
                     <Button 
                       variant="ghost" 
-                      className="w-full h-10 border border-dashed border-border/20 rounded-xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 text-[9px] font-black uppercase tracking-[0.2em] transition-all text-muted-foreground/40"
+                      className="w-full h-10 border border-dashed border-border/70 rounded-2xl hover:bg-primary/5 hover:text-primary hover:border-primary/30 text-[9px] font-black uppercase tracking-[0.16em] transition-all text-muted-foreground"
                       onClick={() => addBlock(day.id)}
                     >
                       <Plus className="w-3 h-3 mr-2" /> Añadir Bloque
@@ -962,7 +1054,7 @@ export function BuilderClient({
               {/* Add Day Button Placeholder */}
               <Button 
                 variant="ghost" 
-                className="h-[200px] border-2 border-dashed border-border/20 rounded-[32px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all"
+                className="h-[180px] border border-dashed border-border/70 rounded-[28px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all ios-panel"
                 onClick={() => addDay(parseInt(activeWeek))}
               >
                 <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
@@ -971,15 +1063,10 @@ export function BuilderClient({
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-primary">Añadir Día {currentWeekDays.length + 1}</span>
               </Button>
             </div>
-          </ScrollArea>
+          </div>
         </main>
       </div>
 
-      {/* Helper info on drag */}
-      <div className="fixed bottom-6 right-6 bg-foreground text-background px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-4">
-        <Info className="w-4 h-4 text-primary" />
-        <span className="text-[10px] font-black uppercase tracking-widest">Tip: Selecciona una semana y arrastra ejercicios a los bloques.</span>
-      </div>
     </DndContext>
   )
 }

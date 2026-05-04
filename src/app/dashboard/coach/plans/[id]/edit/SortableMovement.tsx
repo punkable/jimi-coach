@@ -1,12 +1,17 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Trash2, Hash } from 'lucide-react'
+import { GripVertical, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
-export function SortableMovement({ 
-  id, mov, mIdx, 
-  updateSets, updateReps, updateWeight, removeMov 
+export function SortableMovement({
+  id,
+  mov,
+  mIdx,
+  updateSets,
+  updateReps,
+  updateWeight,
+  removeMov,
 }: any) {
   const {
     attributes,
@@ -25,66 +30,69 @@ export function SortableMovement({
   }
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      className={`p-3 flex flex-col gap-2 transition-all duration-200 ${
-        isDragging 
-          ? 'bg-primary/10 scale-[1.01] shadow-xl border-2 border-primary/50 ring-2 ring-primary/5 rounded-lg' 
-          : 'hover:bg-secondary/5 bg-transparent border-b border-border/10 last:border-0'
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`p-3 flex flex-col gap-3 transition-all duration-200 rounded-2xl ${
+        isDragging
+          ? 'bg-primary/10 scale-[1.01] shadow-xl border border-primary/50 ring-2 ring-primary/5'
+          : 'hover:bg-secondary/40 bg-background/30 border border-border/50'
       }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div 
-            {...attributes} 
-            {...listeners} 
-            className="cursor-grab active:cursor-grabbing hover:bg-secondary/20 p-1 rounded-md transition-colors group"
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing hover:bg-secondary p-1.5 rounded-lg transition-colors group shrink-0"
           >
-            <GripVertical className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+            <GripVertical className="w-3.5 h-3.5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-[11px] uppercase tracking-tight text-foreground/80">
+          <div className="flex flex-col min-w-0">
+            <span className="font-black text-[11px] uppercase tracking-tight text-foreground truncate">
               {mov.exercise?.name || 'Cargando...'}
+            </span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/50">
+              Movimiento {mIdx + 1}
             </span>
           </div>
         </div>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="h-6 w-6 text-muted-foreground/10 hover:text-destructive hover:bg-destructive/10 transition-all" 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-xl text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
           onClick={removeMov}
         >
-          <Trash2 className="w-3 h-3" />
+          <Trash2 className="w-3.5 h-3.5" />
         </Button>
       </div>
-      
-      <div className="flex items-center gap-2 pl-6 animate-in fade-in slide-in-from-top-1 duration-200">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 ml-1">Sets</span>
-          <Input 
-            className="h-7 text-[10px] w-12 bg-background/30 border-border/10 focus:border-primary/20 rounded-md font-bold px-2" 
-            placeholder="3" 
-            value={mov.sets} 
-            onChange={(e) => updateSets(e.target.value)} 
+
+      <div className="grid grid-cols-3 gap-2 pl-0 md:pl-8 animate-in fade-in slide-in-from-top-1 duration-200">
+        <div className="flex flex-col gap-1">
+          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">Sets</span>
+          <Input
+            className="h-9 text-[11px] w-full bg-background/60 border-border/60 focus:border-primary/30 rounded-xl font-bold px-2"
+            placeholder="3"
+            value={mov.sets}
+            onChange={(e) => updateSets(e.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 ml-1">Reps</span>
-          <Input 
-            className="h-7 text-[10px] w-16 bg-background/30 border-border/10 focus:border-primary/20 rounded-md font-bold px-2" 
-            placeholder="10-12" 
-            value={mov.reps} 
-            onChange={(e) => updateReps(e.target.value)} 
+        <div className="flex flex-col gap-1">
+          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">Reps</span>
+          <Input
+            className="h-9 text-[11px] w-full bg-background/60 border-border/60 focus:border-primary/30 rounded-xl font-bold px-2"
+            placeholder="10-12"
+            value={mov.reps}
+            onChange={(e) => updateReps(e.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-0.5 flex-1">
-          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/30 ml-1">Carga</span>
-          <Input 
-            className="h-7 text-[10px] w-full bg-background/30 border-border/10 focus:border-primary/20 rounded-md font-bold px-2" 
-            placeholder="75% RM o 60kg" 
-            value={mov.weight_percentage} 
-            onChange={(e) => updateWeight(e.target.value)} 
+        <div className="flex flex-col gap-1 min-w-0">
+          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">Carga</span>
+          <Input
+            className="h-9 text-[11px] w-full bg-background/60 border-border/60 focus:border-primary/30 rounded-xl font-bold px-2"
+            placeholder="75% RM"
+            value={mov.weight_percentage}
+            onChange={(e) => updateWeight(e.target.value)}
           />
         </div>
       </div>

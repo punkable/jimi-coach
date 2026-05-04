@@ -1,8 +1,37 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+
+async function getAuthorizedCoach() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
+    throw new Error('Not authorized')
+  }
+
+  return { user, role: profile.role as 'coach' | 'admin' }
+}
+
+async function assertCanManagePlan(planId: string, userId: string, role: string) {
+  const admin = getSupabaseAdmin()
+  const { data: plan, error } = await admin
+    .from('workout_plans')
+    .select('id, created_by')
+    .eq('id', planId)
+    .single()
+
+  if (error) throw error
+  if (!plan) throw new Error('Plan not found')
+  if (role !== 'admin' && plan.created_by !== userId) {
+    throw new Error('Not authorized to manage this plan')
+  }
+}
 
 export async function createPlan(formData: FormData) {
   const supabase = await createClient()
@@ -93,15 +122,10 @@ export async function assignPlan(formData: FormData) {
 
 export async function savePlanStructure(planId: string, days: any[], planMeta?: { title: string, description: string, is_community_enabled?: boolean }) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-
-    // Role check
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-    if (profile?.role !== 'coach' && profile?.role !== 'admin') {
-      throw new Error('Not authorized')
-    }
+    const { user, role } = await getAuthorizedCoach()
+    await assertCanManagePlan(planId, user.id, role)
+    const supabase = getSupabaseAdmin()
+    const savedBlockDescriptions: Record<string, string> = {}
 
     // 1. Update Plan Metadata if provided
     if (planMeta) {
@@ -142,6 +166,7 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
           .insert({
             plan_id: planId,
             day_of_week: day.day_of_week,
+            title: day.title || null,
             week_number: day.week_number || 1,
             is_published: day.is_published ?? true
           })
@@ -155,6 +180,7 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
           .from('workout_days')
           .update({
             day_of_week: day.day_of_week,
+            title: day.title || null,
             week_number: day.week_number || 1,
             is_published: day.is_published
           })
@@ -168,13 +194,13 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       // Handle Blocks
       const { data: existingBlocks, error: fetchBlocksErr } = await supabase
         .from('workout_blocks')
-        .select('id')
+        .select('id, description')
         .eq('workout_day_id', dayId)
       
       if (fetchBlocksErr) throw fetchBlocksErr
 
       const incomingBlockIds = day.workout_blocks.map((b: any) => b.id).filter((id: string) => id.length > 15)
-      const blocksToDelete = existingBlocks.filter(b => !incomingBlockIds.includes(b.id)).map(b => b.id)
+      const blocksToDelete = (existingBlocks || []).filter(b => !incomingBlockIds.includes(b.id)).map(b => b.id)
 
       if (blocksToDelete.length > 0) {
         await supabase.from('workout_movements').delete().in('block_id', blocksToDelete)
@@ -186,30 +212,40 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
         const block = day.workout_blocks[i]
         const isNewBlock = block.id.length < 15
         
+        const existingBlock = existingBlocks?.find((existing: any) => existing.id === block.id)
+        const incomingDescription = typeof block.description === 'string' ? block.description : undefined
+        const descriptionToPersist =
+          incomingDescription !== undefined && incomingDescription.length > 0
+            ? incomingDescription
+            : existingBlock?.description || ''
+
         const blockData = {
           workout_day_id: dayId,
           name: block.name || 'Sin nombre',
-          description: block.description || '', // EXPLICIT MAPPING FOR TEXT ROUTINES
+          description: descriptionToPersist,
           type: block.type || 'strength',
           timer_type: block.timer_type || null,
           timer_config: block.timer_config || {},
           order_index: i
         }
 
-        console.log(`[PERSISTENCE] Saving Block: ${block.id}`, {
-          hasDesc: !!block.description,
-          descLength: block.description?.length || 0,
-          type: blockData.type
-        })
-
         let blockId = block.id
         if (isNewBlock) {
-          const { data: newBlock, error: insBlockErr } = await supabase.from('workout_blocks').insert(blockData).select('id').single()
+          const { data: newBlock, error: insBlockErr } = await supabase
+            .from('workout_blocks')
+            .insert(blockData)
+            .select('id')
+            .single()
           if (insBlockErr) throw insBlockErr
           blockId = newBlock?.id
+          if (blockId) savedBlockDescriptions[blockId] = descriptionToPersist
         } else {
-          const { error: updBlockErr } = await supabase.from('workout_blocks').update(blockData).eq('id', blockId)
+          const { error: updBlockErr } = await supabase
+            .from('workout_blocks')
+            .update(blockData)
+            .eq('id', blockId)
           if (updBlockErr) throw updBlockErr
+          savedBlockDescriptions[blockId] = descriptionToPersist
         }
 
         // Handle Movements inside Block
@@ -262,11 +298,21 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       .order('order_index', { foreignTable: 'workout_blocks.workout_movements', ascending: true })
 
     if (finalFetchErr) throw finalFetchErr
+    const hydratedDays = (updatedDays || []).map((day: any) => ({
+      ...day,
+      workout_blocks: (day.workout_blocks || []).map((block: any) => ({
+        ...block,
+        description:
+          savedBlockDescriptions[block.id] !== undefined
+            ? savedBlockDescriptions[block.id]
+            : block.description
+      }))
+    }))
 
     revalidatePath(`/dashboard/coach/plans/${planId}/edit`)
     revalidatePath('/dashboard/athlete')
     revalidatePath('/dashboard/athlete/workout')
-    return { success: true, days: updatedDays }
+    return { success: true, days: hydratedDays }
   } catch (err: any) {
     console.error('SAVE PLAN ERROR:', err)
     return { success: false, error: err.message || 'Error desconocido' }
@@ -292,4 +338,37 @@ export async function toggleWeekStatus(planId: string, weekNumber: number, isPub
   revalidatePath(`/dashboard/coach/plans/${planId}/edit`)
   revalidatePath('/dashboard/athlete')
   revalidatePath('/dashboard/athlete/workout')
+}
+
+export async function updateBlockDescription(blockId: string, description: string) {
+  try {
+    const { user, role } = await getAuthorizedCoach()
+    const supabase = getSupabaseAdmin()
+    const { data: block, error: blockErr } = await supabase
+      .from('workout_blocks')
+      .select('id, workout_days(plan_id)')
+      .eq('id', blockId)
+      .single()
+
+    if (blockErr) throw blockErr
+    const rawDay = block?.workout_days
+    const day = Array.isArray(rawDay) ? rawDay[0] : rawDay
+    if (!day?.plan_id) throw new Error('No se encontro el plan del bloque')
+    await assertCanManagePlan(day.plan_id, user.id, role)
+
+    const { error } = await supabase
+      .from('workout_blocks')
+      .update({ description })
+      .eq('id', blockId)
+
+    if (error) throw error
+
+    revalidatePath('/dashboard/coach/plans')
+    revalidatePath('/dashboard/athlete')
+    revalidatePath('/dashboard/athlete/workout')
+    return { success: true, description }
+  } catch (err: any) {
+    console.error('Error updating block description:', err)
+    return { success: false, error: err.message || 'Failed to update block description' }
+  }
 }

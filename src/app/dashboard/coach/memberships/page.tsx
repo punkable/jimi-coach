@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Crown, Plus, Trash2, CreditCard } from 'lucide-react'
-import { createMembership, deleteMembership, updateMembership } from './actions'
+import { Crown, Plus, Trash2, CreditCard, Sparkles, CheckCircle2 } from 'lucide-react'
+import { createMembership, deleteMembership } from './actions'
 
 export default async function MembershipsPage() {
   const supabase = await createClient()
@@ -15,18 +15,31 @@ export default async function MembershipsPage() {
     .order('price', { ascending: true })
 
   return (
-    <div className="p-6 md:p-8 space-y-8 max-w-6xl mx-auto">
-      <header>
-        <h1 className="text-3xl font-black uppercase tracking-tight">Modalidades y Planes</h1>
-        <p className="text-muted-foreground text-sm font-medium uppercase tracking-widest mt-1">
-          Configura los planes contratados por tus alumnos (Membresías)
-        </p>
+    <div className="p-4 md:p-8 xl:p-10 space-y-8 max-w-7xl mx-auto">
+      <header className="ios-panel p-6 md:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
+        <div>
+          <div className="section-title text-[var(--coach)] mb-2">Modelo comercial</div>
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight">Modalidades y planes</h1>
+          <p className="text-muted-foreground text-sm mt-2">
+            Define membresías claras para que cada atleta entienda qué incluye su seguimiento.
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-3 text-center">
+          <div className="rounded-2xl bg-[var(--strength)]/10 border border-[var(--strength)]/20 px-4 py-3">
+            <Crown className="w-5 h-5 mx-auto text-[var(--strength)]" />
+            <p className="text-[10px] font-black uppercase tracking-widest mt-2">Premium</p>
+          </div>
+          <div className="rounded-2xl bg-[var(--metcon)]/10 border border-[var(--metcon)]/20 px-4 py-3">
+            <Sparkles className="w-5 h-5 mx-auto text-[var(--metcon)]" />
+            <p className="text-[10px] font-black uppercase tracking-widest mt-2">Simple</p>
+          </div>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Create Form */}
         <div className="lg:col-span-1">
-          <Card className="glass border-primary/20 sticky top-8">
+          <Card className="ios-panel sticky top-8">
             <CardHeader>
               <CardTitle className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
                 <Plus className="w-5 h-5 text-primary" /> Nueva Modalidad
@@ -39,15 +52,15 @@ export default async function MembershipsPage() {
               <form action={createMembership} className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del Plan</label>
-                  <Input name="name" placeholder="Ej: Plan Pro Mensual" required className="bg-secondary/30 rounded-xl" />
+                  <Input name="name" placeholder="Ej: Plan Pro Mensual" required />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Corta</label>
-                  <Textarea name="description" placeholder="Ej: Acceso ilimitado y seguimiento..." className="bg-secondary/30 rounded-xl resize-none h-20" />
+                  <Textarea name="description" placeholder="Ej: Acceso ilimitado y seguimiento..." className="bg-background/55 rounded-xl resize-none h-24 font-semibold" />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Precio ($)</label>
-                  <Input name="price" type="number" placeholder="45000" className="bg-secondary/30 rounded-xl" />
+                  <Input name="price" type="number" placeholder="45000" />
                 </div>
                 <Button type="submit" className="w-full font-black uppercase tracking-widest text-xs h-12 rounded-xl mt-2 shadow-lg shadow-primary/20">
                   Crear Modalidad
@@ -62,11 +75,11 @@ export default async function MembershipsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {memberships && memberships.length > 0 ? (
               memberships.map((m) => (
-                <Card key={m.id} className="glass group hover:border-primary/40 transition-all duration-300 overflow-hidden">
-                  <div className="h-1 bg-primary/20 group-hover:bg-primary transition-colors" />
+                <Card key={m.id} className="ios-panel group hover:border-primary/40 transition-all duration-300 overflow-hidden">
+                  <div className="h-1.5 bg-gradient-to-r from-[var(--strength)] via-[var(--primary)] to-[var(--metcon)] opacity-70 group-hover:opacity-100 transition-opacity" />
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
-                      <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">
                         <Crown className="w-5 h-5" />
                       </div>
                       <form action={deleteMembership.bind(null, m.id)}>
@@ -75,47 +88,24 @@ export default async function MembershipsPage() {
                         </Button>
                       </form>
                     </div>
-                    <CardTitle className="text-xl font-black uppercase tracking-tight mt-4">{m.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground font-medium min-h-8 line-clamp-2">{m.description}</p>
+                    <CardTitle className="text-xl font-black tracking-tight mt-4">{m.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground font-medium h-8 line-clamp-2">{m.description}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col gap-3 mt-2 mb-5">
+                    <div className="flex flex-col gap-3 mt-2">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-2"><CreditCard className="w-3 h-3"/> Valor</span>
                         <span className="font-black text-primary">${Number(m.price).toLocaleString()}</span>
                       </div>
-                    </div>
-                    <form action={updateMembership.bind(null, m.id)} className="space-y-3 border-t border-border/20 pt-4">
-                      <div className="grid grid-cols-1 gap-2">
-                        <Input
-                          name="name"
-                          defaultValue={m.name}
-                          aria-label="Nombre del plan"
-                          className="h-9 bg-secondary/30 rounded-xl text-xs font-bold"
-                        />
-                        <Textarea
-                          name="description"
-                          defaultValue={m.description || ''}
-                          aria-label="Descripción del plan"
-                          className="bg-secondary/30 rounded-xl resize-none min-h-16 text-xs"
-                        />
-                        <Input
-                          name="price"
-                          type="number"
-                          defaultValue={m.price || 0}
-                          aria-label="Precio del plan"
-                          className="h-9 bg-secondary/30 rounded-xl text-xs font-bold"
-                        />
+                      <div className="inline-flex w-fit items-center gap-2 rounded-full bg-[var(--gymnastics)]/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[var(--gymnastics)]">
+                        <CheckCircle2 className="w-3 h-3" /> Activo
                       </div>
-                      <Button type="submit" variant="outline" className="w-full h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/10">
-                        Guardar Cambios
-                      </Button>
-                    </form>
+                    </div>
                   </CardContent>
                 </Card>
               ))
             ) : (
-              <div className="col-span-full py-20 text-center glass rounded-3xl border-dashed border-2 border-border/20">
+              <div className="col-span-full py-20 text-center ios-panel border-dashed border-2 border-border/20">
                 <CreditCard className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
                 <p className="text-sm text-muted-foreground font-black uppercase tracking-[0.2em]">No hay modalidades creadas</p>
                 <p className="text-[10px] text-muted-foreground/50 mt-2 uppercase">Comienza creando tu primer plan a la izquierda</p>

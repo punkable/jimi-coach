@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Edit } from 'lucide-react'
+import { Plus, Edit, CalendarDays, Users, Layers3 } from 'lucide-react'
 import Link from 'next/link'
 import { AssignDialog } from './assign-dialog'
 import { archivePlan } from './actions'
@@ -10,68 +10,49 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 
 export default async function PlansPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user?.id)
-    .single()
 
-  let plansQuery = supabase
+  const { data: plans } = await supabase
     .from('workout_plans')
     .select('*')
     .is('is_archived', false)
     .order('created_at', { ascending: false })
 
-  if (profile?.role === 'coach') {
-    plansQuery = plansQuery.eq('created_by', user?.id)
-  }
-
-  const { data: plans } = await plansQuery
-
-  let athletesQuery = supabase
+  const { data: athletes } = await supabase
     .from('profiles')
     .select('id, full_name, email')
     .eq('role', 'athlete')
 
-  if (profile?.role === 'coach') {
-    const { data: relationships } = await supabase
-      .from('coach_athletes')
-      .select('athlete_id')
-      .eq('coach_id', user?.id)
-
-    const athleteIds = relationships?.map((relationship) => relationship.athlete_id) || []
-    athletesQuery = athleteIds.length > 0
-      ? athletesQuery.in('id', athleteIds)
-      : athletesQuery.eq('id', '00000000-0000-0000-0000-000000000000')
-  }
-
-  const { data: athletes } = await athletesQuery
-
   return (
-    <div className="p-4 md:p-8 space-y-6">
-      <header className="flex items-center justify-between">
+    <div className="p-4 md:p-8 xl:p-10 space-y-8 max-w-7xl mx-auto">
+      <header className="ios-panel p-6 md:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Planificaciones</h1>
-          <p className="text-muted-foreground mt-1">Crea y asigna rutinas a tus alumnos.</p>
+          <div className="section-title text-primary mb-2">Programación CrossFit</div>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Planificaciones</h1>
+          <p className="text-muted-foreground mt-2 text-sm">Crea ciclos, organiza semanas y asigna rutinas a tus alumnos.</p>
         </div>
         <Link href="/dashboard/coach/plans/new">
-          <Button className="gap-2">
+          <Button className="gap-2 h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-xs">
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Nueva Planificación</span>
           </Button>
         </Link>
       </header>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MiniGuide icon={CalendarDays} title="1. Diseña semanas" text="Divide el ciclo por días y bloques." color="coach" />
+        <MiniGuide icon={Layers3} title="2. Escribe el WOD" text="Usa texto libre y etiquetas con video." color="gymnastics" />
+        <MiniGuide icon={Users} title="3. Asigna atletas" text="Publica solo lo que esté listo." color="athlete" />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <TooltipProvider>
         {plans && plans.length > 0 ? (
           plans.map((plan) => (
-            <Card key={plan.id} className="flex flex-col glass border-border/40 hover:border-border/80 transition-all shadow-lg">
+            <Card key={plan.id} className="flex flex-col ios-panel overflow-hidden hover:-translate-y-0.5 transition-all">
               <CardHeader>
                 <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-xl font-bold leading-tight">{plan.title}</CardTitle>
-                  <span className="text-[10px] uppercase bg-primary/20 text-primary px-2 py-0.5 rounded-full font-bold shadow-[0_0_10px_rgba(var(--primary),0.2)]">
+                  <CardTitle className="text-xl font-black leading-tight uppercase tracking-tight">{plan.title}</CardTitle>
+                  <span className="metric-chip bg-primary/10 border-primary/20 text-primary">
                     {plan.level || 'General'}
                   </span>
                 </div>
@@ -81,7 +62,7 @@ export default async function PlansPage() {
               </CardHeader>
               <CardContent className="mt-auto pt-4 flex gap-3">
                 <Link href={`/dashboard/coach/plans/${plan.id}/edit`} className="flex-1">
-                  <Button variant="default" className="w-full gap-2" size="sm">
+                  <Button variant="default" className="w-full gap-2 rounded-xl font-bold" size="sm">
                     <Edit className="w-4 h-4" />
                     Editar
                   </Button>
@@ -117,6 +98,26 @@ export default async function PlansPage() {
           </div>
         )}
         </TooltipProvider>
+      </div>
+    </div>
+  )
+}
+
+function MiniGuide({ icon: Icon, title, text, color }: { icon: any, title: string, text: string, color: string }) {
+  const colorMap: Record<string, string> = {
+    coach: 'text-[var(--coach)] bg-[var(--coach)]/10 border-[var(--coach)]/20',
+    gymnastics: 'text-[var(--gymnastics)] bg-[var(--gymnastics)]/10 border-[var(--gymnastics)]/20',
+    athlete: 'text-[var(--athlete)] bg-[var(--athlete)]/10 border-[var(--athlete)]/20',
+  }
+
+  return (
+    <div className="ios-panel p-4 flex items-center gap-4">
+      <div className={`w-11 h-11 rounded-2xl border flex items-center justify-center shrink-0 ${colorMap[color]}`}>
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <h3 className="text-sm font-black uppercase tracking-tight">{title}</h3>
+        <p className="text-xs text-muted-foreground mt-1">{text}</p>
       </div>
     </div>
   )

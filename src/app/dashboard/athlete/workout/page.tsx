@@ -34,7 +34,7 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
   // Fetch all days for this plan
   const { data: days } = await supabase
     .from('workout_days')
-    .select('*, workout_blocks(*, workout_movements(*, exercises(*)))')
+    .select('*, workout_blocks(id, workout_day_id, name, description, type, timer_type, timer_config, order_index, workout_movements(*, exercises(*)))')
     .eq('plan_id', activeAssignment.plan_id)
     .eq('is_published', true)
     .order('day_of_week', { ascending: true })
@@ -51,10 +51,10 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
   // If no day selected, show the selection UI
   if (!todayData) {
     return (
-      <div className="flex-1 flex flex-col bg-background p-6 md:max-w-lg md:mx-auto md:w-full md:border-x md:border-border/40 min-h-screen">
-        <header className="mb-8 pt-4">
+      <div className="flex-1 flex flex-col bg-background p-4 md:p-6 md:max-w-2xl md:mx-auto md:w-full min-h-screen">
+        <header className="ios-panel p-5 mb-6 mt-4">
           <Link href="/dashboard/athlete">
-            <Button variant="ghost" size="icon" className="rounded-full mb-4">
+            <Button variant="ghost" size="icon" className="rounded-2xl mb-4">
               <ArrowLeft className="w-5 h-5" />
             </Button>
           </Link>
@@ -71,10 +71,10 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
             
             return (
               <Link key={day.id} href={`/dashboard/athlete/workout?dayId=${day.id}`}>
-                <Card className="glass hover:border-primary/50 transition-all active:scale-[0.97] group border-border/30 overflow-hidden">
+                <Card className="ios-panel hover:border-primary/50 transition-all active:scale-[0.97] group overflow-hidden">
                   <CardContent className="p-0">
                     <div className="flex items-center p-4 gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-secondary/50 flex flex-col items-center justify-center border border-border/30 group-hover:border-primary/30 transition-colors">
+                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex flex-col items-center justify-center border border-primary/20 group-hover:border-primary/40 transition-colors">
                         <span className="text-[10px] font-black uppercase tracking-tighter text-muted-foreground leading-none">Día</span>
                         <span className="text-xl font-black leading-none mt-0.5">{day.day_of_week}</span>
                       </div>
@@ -113,7 +113,7 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
     })
   })
 
-  const prs: Record<string, { weight: number, reps: number }> = {}
+  let prs: Record<string, { weight: number, reps: number }> = {}
   if (exerciseIds.length > 0) {
     const { data: pastSets } = await supabase
       .from('workout_set_results')

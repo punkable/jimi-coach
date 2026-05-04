@@ -11,10 +11,11 @@ export default async function SettingsPage() {
   const { data: profile } = await supabase.from('profiles').select('*').eq('id', user?.id || '').single()
 
   return (
-    <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
-      <header className="flex items-center justify-between">
+    <div className="p-4 md:p-8 xl:p-10 space-y-8 max-w-5xl mx-auto">
+      <header className="ios-panel p-6 md:p-7 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ajustes</h1>
+          <div className="section-title text-[var(--coach)] mb-2">Centro de control</div>
+          <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight">Ajustes</h1>
           <p className="text-muted-foreground mt-1">Configuración de tu cuenta y academia.</p>
         </div>
       </header>
@@ -27,7 +28,7 @@ export default async function SettingsPage() {
 
         {/* Account Actions */}
         <div className="space-y-6">
-          <Card>
+          <Card className="ios-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-primary" />
@@ -40,7 +41,7 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="ios-panel">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Dumbbell className="w-5 h-5 text-primary" />
@@ -55,7 +56,7 @@ export default async function SettingsPage() {
         </div>
       </div>
 
-      <div className="pt-8 border-t border-border flex justify-end">
+      <div className="ios-panel p-5 flex justify-end">
         <form action={signout}>
           <Button variant="destructive" type="submit" className="gap-2">
             <LogOut className="w-4 h-4" />

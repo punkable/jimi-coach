@@ -1,10 +1,10 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Timer as TimerIcon, X, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer as TimerIcon, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -14,64 +14,6 @@ import { Battery, Brain, Activity } from 'lucide-react'
 import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 import { CrossFitTimer, TimerType } from './crossfit-timer'
-
-function buildWorkoutSignature(day: any) {
-  return JSON.stringify({
-    id: day?.id,
-    blocks: day?.workout_blocks?.map((block: any) => ({
-      id: block.id,
-      name: block.name,
-      type: block.type,
-      description: block.description || '',
-      timer_type: block.timer_type || null,
-      timer_config: block.timer_config || {},
-      movements: block.workout_movements?.map((mov: any) => ({
-        id: mov.id,
-        exercise_id: mov.exercises?.id || mov.exercise_id,
-        sets: mov.sets,
-        reps: mov.reps,
-        weight_percentage: mov.weight_percentage,
-        rest: mov.rest,
-        notes: mov.notes,
-        tracking_type: mov.exercises?.tracking_type,
-      })) || [],
-    })) || [],
-  })
-}
-
-function reconcileSavedProgress(day: any, savedSets: Record<string, WorkoutSet[]> = {}, savedBlocks: Record<string, boolean> = {}) {
-  const currentMovementIds = new Set<string>()
-  const compatibleSets: Record<string, WorkoutSet[]> = {}
-  const compatibleBlocks: Record<string, boolean> = {}
-
-  day?.workout_blocks?.forEach((block: any) => {
-    block.workout_movements?.forEach((mov: any) => {
-      currentMovementIds.add(mov.id)
-    })
-  })
-
-  Object.entries(savedSets).forEach(([movementId, sets]) => {
-    if (currentMovementIds.has(movementId)) {
-      compatibleSets[movementId] = sets
-    }
-  })
-
-  day?.workout_blocks?.forEach((block: any) => {
-    const trackedMovements = block.workout_movements?.filter((mov: any) => (mov.sets || 0) > 0) || []
-
-    if (trackedMovements.length === 0) {
-      compatibleBlocks[block.id] = !!savedBlocks[block.id]
-      return
-    }
-
-    compatibleBlocks[block.id] = trackedMovements.every((mov: any) => {
-      const sets = compatibleSets[mov.id]
-      return sets?.length > 0 && sets.every((set) => set.is_completed)
-    })
-  })
-
-  return { compatibleSets, compatibleBlocks }
-}
 
 export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[] }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
@@ -96,39 +38,28 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
   // ── Persist workout progress to localStorage ──────────────────────────────
   const [isLoaded, setIsLoaded] = useState(false)
-  const [resumedSession, setResumedSession] = useState(false)
-  const [updatedSavedSession, setUpdatedSavedSession] = useState(false)
   const storageKey = `wod-progress-${day?.id}`
-  const workoutSignature = useMemo(() => buildWorkoutSignature(day), [day])
   
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
-        const { sets, blocks, timestamp, signature } = JSON.parse(saved)
+        const { sets, blocks, timestamp } = JSON.parse(saved)
         // Only resume if it's from today
         const isToday = new Date(timestamp).toDateString() === new Date().toDateString()
-        const matchesCurrentWorkout = signature === workoutSignature
-        if (isToday && matchesCurrentWorkout) {
+        if (isToday) {
           if (sets) setAllSetsData(sets)
           if (blocks) setCompletedBlocks(blocks)
-          setResumedSession(true)
-        } else if (isToday) {
-          const { compatibleSets, compatibleBlocks } = reconcileSavedProgress(day, sets, blocks)
-          setAllSetsData(compatibleSets)
-          setCompletedBlocks(compatibleBlocks)
-          setUpdatedSavedSession(true)
         } else {
           localStorage.removeItem(storageKey)
         }
       }
     } catch (e) {
       console.error('Error loading progress:', e)
-      localStorage.removeItem(storageKey)
     } finally {
       setIsLoaded(true)
     }
-  }, [day, storageKey, workoutSignature])
+  }, [storageKey])
 
   useEffect(() => {
     if (!day?.id || !isLoaded) return
@@ -136,13 +67,12 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
       localStorage.setItem(storageKey, JSON.stringify({ 
         sets: allSetsData, 
         blocks: completedBlocks,
-        signature: workoutSignature,
         timestamp: new Date().toISOString()
       }))
     } catch (e) {
       console.error('Error saving progress:', e)
     }
-  }, [allSetsData, completedBlocks, storageKey, workoutSignature, isLoaded])
+  }, [allSetsData, completedBlocks, storageKey, isLoaded])
   // ─────────────────────────────────────────────────────────────────────────
 
   // Timer Tick
@@ -240,7 +170,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background md:max-w-lg md:mx-auto md:w-full md:border-x md:border-border/40 relative overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-background md:max-w-2xl md:mx-auto md:w-full relative overflow-hidden">
       {/* Smart Video Dialog */}
       <Dialog open={!!activeVideo} onOpenChange={() => setActiveVideo(null)}>
         <DialogContent className="max-w-[90vw] w-[400px] rounded-3xl border-border/40 glass-strong p-0 overflow-hidden">
@@ -261,31 +191,34 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               <p className="text-white/40 text-xs">Video no disponible</p>
             )}
           </div>
+          <div className="p-4 bg-secondary/20">
+            <Button className="w-full" onClick={() => setActiveVideo(null)}>Cerrar</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Header — pt-safe ensures notch/dynamic-island doesn't overlap */}
-      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/30"
+      <header className="sticky top-0 z-20 bg-background/88 backdrop-blur-xl border-b border-border/60"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="flex items-center justify-between gap-2 px-3 sm:px-4 min-h-14 py-2">
-          <div className="flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-2">
             <Link href="/dashboard/athlete">
-              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 -ml-1 shrink-0" aria-label="Volver al inicio">
+              <Button variant="ghost" size="icon" className="rounded-2xl w-10 h-10 -ml-1">
                 <ArrowLeft className="w-4.5 h-4.5" />
               </Button>
             </Link>
-            <div className="min-w-0">
-              <h1 className="text-[13px] sm:text-sm font-black tracking-tight leading-tight uppercase truncate max-w-[52vw] sm:max-w-[18rem]">{day.name || day.title || 'WOD'}</h1>
-              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
+            <div>
+              <h1 className="text-sm font-black tracking-tight leading-none uppercase">{day.name || day.title || 'WOD'}</h1>
+              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
                 {day.workout_blocks?.length ?? 0} bloques · {day.workout_blocks?.reduce((a: number, b: any) => a + (b.workout_movements?.length ?? 0), 0) ?? 0} ejercicios
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
-              className="rounded-full w-9 h-9 text-muted-foreground hover:text-destructive"
+              className="rounded-2xl w-10 h-10 text-muted-foreground hover:text-destructive"
               onClick={() => {
                 if (confirm('¿Quieres reiniciar la sesión? Se borrará el progreso actual de este día.')) {
                   localStorage.removeItem(storageKey)
@@ -293,16 +226,14 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 }
               }}
               title="Reiniciar Sesión"
-              aria-label="Reiniciar sesión"
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className={`rounded-full w-9 h-9 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
+              className={`rounded-2xl w-10 h-10 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
               onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
-              aria-label={activeTab === 'tools' ? 'Cerrar herramientas' : 'Abrir herramientas'}
             >
               {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
             </Button>
@@ -325,17 +256,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
       </header>
 
       {/* Main Content Area — pb-36 leaves room for finish button + home indicator */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6" style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
-        {resumedSession && (
-          <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-primary">
-            Sesión reanudada automáticamente con progreso guardado de hoy.
-          </div>
-        )}
-        {updatedSavedSession && (
-          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[11px] font-bold leading-relaxed text-amber-200">
-            La rutina fue actualizada por tu coach. Conservamos tus series compatibles y ajustamos el progreso a la versión vigente.
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5" style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'tools' ? (
             <motion.div 
@@ -346,7 +267,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               className="space-y-6"
             >
               {/* Chronometer */}
-              <Card className="glass border-primary/30">
+              <Card className="ios-panel border-primary/30">
                 <CardContent className="p-6 flex flex-col items-center">
                   <TimerIcon className="w-8 h-8 text-primary mb-4" />
                   <div className="text-6xl font-black tracking-tighter tabular-nums mb-6 px-4 py-2 bg-secondary/50 rounded-2xl border border-white/5 drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]">
@@ -375,6 +296,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               {day.workout_blocks.map((block: any) => {
                 const isCompleted = completedBlocks[block.id]
                 const blockMovCount = block.workout_movements?.length ?? 0
+                const routineText = typeof block.description === 'string' ? block.description.trim() : ''
                 
                 const typeColors: Record<string, string> = {
                   strength: 'border-l-[var(--strength)]',
@@ -390,21 +312,21 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 return (
                   <div
                     key={block.id}
-                    className={`rounded-2xl border transition-all duration-300 overflow-hidden border-l-4 ${accentColor} ${
+                    className={`ios-panel rounded-[24px] border transition-all duration-300 overflow-hidden border-l-4 ${accentColor} ${
                       isCompleted
-                        ? 'opacity-60 bg-secondary/10'
-                        : `glass-card border-border/10 shadow-xl ${bgAccent}`
+                        ? 'opacity-70 bg-secondary/20'
+                        : `border-border/70 ${bgAccent}`
                     }`}
                   >
                     {/* Block header */}
-                    <div className={`flex items-center justify-between gap-3 px-4 py-4 border-b border-border/10 ${isCompleted ? 'bg-primary/5' : ''}`}>
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div className={`flex items-center justify-between gap-3 px-4 py-4 border-b border-border/60 ${isCompleted ? 'bg-primary/5' : ''}`}>
+                      <div className="flex items-center gap-3">
                         <button
                           onClick={() => toggleBlock(block.id)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${
+                          className={`w-9 h-9 rounded-2xl flex items-center justify-center transition-all ${
                             isCompleted 
                               ? 'bg-primary text-primary-foreground shadow-lg' 
-                              : `${iconBg} border border-border/10`
+                              : `${iconBg} border border-border/60`
                           }`}
                         >
                           <CheckCircle2 className={`w-5 h-5 ${isCompleted ? 'animate-in zoom-in-50' : 'opacity-40'}`} />
@@ -418,7 +340,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
                         {block.timer_type && !isCompleted && (
                           <Button
                             variant="outline"
@@ -427,7 +349,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                               e.stopPropagation()
                               setActiveTimer({ type: block.timer_type, config: block.timer_config || {} })
                             }}
-                            className="h-8 rounded-full border-primary/30 text-primary hover:bg-primary/10 gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest"
+                            className="h-8 rounded-xl border-primary/30 text-primary hover:bg-primary/10 gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest"
                           >
                             <TimerIcon className="w-3.5 h-3.5" /> Iniciar
                           </Button>
@@ -441,27 +363,42 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     </div>
                     
                     {/* Routine Description */}
-                    {block.description && (
-                      <div className="px-4 py-4 bg-secondary/5 bg-gradient-to-br from-primary/5 to-transparent border-b border-border/10">
-                        <SmartRoutineText 
-                          text={block.description} 
-                          exercises={allExercises || []} 
-                          blockExercises={block.workout_movements?.map((m: any) => m.exercises) || []}
-                          onVideoClick={(url, name) => setActiveVideo({ url, name })}
-                        />
+                    {routineText && (
+                      <div className="px-4 py-4 bg-[var(--gymnastics)]/8 bg-gradient-to-br from-[var(--gymnastics)]/10 to-transparent border-b border-[var(--gymnastics)]/20">
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--gymnastics)]">
+                              Rutina libre del WOD
+                            </p>
+                            <p className="text-[10px] text-muted-foreground font-semibold mt-1">
+                              Formato, notas y ejercicios con video vinculados por tu coach.
+                            </p>
+                          </div>
+                          <div className="h-9 w-9 rounded-2xl bg-[var(--gymnastics)]/10 border border-[var(--gymnastics)]/20 flex items-center justify-center shrink-0">
+                            <Video className="w-4 h-4 text-[var(--gymnastics)]" />
+                          </div>
+                        </div>
+                        <div className="rounded-2xl border border-border/60 bg-background/55 p-4">
+                          <SmartRoutineText 
+                            text={routineText} 
+                            exercises={allExercises || []} 
+                            blockExercises={block.workout_movements?.map((m: any) => m.exercises).filter(Boolean) || []}
+                            onVideoClick={(url, name) => setActiveVideo({ url, name })}
+                          />
+                        </div>
                       </div>
                     )}
                     
                     {/* Movements */}
                     {!isCompleted && (
-                      <div className="divide-y divide-border/20">
+                      <div className="space-y-3 p-3">
                         {block.workout_movements.map((mov: any, mIdx: number) => {
                           const hasSets = (mov.sets || 0) > 0
                           return (
-                            <div key={mIdx} className="p-4 space-y-4">
+                            <div key={mIdx} className="p-4 space-y-4 rounded-2xl border border-border/60 bg-background/40">
                               <div className="flex gap-3">
                                 {/* Video/icon thumb */}
-                                <div className="w-12 h-12 rounded-xl bg-secondary/40 shrink-0 flex items-center justify-center border border-border/30 relative overflow-hidden group">
+                                <div className="w-12 h-12 rounded-2xl bg-secondary/50 shrink-0 flex items-center justify-center border border-border/60 relative overflow-hidden group">
                                   {mov.exercises?.video_url ? (
                                     <button 
                                       onClick={() => setActiveVideo({ url: mov.exercises.video_url, name: mov.exercises.name })}
@@ -546,7 +483,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               })}
               {/* Extra Movements Section */}
               {extraMovements.map((mov, idx) => (
-                <div key={`extra-${idx}`} className="rounded-2xl border glass border-primary/20 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+                <div key={`extra-${idx}`} className="ios-panel rounded-2xl border-primary/20 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
                   <div className="flex items-center justify-between px-4 py-3 bg-primary/5">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
@@ -577,7 +514,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               {/* Add Extra Exercise Button */}
               <button
                 onClick={() => setAddExerciseOpen(true)}
-                className="w-full py-3 border-2 border-dashed border-border/50 rounded-xl text-muted-foreground hover:border-primary/50 hover:text-primary transition-all flex items-center justify-center gap-2 text-sm font-medium"
+                className="w-full py-4 border border-dashed border-border/70 rounded-2xl text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-sm font-black uppercase tracking-widest"
               >
                 <PlusCircle className="w-4 h-4" />
                 Añadir Ejercicio Extra
@@ -620,7 +557,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', padding: '4rem 1rem max(env(safe-area-inset-bottom), 16px)' }}
         >
           <Button
-            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-white text-black hover:bg-white/90 shadow-[0_12px_40px_rgba(255,255,255,0.15)] active:scale-95 transition-all pointer-events-auto border-none"
+            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all pointer-events-auto"
             onClick={() => setFinishOpen(true)}
           >
             Finalizar Entrenamiento

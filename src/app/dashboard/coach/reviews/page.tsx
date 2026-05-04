@@ -50,20 +50,24 @@ export default async function ReviewsPage({
   ]
 
   return (
-    <div className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto">
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div className="p-4 md:p-8 xl:p-10 space-y-8 max-w-7xl mx-auto">
+      <header className="ios-panel p-6 md:p-7 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <div className="flex items-center gap-2 text-primary mb-2">
+          <div className="section-title text-[var(--review)] mb-2 flex items-center gap-2">
             <Video className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Centro de Revisión</span>
+            <span>Centro de revisión</span>
           </div>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Actividad de Alumnos</h1>
+          <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Actividad de alumnos</h1>
           <p className="text-muted-foreground text-sm font-medium mt-1">Monitorea, revisa y da feedback a tus atletas.</p>
+        </div>
+        <div className="rounded-2xl border border-[var(--review)]/20 bg-[var(--review)]/10 px-5 py-4 text-[var(--review)]">
+          <MessageSquare className="w-6 h-6" />
+          <p className="mt-2 text-[10px] font-black uppercase tracking-widest">Feedback técnico</p>
         </div>
       </header>
 
       {/* Status Tabs */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="ios-panel p-2 flex gap-2 flex-wrap">
         {tabs.map(tab => (
           <a key={tab.key} href={`?status=${tab.key}`}>
             <div className={`px-4 py-2 rounded-xl border text-[11px] font-black uppercase tracking-widest cursor-pointer transition-all ${
@@ -93,11 +97,11 @@ export default async function ReviewsPage({
             }, {}) ?? {}
 
             return (
-              <Card key={result.id} className={`glass border-border/40 overflow-hidden flex flex-col ${hasVideo && (!fb || fb.status === 'pending') ? 'ring-1 ring-primary/30' : ''}`}>
-                <CardHeader className="pb-4 border-b border-border/20 bg-card/30">
+              <Card key={result.id} className={`ios-panel border-border/40 overflow-hidden flex flex-col ${hasVideo && (!fb || fb.status === 'pending') ? 'ring-1 ring-[var(--review)]/30' : ''}`}>
+                <CardHeader className="pb-4 border-b border-border/20 bg-card/45">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center border border-border/30">
+                      <div className="w-10 h-10 rounded-2xl bg-[var(--athlete)]/10 flex items-center justify-center border border-[var(--athlete)]/20">
                         {result.profiles?.avatar_url ? (
                           <img src={result.profiles.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
                         ) : (
@@ -117,7 +121,7 @@ export default async function ReviewsPage({
                       result.rpe >= 7 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' :
                       'bg-green-500/10 text-green-500 border-green-500/20'
                     }`}>
-                      RPE {result.rpe ?? '—'}
+                      RPE {result.rpe ?? '-'}
                     </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-border/10">
@@ -131,7 +135,7 @@ export default async function ReviewsPage({
                   {Object.keys(groupedSets).length > 0 && (
                     <div className="space-y-3">
                       <p className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1.5">
-                        <Dumbbell className="w-3 h-3" /> Series Registradas
+                        <Dumbbell className="w-3 h-3" /> Series registradas
                       </p>
                       {Object.entries(groupedSets).map(([name, sets]: [string, any]) => (
                         <div key={name} className="bg-secondary/20 rounded-xl p-3 border border-border/20">
@@ -150,7 +154,7 @@ export default async function ReviewsPage({
                   )}
 
                   {result.notes && (
-                    <div className="bg-amber-500/5 p-4 rounded-2xl border-l-4 border-amber-500/30 text-sm italic text-muted-foreground leading-relaxed">
+                      <div className="bg-amber-500/5 p-4 rounded-2xl border-l-4 border-amber-500/30 text-sm italic text-muted-foreground leading-relaxed">
                       "{result.notes}"
                     </div>
                   )}
@@ -159,7 +163,7 @@ export default async function ReviewsPage({
                     {hasVideo && (
                       <a href={result.video_link} target="_blank" rel="noopener noreferrer">
                         <Button className="w-full h-11 gap-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-xl transition-all font-bold uppercase tracking-widest text-[10px]">
-                          <Video className="w-4 h-4" /> Ver Video Técnico <ExternalLink className="w-3 h-3 opacity-40" />
+                          <Video className="w-4 h-4" /> Ver video técnico <ExternalLink className="w-3 h-3 opacity-40" />
                         </Button>
                       </a>
                     )}
@@ -193,11 +197,11 @@ export default async function ReviewsPage({
                             <textarea
                               name="feedback"
                               placeholder="Escribe tu corrección técnica (opcional)..."
-                              className="w-full bg-background/50 border border-border/40 rounded-xl p-3 text-sm min-h-[80px] focus:outline-none focus:ring-1 focus:ring-primary"
+                              className="w-full bg-background/55 border border-border/60 rounded-xl p-3 text-sm font-semibold min-h-[92px] focus:outline-none focus:ring-2 focus:ring-[var(--review)]/30"
                             />
                             <div className="flex gap-2">
                               <Button type="submit" className="flex-1 h-11 rounded-xl font-black uppercase tracking-widest text-[10px]">
-                                <MessageSquare className="w-4 h-4 mr-2" /> Enviar Feedback
+                                <MessageSquare className="w-4 h-4 mr-2" /> Enviar feedback
                               </Button>
                             </div>
                           </form>
@@ -209,7 +213,7 @@ export default async function ReviewsPage({
                                 await createFeedback(result.id, result.athlete_id, '', 'archived')
                               }} className="w-full">
                                 <Button type="submit" variant="outline" className="w-full h-11 rounded-xl text-muted-foreground border-border/40 hover:bg-secondary/50 font-black uppercase tracking-widest text-[10px]">
-                                  <Archive className="w-4 h-4 mr-2" /> Archivar sin Feedback
+                                  <Archive className="w-4 h-4 mr-2" /> Archivar sin feedback
                                 </Button>
                               </form>
                             ) : (

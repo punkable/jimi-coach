@@ -37,12 +37,13 @@ export default async function AthleteProgressPage() {
 
   return (
     <div className="min-h-[100dvh] pb-10 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
-      <header className="flex items-center gap-4 mb-10">
-        <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+      <header className="ios-panel p-6 md:p-7 flex items-center gap-4 mb-8">
+        <div className="w-14 h-14 rounded-2xl bg-[var(--review)]/10 flex items-center justify-center">
           <Medal className="w-8 h-8 text-primary" />
         </div>
         <div>
-          <h1 className="text-3xl font-black uppercase tracking-tight">Tu Evolución</h1>
+          <div className="section-title text-[var(--review)] mb-1">Historial del atleta</div>
+          <h1 className="text-3xl font-black uppercase tracking-tight">Tu evolución</h1>
           <p className="text-muted-foreground text-sm font-medium">Análisis de rendimiento y récords</p>
         </div>
       </header>
@@ -50,13 +51,13 @@ export default async function AthleteProgressPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Left: Stats & Charts */}
         <div className="lg:col-span-7 space-y-8">
-          <section className="glass rounded-[32px] p-8 border-primary/10">
+          <section className="ios-panel p-6 md:p-8 border-primary/10">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
                 <h2 className="text-xl font-black uppercase tracking-tight">Tendencia de Intensidad (RPE)</h2>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-primary/20 text-primary px-3 py-1 rounded-full">Últimos 10 Entrenos</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] bg-primary/20 text-primary px-3 py-1 rounded-full">Últimos 10 entrenos</span>
             </div>
             {results && results.length > 1 ? (
               <ProgressChart data={results} />
@@ -75,7 +76,7 @@ export default async function AthleteProgressPage() {
             </div>
 
             {results && results.length > 0 ? (
-              <div className="glass rounded-[32px] border-border/40 overflow-hidden shadow-xl">
+              <div className="ios-panel border-border/40 overflow-hidden shadow-xl">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left">
                     <thead>
@@ -103,7 +104,7 @@ export default async function AthleteProgressPage() {
                               res.rpe >= 7 ? 'bg-amber-500/20 text-amber-400' : 
                               'bg-green-500/20 text-green-400'
                             }`}>
-                              {res.rpe || '—'}
+                              {res.rpe || '-'}
                             </span>
                           </td>
                           <td className="px-6 py-5 text-right">
@@ -118,7 +119,7 @@ export default async function AthleteProgressPage() {
                 </div>
               </div>
             ) : (
-              <Card className="glass border-dashed border-border/40 p-12 text-center rounded-[32px]">
+              <Card className="ios-panel border-dashed border-border/40 p-12 text-center">
                 <p className="text-sm text-muted-foreground font-medium italic">Empieza a entrenar para ver tu historial.</p>
               </Card>
             )}
@@ -135,7 +136,7 @@ export default async function AthleteProgressPage() {
           {records && records.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
               {records.map((pr: any) => (
-                <Card key={pr.id} className="glass border-primary/10 overflow-hidden group hover:border-primary/30 transition-all shadow-lg rounded-2xl">
+                <Card key={pr.id} className="ios-panel border-primary/10 overflow-hidden group hover:border-primary/30 transition-all shadow-lg">
                   <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -157,7 +158,7 @@ export default async function AthleteProgressPage() {
               ))}
             </div>
           ) : (
-            <Card className="glass border-dashed border-border/40 p-12 text-center rounded-[32px]">
+            <Card className="ios-panel border-dashed border-border/40 p-12 text-center">
               <p className="text-sm text-muted-foreground font-medium italic">Registra tus pesos máximos para ver tus PRs aquí.</p>
             </Card>
           )}

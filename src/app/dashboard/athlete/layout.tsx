@@ -3,13 +3,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { BookOpen, Calculator, Home, TrendingUp, User, LogOut } from 'lucide-react'
+import { Home, TrendingUp, User, LogOut, BookOpen, MessageSquareText } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
 const navItems = [
   { href: '/dashboard/athlete', icon: Home, label: 'Hoy', exact: true },
-  { href: '/dashboard/athlete/tools', icon: Calculator, label: 'Tools', exact: false },
-  { href: '/dashboard/athlete/library', icon: BookOpen, label: 'Biblioteca', exact: false },
+  { href: '/dashboard/athlete/library', icon: BookOpen, label: 'Técnica', exact: false },
+  { href: '/dashboard/athlete/feedback', icon: MessageSquareText, label: 'Feedback', exact: false },
   { href: '/dashboard/athlete/progress', icon: TrendingUp, label: 'Progreso', exact: false },
   { href: '/dashboard/athlete/profile', icon: User, label: 'Perfil', exact: false },
 ]
@@ -26,8 +26,8 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
         <aside className="hidden md:flex flex-col w-64 border-r border-border/40 bg-card/40 backdrop-blur-xl shrink-0">
           <div className="p-8">
             <Link href="/dashboard/athlete" className="flex items-center gap-2">
-              <Image src="/images/logotipo.png" alt="LDRFIT" width={140} height={40} className="object-contain hidden md:block" />
-              <Image src="/images/isotipo.png" alt="L" width={32} height={32} className="object-contain md:hidden" />
+              <Image src="/images/logofinal.svg" alt="LDRFIT" width={148} height={42} className="brand-logo hidden md:block" />
+              <Image src="/images/isotipo.svg" alt="LDRFIT" width={34} height={34} className="brand-logo md:hidden" />
             </Link>
           </div>
           <nav className="flex-1 px-4 space-y-2 mt-4">
@@ -89,7 +89,7 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
                     <div className="absolute -top-1 w-12 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(204,255,0,0.8)]" />
                   )}
                   <Icon className={`h-6 w-6 transition-all duration-300 ${isActive ? 'stroke-[2.5] scale-110 drop-shadow-[0_0_8px_rgba(204,255,0,0.4)]' : 'stroke-[1.5]'}`} />
-                  <span className={`text-[8px] font-black uppercase tracking-[0.15em] transition-all ${isActive ? 'opacity-100' : 'opacity-40'}`}>
+                  <span className={`text-[7px] font-black uppercase tracking-[0.08em] transition-all ${isActive ? 'opacity-100' : 'opacity-40'}`}>
                     {label}
                   </span>
                 </Link>
