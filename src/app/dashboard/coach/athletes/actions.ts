@@ -142,10 +142,17 @@ export async function hardDeleteAthlete(athleteId: string) {
   revalidatePath('/dashboard/coach/athletes')
 }
 
-export async function assignWorkoutPlan(athleteId: string, planId: string) {
+export async function assignWorkoutPlan(athleteId: string, planId: string | null) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
+
+  if (!planId || planId === 'no-plan') {
+    await supabase.from('assigned_plans').delete().eq('athlete_id', athleteId)
+    revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
+    revalidatePath('/dashboard/athlete')
+    return { success: true }
+  }
 
   // Check if already assigned
   const { data: existing } = await supabase

@@ -88,10 +88,6 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                 <span className="text-muted-foreground flex items-center gap-2"><Ruler className="w-4 h-4"/> Altura</span>
                 <span className="font-medium">{profile.height_cm ? `${profile.height_cm} cm` : '-'}</span>
               </div>
-              <div className="flex items-center justify-between border-b border-border pb-2">
-                <span className="text-muted-foreground flex items-center gap-2"><Target className="w-4 h-4"/> RM Snatch</span>
-                <span className="font-medium">{profile.snatch_rm ? `${profile.snatch_rm} kg` : '-'}</span>
-              </div>
               <div className="flex items-center justify-between pb-2">
                 <span className="text-muted-foreground flex items-center gap-2"><Calendar className="w-4 h-4"/> Talla Polera</span>
                 <span className="font-medium">{profile.shirt_size || '-'}</span>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -8,7 +8,7 @@ import {
   Plus, Trash2, Dumbbell, Save, Loader2, 
   Search, X, Calendar, Layout, Edit3,
   GripHorizontal, ChevronRight, Hash, Info, Video,
-  Eye, EyeOff
+  Eye, EyeOff, CheckCircle2, Timer as TimerIcon
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure, toggleWeekStatus } from '../../actions'
@@ -37,11 +37,12 @@ import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
+import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 
 // Types
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
 type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
-type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[] }
+type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[], timer_type?: string, timer_config?: any }
 type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
@@ -112,6 +113,8 @@ export function BuilderClient({
       workout_blocks: (d.workout_blocks || []).map((b: any) => ({
         ...b,
         id: b.id || genId(),
+        timer_type: b.timer_type || null,
+        timer_config: b.timer_config || {},
         workout_movements: (b.workout_movements || []).map((m: any) => ({
           ...m,
           id: m.id || genId(),
@@ -132,12 +135,31 @@ export function BuilderClient({
   const [libSearch, setLibSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [editingBlocks, setEditingBlocks] = useState<Record<string, boolean>>({})
+
+  // Immutable state update helper
+  const updateDays = (updater: Day[] | ((prev: Day[]) => Day[])) => {
+    setDays(updater)
+    setHasUnsavedChanges(true)
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event
@@ -150,7 +172,7 @@ export function BuilderClient({
     if (active.data.current?.type === 'block') {
       const activeDIdx = active.data.current.dIdx
       if (activeId !== overId) {
-        setDays(prev => {
+        updateDays(prev => {
           const next = JSON.parse(JSON.stringify(prev))
           const blockIds = next[activeDIdx].workout_blocks.map((b: any) => b.id)
           const oldIndex = blockIds.indexOf(activeId)
@@ -218,7 +240,7 @@ export function BuilderClient({
       }
 
       if (overDIdx !== -1) {
-        setDays(prev => {
+        updateDays(prev => {
           const next = JSON.parse(JSON.stringify(prev))
           const [moved] = next[activeDIdx].workout_blocks[activeBIdx].workout_movements.splice(activeMIdx, 1)
           next[overDIdx].workout_blocks[overBIdx].workout_movements.splice(overMIdx, 0, moved)
@@ -239,12 +261,12 @@ export function BuilderClient({
       is_published: true,
       workout_blocks: [] 
     }
-    setDays([...days, newDay])
+    updateDays([...days, newDay])
   }
 
   const addWeek = () => {
     const nextWeek = Math.max(0, ...days.map(d => d.week_number || 1)) + 1
-    setDays([...days, { 
+    updateDays([...days, { 
       id: genId(), 
       week_number: nextWeek, 
       day_of_week: 1, 
@@ -264,9 +286,10 @@ export function BuilderClient({
       id: genId(), 
       name: `Bloque ${blockLetter}`, 
       type: 'strength', 
+      description: '',
       workout_movements: [] 
     })
-    setDays(n)
+    updateDays(n)
   }
 
   const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number, sets: number = 3) => {
@@ -286,17 +309,23 @@ export function BuilderClient({
     } else {
       n[dIdx].workout_blocks[bIdx].workout_movements.push(newMov)
     }
-    setDays(n)
+    updateDays(n)
   }
 
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await savePlanStructure(planId, days, planMeta)
-      alert('¡Planificación guardada con éxito!')
-    } catch (e) {
+      const res = await savePlanStructure(planId, days, planMeta)
+      if (res.success && res.days) {
+        setDays(processInitialDays(res.days))
+        setHasUnsavedChanges(false)
+        alert('¡Planificación guardada con éxito!')
+      } else {
+        throw new Error('No se recibió la estructura actualizada')
+      }
+    } catch (e: any) {
       console.error(e)
-      alert('Error al guardar')
+      alert(`Error al guardar: ${e.message || 'Error desconocido'}`)
     } finally {
       setIsSaving(false)
     }
@@ -337,10 +366,15 @@ export function BuilderClient({
             <Button 
               onClick={handleSave} 
               disabled={isSaving} 
-              className="w-full gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl shadow-lg shadow-primary/10"
+              className={`w-full gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl transition-all relative ${
+                hasUnsavedChanges 
+                  ? 'bg-primary shadow-lg shadow-primary/20 ring-1 ring-primary ring-offset-2 ring-offset-background' 
+                  : 'bg-muted hover:bg-muted/80 text-muted-foreground shadow-none'
+              }`}
             >
               {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              Guardar Plan
+              {isSaving ? 'Guardando...' : 'Guardar Plan'}
+              {hasUnsavedChanges && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />}
             </Button>
           </div>
 
@@ -478,7 +512,7 @@ export function BuilderClient({
                           className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-bold text-sm tracking-tight truncate w-full placeholder:opacity-30"
                           value={day.title}
                           onChange={(e) => {
-                            const n = [...days]; n[globalDIdx].title = e.target.value; setDays(n);
+                            const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n);
                           }}
                         />
                       </div>
@@ -486,7 +520,7 @@ export function BuilderClient({
                         <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md" onClick={() => addBlock(day.id)}>
                           <Plus className="w-3 h-3" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:text-destructive" onClick={() => setDays(days.filter(d => d.id !== day.id))}>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md hover:text-destructive" onClick={() => updateDays(days.filter(d => d.id !== day.id))}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
@@ -501,10 +535,10 @@ export function BuilderClient({
                             id={block.id} 
                             block={block} 
                             onRemove={() => {
-                              const n = [...days]; n[globalDIdx].workout_blocks.splice(bIdx, 1); setDays(n);
+                              const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks.splice(bIdx, 1); updateDays(n);
                             }}
                             onRename={(val: string) => {
-                              const n = [...days]; n[globalDIdx].workout_blocks[bIdx].name = val; setDays(n);
+                              const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].name = val; updateDays(n);
                             }}
                           >
                             <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
@@ -514,68 +548,227 @@ export function BuilderClient({
                                   <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
                                     <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
                                   </Label>
-                                  <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
-                                    <PopoverTrigger render={
-                                      <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
-                                        <Video className="w-3 h-3" /> Vincular Video
+                                  <div className="flex items-center gap-2">
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="sm" className={cn(
+                                          "h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all",
+                                          block.timer_type ? "bg-primary/10 text-primary border border-primary/20" : "text-muted-foreground hover:text-primary"
+                                        )}>
+                                          <TimerIcon className="w-3 h-3" /> {block.timer_type ? block.timer_type.replace('_', ' ') : 'Sin Crono'}
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-64 p-4 rounded-2xl border-border/40 shadow-2xl" align="end">
+                                        <div className="space-y-4">
+                                          <div className="space-y-1.5">
+                                            <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de Cronómetro</Label>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                              {[
+                                                { id: null, label: 'Ninguno' },
+                                                { id: 'amrap', label: 'AMRAP' },
+                                                { id: 'for_time', label: 'For Time' },
+                                                { id: 'emom', label: 'EMOM' },
+                                                { id: 'tabata', label: 'Tabata' }
+                                              ].map(t => (
+                                                <Button
+                                                  key={t.id || 'none'}
+                                                  variant={block.timer_type === t.id ? 'default' : 'secondary'}
+                                                  size="sm"
+                                                  className="h-8 text-[9px] font-bold uppercase"
+                                                  onClick={() => {
+                                                    const n = JSON.parse(JSON.stringify(days))
+                                                    n[globalDIdx].workout_blocks[bIdx].timer_type = t.id
+                                                    // Default configs
+                                                    if (t.id === 'amrap') n[globalDIdx].workout_blocks[bIdx].timer_config = { minutes: 15 }
+                                                    if (t.id === 'emom') n[globalDIdx].workout_blocks[bIdx].timer_config = { rounds: 10 }
+                                                    if (t.id === 'tabata') n[globalDIdx].workout_blocks[bIdx].timer_config = { rounds: 8, work: 20, rest: 10 }
+                                                    updateDays(n)
+                                                  }}
+                                                >
+                                                  {t.label}
+                                                </Button>
+                                              ))}
+                                            </div>
+                                          </div>
+
+                                          {block.timer_type && (
+                                            <div className="space-y-3 pt-3 border-t border-border/10">
+                                              {block.timer_type === 'amrap' && (
+                                                <div className="space-y-1.5">
+                                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Tiempo (Minutos)</Label>
+                                                  <Input 
+                                                    type="number" 
+                                                    className="h-8 text-xs" 
+                                                    value={block.timer_config?.minutes || 15}
+                                                    onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, minutes: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }}
+                                                  />
+                                                </div>
+                                              )}
+                                              {block.timer_type === 'emom' && (
+                                                <div className="space-y-1.5">
+                                                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Minutos Totales</Label>
+                                                  <Input 
+                                                    type="number" 
+                                                    className="h-8 text-xs" 
+                                                    value={block.timer_config?.rounds || 10}
+                                                    onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, rounds: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }}
+                                                  />
+                                                </div>
+                                              )}
+                                              {block.timer_type === 'tabata' && (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                  <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Rondas</Label>
+                                                    <Input type="number" className="h-8 text-xs" value={block.timer_config?.rounds || 8} onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, rounds: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }} />
+                                                  </div>
+                                                  <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Trabajo (seg)</Label>
+                                                    <Input type="number" className="h-8 text-xs" value={block.timer_config?.work || 20} onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, work: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }} />
+                                                  </div>
+                                                  <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Descanso (seg)</Label>
+                                                    <Input type="number" className="h-8 text-xs" value={block.timer_config?.rest || 10} onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, rest: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }} />
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                    {!editingBlocks[block.id] && block.description && (
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm" 
+                                        className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl text-muted-foreground hover:text-primary transition-all"
+                                        onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
+                                      >
+                                        <Edit3 className="w-3 h-3" /> Editar Texto
                                       </Button>
-                                    } />
-                                    <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
-                                      <div className="p-3 border-b border-border/10 bg-secondary/10">
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
-                                        <div className="relative">
-                                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
-                                          <Input 
-                                            placeholder="Buscar en biblioteca..." 
-                                            className="h-9 text-xs pl-9 bg-background/50 border-border/20 rounded-xl" 
-                                            onChange={(e) => setLibSearch(e.target.value)}
-                                            value={libSearch}
-                                            autoFocus
-                                          />
-                                        </div>
-                                      </div>
-                                      <ScrollArea className="h-64">
-                                        <div className="p-1.5 space-y-0.5">
-                                          {filteredLibrary.slice(0, 50).map(ex => (
-                                            <button
-                                              key={ex.id}
-                                              className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
-                                              onClick={() => {
-                                                const tag = `[${ex.name}]`
-                                                const n = [...days]
-                                                const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
-                                                n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
-                                                setDays(n)
-                                                setOpenPopoverId(null)
-                                              }}
-                                            >
-                                              <div className="flex flex-col">
-                                                <span className="uppercase tracking-tight">{ex.name}</span>
-                                                <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
+                                    )}
+                                    {(editingBlocks[block.id] || !block.description) && (
+                                      <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
+                                        <PopoverTrigger render={
+                                          <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
+                                            <Video className="w-3 h-3" /> Vincular Video
+                                          </Button>
+                                        } />
+                                        <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
+                                          <div className="p-3 border-b border-border/10 bg-secondary/10">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
+                                            <div className="relative">
+                                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/40" />
+                                              <Input 
+                                                placeholder="Buscar en biblioteca..." 
+                                                className="h-9 text-xs pl-9 bg-background/50 border-border/20 rounded-xl" 
+                                                onChange={(e) => setLibSearch(e.target.value)}
+                                                value={libSearch}
+                                                autoFocus
+                                              />
+                                            </div>
+                                          </div>
+                                          <ScrollArea className="h-64">
+                                            <div className="p-1.5 space-y-0.5">
+                                              {filteredLibrary.slice(0, 50).map(ex => (
+                                                <button
+                                                  key={ex.id}
+                                                  className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
+                                                  onClick={() => {
+                                                      const tag = `[${ex.name}]`
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      const currentDesc = n[globalDIdx].workout_blocks[bIdx].description || ''
+                                                      n[globalDIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tag
+                                                      updateDays(n)
+                                                      setOpenPopoverId(null)
+                                                    }}
+                                                  >
+                                                    <div className="flex flex-col">
+                                                      <span className="uppercase tracking-tight">{ex.name}</span>
+                                                      <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
+                                                    </div>
+                                                    <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                      <Plus className="w-3.5 h-3.5 text-primary" />
+                                                    </div>
+                                                  </button>
+                                                ))}
                                               </div>
-                                              <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Plus className="w-3.5 h-3.5 text-primary" />
-                                              </div>
-                                            </button>
-                                          ))}
-                                        </div>
-                                      </ScrollArea>
-                                    </PopoverContent>
-                                  </Popover>
+                                            </ScrollArea>
+                                          </PopoverContent>
+                                        </Popover>
+                                      )}
+                                  </div>
                                 </div>
-
-                                <Textarea 
-                                  placeholder="Ej: AMRAP 15 min de:
- 10 Pull Ups
- 5 Snatch
- 20 Box Jumps"
-                                  className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
-                                  value={block.description || ''}
-                                  onChange={(e) => {
-                                    const n = [...days]; n[globalDIdx].workout_blocks[bIdx].description = e.target.value; setDays(n);
-                                  }}
-                                />
-
+  
+                                {(editingBlocks[block.id] || !block.description) ? (
+                                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <Textarea 
+                                      placeholder="Ej: AMRAP 15 min de:
+   10 Pull Ups
+   5 Snatch
+   20 Box Jumps"
+                                      className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
+                                      value={block.description || ''}
+                                      onChange={(e) => {
+                                        const n = JSON.parse(JSON.stringify(days))
+                                        n[globalDIdx].workout_blocks[bIdx].description = e.target.value
+                                        updateDays(n)
+                                      }}
+                                    />
+                                    <div className="flex justify-end">
+                                      <Button 
+                                        size="sm" 
+                                        variant="secondary" 
+                                        className="h-8 rounded-xl text-[10px] font-bold uppercase tracking-widest px-4 gap-2"
+                                        onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: false }))}
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Finalizar Edición
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="p-4 bg-secondary/5 border border-border/10 rounded-[16px] group relative">
+                                    <SmartRoutineText 
+                                      text={block.description} 
+                                      exercises={library} 
+                                      blockExercises={block.workout_movements.map((m: any) => m.exercise)}
+                                      onVideoClick={(url, name) => {
+                                        // Preview video for coach too
+                                        window.open(url, '_blank')
+                                      }}
+                                    />
+                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        className="h-6 w-6 rounded-md bg-background/80 shadow-sm"
+                                        onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
+                                      >
+                                        <Edit3 className="w-3 h-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+  
                                 <p className="text-[8px] text-muted-foreground/40 font-medium italic px-1">
                                   El alumno verá un icono de video <Video className="w-2 h-2 inline" /> junto a los nombres de ejercicios vinculados.
                                 </p>
@@ -595,16 +788,16 @@ export function BuilderClient({
                                       mov={mov} 
                                       mIdx={mIdx}
                                       updateSets={(val: string) => {
-                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; setDays(n);
+                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; updateDays(n);
                                       }}
                                       updateReps={(val: string) => {
-                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; setDays(n);
+                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; updateDays(n);
                                       }}
                                       updateWeight={(val: string) => {
-                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; setDays(n);
+                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; updateDays(n);
                                       }}
                                       removeMov={() => {
-                                        const n = [...days]; n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); setDays(n);
+                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); updateDays(n);
                                       }}
                                     />
                                   ))}

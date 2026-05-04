@@ -1,23 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core'
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { Check, Plus, Minus, GripVertical, AlertCircle } from 'lucide-react'
+import { Check, Plus, Minus, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -44,8 +28,7 @@ function hasRequiredData(set: WorkoutSet, trackingType: TrackingType): boolean {
   }
 }
 
-// ─── Sortable Row ─────────────────────────────────────────────────────────────
-function SortableSetRow({
+function SetRow({
   set,
   idx,
   trackingType,
@@ -62,40 +45,20 @@ function SortableSetRow({
   onRemove: (id: string) => void
   canRemove: boolean
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: set.id })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  }
-
   const ready = hasRequiredData(set, trackingType)
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
       className={`flex items-center gap-1.5 p-2 rounded-xl border transition-all duration-200 ${
         set.is_completed
           ? 'bg-primary/10 border-primary/30'
-          : isDragging
-          ? 'bg-secondary/60 border-primary/50 shadow-2xl scale-105'
           : 'bg-background/50 border-border/30 hover:border-border/60'
       }`}
     >
-      {/* Drag Handle + Set Number */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="flex flex-col items-center gap-0.5 shrink-0 text-muted-foreground/40 hover:text-muted-foreground active:text-primary touch-none cursor-grab active:cursor-grabbing px-1"
-      >
-        <GripVertical className="w-4 h-4" />
-        <span className="text-[10px] font-bold leading-none">{set.set_number}</span>
-      </button>
+      <div className="w-8 flex items-center justify-center">
+        <span className="text-[10px] font-black text-muted-foreground/40">{set.set_number}</span>
+      </div>
 
-      {/* Inputs */}
       <div className="flex-1 flex gap-1.5">
         {trackingType === 'weight_reps' && (
           <>
@@ -165,7 +128,6 @@ function SortableSetRow({
         )}
       </div>
 
-      {/* Check / Remove */}
       <div className="flex items-center gap-1 shrink-0">
         {canRemove && !set.is_completed && (
           <button
@@ -177,10 +139,9 @@ function SortableSetRow({
         )}
         <button
           onClick={() => {
-            if (!set.is_completed && !ready) return // prevent unchecked without data
+            if (!set.is_completed && !ready) return
             onToggle(set.id)
           }}
-          title={!ready && !set.is_completed ? 'Rellena los datos primero' : ''}
           className={`w-9 h-9 rounded-full flex items-center justify-center transition-all relative ${
             set.is_completed
               ? 'bg-primary text-primary-foreground shadow-[0_0_12px_rgba(var(--primary),0.5)]'
@@ -202,19 +163,26 @@ function SortableSetRow({
   )
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
 export function WorkoutSetsList({
   movement,
+  prs,
   initialSets,
   onSetChange,
   onTimerStart,
 }: {
   movement: any
+  prs?: Record<string, { weight: number, reps: number }>
   initialSets?: WorkoutSet[]
   onSetChange: (sets: WorkoutSet[]) => void
   onTimerStart: (seconds: number) => void
 }) {
   const trackingType: TrackingType = movement.exercises?.tracking_type || 'weight_reps'
+
+  // Percentage Calculation Logic
+  const pb = prs?.[movement.exercises?.id]
+  const percentageStr = movement.weight_percentage ? String(movement.weight_percentage) : null
+  const percentageNum = percentageStr ? parseFloat(percentageStr.replace('%', '')) : null
+  const calculatedWeight = (pb && percentageNum) ? Math.round(pb.weight * percentageNum / 100) : null
 
   const buildInitialSets = (): WorkoutSet[] => {
     if (initialSets && initialSets.length > 0) return initialSets
@@ -231,7 +199,7 @@ export function WorkoutSetsList({
         id: `${movement.id}-set-${i}`,
         movement_id: movement.id,
         set_number: i + 1,
-        weight: null,
+        weight: calculatedWeight,
         reps: defaultReps,
         distance: null,
         time_seconds: null,
@@ -242,7 +210,6 @@ export function WorkoutSetsList({
 
   const [sets, setSets] = useState<WorkoutSet[]>(buildInitialSets)
 
-  // Notify parent
   useEffect(() => {
     if (sets.length > 0) onSetChange(sets)
   }, [sets]) // eslint-disable-line
@@ -276,7 +243,7 @@ export function WorkoutSetsList({
           id: `${movement.id}-set-${Date.now()}`,
           movement_id: movement.id,
           set_number: prev.length + 1,
-          weight: last?.weight ?? null,
+          weight: last?.weight ?? calculatedWeight ?? null,
           reps: last?.reps ?? null,
           distance: last?.distance ?? null,
           time_seconds: last?.time_seconds ?? null,
@@ -297,22 +264,6 @@ export function WorkoutSetsList({
     setSets(prev => prev.map(s => ({ ...s, is_completed: true })))
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    setSets(prev => {
-      const oldIdx = prev.findIndex(s => s.id === active.id)
-      const newIdx = prev.findIndex(s => s.id === over.id)
-      const reordered = arrayMove(prev, oldIdx, newIdx)
-      return reordered.map((s, i) => ({ ...s, set_number: i + 1 }))
-    })
-  }
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } })
-  )
-
   const allReady = sets.every(s => hasRequiredData(s, trackingType))
   const headerLabel: Record<TrackingType, string> = {
     weight_reps: 'Peso · Reps',
@@ -323,29 +274,41 @@ export function WorkoutSetsList({
 
   return (
     <div className="mt-3 space-y-2">
+      {/* Percentage Info */}
+      {percentageNum && (
+        <div className="px-2 mb-2">
+          <div className="flex items-center justify-between py-1.5 px-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Objetivo: {percentageNum}%</span>
+            {pb ? (
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Basado en RM: {pb.weight}kg</span>
+            ) : (
+              <span className="text-[10px] font-medium text-muted-foreground/60 italic lowercase">rm no registrado</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Column headers */}
       <div className="flex items-center gap-2 px-2 text-[10px] uppercase font-semibold text-muted-foreground/60 tracking-wider">
-        <span className="w-10 text-center">#</span>
+        <span className="w-8 text-center">#</span>
         <span className="flex-1 text-center">{headerLabel[trackingType]}</span>
         <span className="w-9 text-center">✓</span>
       </div>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={sets.map(s => s.id)} strategy={verticalListSortingStrategy}>
-          {sets.map((set, idx) => (
-            <SortableSetRow
-              key={set.id}
-              set={set}
-              idx={idx}
-              trackingType={trackingType}
-              onUpdate={updateSet}
-              onToggle={toggleComplete}
-              onRemove={removeSet}
-              canRemove={sets.length > 1}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
+      <div className="space-y-1.5">
+        {sets.map((set, idx) => (
+          <SetRow
+            key={set.id}
+            set={set}
+            idx={idx}
+            trackingType={trackingType}
+            onUpdate={updateSet}
+            onToggle={toggleComplete}
+            onRemove={removeSet}
+            canRemove={sets.length > 1}
+          />
+        ))}
+      </div>
 
       {/* Footer actions */}
       <div className="flex items-center justify-between pt-1 px-1">
@@ -364,7 +327,6 @@ export function WorkoutSetsList({
           size="sm"
           onClick={completeAll}
           disabled={!allReady}
-          title={!allReady ? 'Rellena todas las series primero' : 'Marcar todas como completadas'}
           className="h-7 text-[10px] px-2 border-primary/30 text-primary hover:bg-primary/10 gap-1 rounded-full disabled:opacity-30"
         >
           <Check className="w-3 h-3" /><Check className="w-3 h-3 -ml-2" /> Todo

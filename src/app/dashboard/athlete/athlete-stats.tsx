@@ -48,29 +48,17 @@ export function AthleteStats({
       <Card className="md:col-span-2 glass">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Target className="w-5 h-5 text-primary" /> Evolución 1RM (Estimado)
+            <Target className="w-5 h-5 text-primary" /> Actividad Reciente
           </CardTitle>
-          <CardDescription>Tu progreso en levantamientos principales (kg)</CardDescription>
+          <CardDescription>Sesiones completadas en las últimas semanas</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[200px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={prData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
-                <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                <Tooltip 
-                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '8px' }}
-                  itemStyle={{ color: 'hsl(var(--foreground))' }}
-                />
-                <Line type="monotone" dataKey="BackSquat" stroke="#f97316" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="Snatch" stroke="#8b5cf6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="flex justify-center gap-6 mt-4 text-sm">
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#f97316]"></div> Back Squat</div>
-            <div className="flex items-center gap-2"><div className="w-3 h-3 rounded-full bg-[#8b5cf6]"></div> Snatch</div>
+          <div className="h-[200px] w-full flex items-center justify-center bg-secondary/10 rounded-xl border border-border/20">
+            <div className="text-center p-6">
+              <Trophy className="w-12 h-12 text-primary/40 mx-auto mb-3" />
+              <p className="text-sm font-medium">¡Sigue así!</p>
+              <p className="text-xs text-muted-foreground mt-1">Has completado {totalWorkouts} entrenamientos en total.</p>
+            </div>
           </div>
         </CardContent>
       </Card>

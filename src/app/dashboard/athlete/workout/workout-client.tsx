@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { submitWorkoutResult, submitReadiness } from '../actions'
 import { Battery, Brain, Activity } from 'lucide-react'
 import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
+import { SmartRoutineText } from '@/components/workout/smart-routine-text'
+import { CrossFitTimer, TimerType } from './crossfit-timer'
 
 export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[] }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
@@ -30,6 +32,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   // Hevy-Style State
   const [allSetsData, setAllSetsData] = useState<Record<string, WorkoutSet[]>>({})
   const [restTimerSeconds, setRestTimerSeconds] = useState<number | null>(null)
+
+  // CrossFit Timer State
+  const [activeTimer, setActiveTimer] = useState<{ type: TimerType, config: any } | null>(null)
 
   // ── Persist workout progress to localStorage ──────────────────────────────
   const [isLoaded, setIsLoaded] = useState(false)
@@ -91,7 +96,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   const [isRunning, setIsRunning] = useState(false)
   const [rmWeight, setRmWeight] = useState('')
   const [rmReps, setRmReps] = useState('')
-  const [estimated1RM, setEstimated1RM] = useState<number | null>(null)
 
   // Timer Logic
   useEffect(() => {
@@ -108,15 +112,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
     return `${m}:${s}`
   }
 
-  // 1RM Calculator Logic (Epley Formula)
-  const calculateRM = () => {
-    const w = parseFloat(rmWeight)
-    const r = parseInt(rmReps)
-    if (w > 0 && r > 0) {
-      const rm = w * (1 + r / 30)
-      setEstimated1RM(Math.round(rm))
-    }
-  }
 
   // Video Modal State for Smart Text
   const [activeVideo, setActiveVideo] = useState<{ url: string, name: string } | null>(null)
@@ -276,33 +271,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 </CardContent>
               </Card>
 
-              {/* RM Calculator */}
-              <Card className="glass">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Calculator className="w-5 h-5 text-primary" />
-                    <h3 className="font-bold text-lg">Calculadora 1RM</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div>
-                      <label className="text-xs text-muted-foreground">Peso (kg/lb)</label>
-                      <Input type="number" placeholder="Ej: 100" value={rmWeight} onChange={e => setRmWeight(e.target.value)} className="bg-background/50" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Repeticiones</label>
-                      <Input type="number" placeholder="Ej: 5" value={rmReps} onChange={e => setRmReps(e.target.value)} className="bg-background/50" />
-                    </div>
-                  </div>
-                  <Button className="w-full" onClick={calculateRM}>Calcular</Button>
-                  
-                  {estimated1RM && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="mt-6 p-4 bg-primary/10 rounded-xl text-center border border-primary/20">
-                      <p className="text-sm text-muted-foreground">Tu 1RM Estimado es:</p>
-                      <p className="text-4xl font-black text-primary">{estimated1RM} <span className="text-lg font-normal">kg/lb</span></p>
-                    </motion.div>
-                  )}
-                </CardContent>
-              </Card>
             </motion.div>
           ) : (
             <motion.div 
@@ -326,32 +294,47 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     }`}
                   >
                     {/* Block header */}
-                    <div
-                      className={`flex items-center justify-between px-4 py-3 cursor-pointer ${
-                        isCompleted ? 'bg-transparent' : 'bg-card/50'
-                      }`}
-                      onClick={() => toggleBlock(block.id)}
-                    >
+                    <div className={`flex items-center justify-between px-4 py-4 border-b border-border/10 ${isCompleted ? 'bg-primary/5' : ''}`}>
                       <div className="flex items-center gap-3">
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all ${
-                          isCompleted
-                            ? 'bg-primary border-primary shadow-[0_0_8px_rgba(var(--primary),0.4)]'
-                            : 'border-muted-foreground/30'
-                        }`}>
-                          {isCompleted && <CheckCircle2 className="w-3.5 h-3.5 text-primary-foreground" />}
-                        </div>
+                        <button
+                          onClick={() => toggleBlock(block.id)}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                            isCompleted 
+                              ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.6)]' 
+                              : 'bg-secondary/50 text-muted-foreground border border-border/40'
+                          }`}
+                        >
+                          <CheckCircle2 className={`w-5 h-5 ${isCompleted ? 'animate-in zoom-in-50' : 'opacity-40'}`} />
+                        </button>
                         <div>
-                          <h3 className={`font-black text-sm tracking-tight uppercase ${
-                            isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'
-                          }`}>
+                          <h3 className={`font-black text-sm tracking-tight uppercase leading-none ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                             {block.name}
                           </h3>
-                          <p className="text-[10px] text-muted-foreground font-medium">
+                          <p className="text-[10px] text-muted-foreground mt-1 font-medium">
                             {blockMovCount > 0 ? `${blockMovCount} ejercicios` : 'Rutina de texto'}
                           </p>
                         </div>
                       </div>
-                      <X className={`w-4 h-4 text-muted-foreground/40 transition-transform ${isCompleted ? 'rotate-0' : 'rotate-45'}`} />
+                      <div className="flex items-center gap-2">
+                        {block.timer_type && !isCompleted && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setActiveTimer({ type: block.timer_type, config: block.timer_config || {} })
+                            }}
+                            className="h-8 rounded-full border-primary/30 text-primary hover:bg-primary/10 gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest"
+                          >
+                            <TimerIcon className="w-3.5 h-3.5" /> Iniciar
+                          </Button>
+                        )}
+                        {isCompleted && (
+                          <span className="text-[9px] font-black bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            Completado
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     {/* Routine Description */}
@@ -423,32 +406,33 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                                 </div>
                               </div>
 
-                              {hasSets && (
-                                <WorkoutSetsList
-                                  movement={mov}
-                                  initialSets={allSetsData[mov.id]}
-                                  onSetChange={(sets) => {
-                                    setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
-                                    const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
-                                    const allBlockMovements = block.workout_movements || []
-                                    let blockCompleted = true
-                                    allBlockMovements.forEach((m: any) => {
-                                      if ((m.sets || 0) <= 0) return // Skip video-only movements
-                                      const mId = m.id as string
-                                      const mSets = updatedAllSets[mId]
-                                      if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
-                                        blockCompleted = false
+                                {hasSets && (
+                                  <WorkoutSetsList
+                                    movement={mov}
+                                    prs={prs}
+                                    initialSets={allSetsData[mov.id]}
+                                    onSetChange={(sets) => {
+                                      setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
+                                      const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
+                                      const allBlockMovements = block.workout_movements || []
+                                      let blockCompleted = true
+                                      allBlockMovements.forEach((m: any) => {
+                                        if ((m.sets || 0) <= 0) return // Skip video-only movements
+                                        const mId = m.id as string
+                                        const mSets = updatedAllSets[mId]
+                                        if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
+                                          blockCompleted = false
+                                        }
+                                      })
+                                      if (blockCompleted && allBlockMovements.length > 0) {
+                                        setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
+                                      } else if (!blockCompleted) {
+                                        setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
                                       }
-                                    })
-                                    if (blockCompleted && allBlockMovements.length > 0) {
-                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
-                                    } else if (!blockCompleted) {
-                                      setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
-                                    }
-                                  }}
-                                  onTimerStart={(secs) => setRestTimerSeconds(secs)}
-                                />
-                              )}
+                                    }}
+                                    onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                                  />
+                                )}
                             </div>
                           )
                         })}
@@ -711,6 +695,15 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* CrossFit Timer Modal */}
+      {activeTimer && (
+        <CrossFitTimer 
+          type={activeTimer.type} 
+          config={activeTimer.config} 
+          onClose={() => setActiveTimer(null)} 
+        />
+      )}
     </div>
   )
 }
@@ -738,80 +731,4 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
   )
 }
 
-function SmartRoutineText({ text, exercises, blockExercises, onVideoClick }: { text: string, exercises: any[], blockExercises?: any[], onVideoClick: (videoUrl: string, name: string) => void }) {
-  if (!text) return null
-  
-  // 1. Prepare names for auto-linking (from the block's movements)
-  const autoLinkNames = (blockExercises || [])
-    .filter(ex => ex?.name)
-    .map(ex => ex.name)
-    .sort((a, b) => b.length - a.length)
 
-  // 2. Identify if we even need to process
-  if (autoLinkNames.length === 0 && !text.includes('[')) {
-    return <div className="text-[14px] text-foreground/90 leading-relaxed font-medium whitespace-pre-wrap">{text}</div>
-  }
-
-  // 3. Create Regex: Matches [Any Name] or any of the autoLinkNames
-  const escapedNames = autoLinkNames.map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
-  const pattern = `(\\[.*?\\]${escapedNames ? `|\\b(?:${escapedNames})\\b` : ''})`
-  const regex = new RegExp(pattern, 'gi')
-  
-  const parts = text.split(regex)
-  
-  return (
-    <div className="text-[14px] text-foreground/90 leading-relaxed font-medium whitespace-pre-wrap">
-      {parts.map((part, i) => {
-        if (!part) return null
-
-        let exerciseName = ''
-        let exercise: any = null
-
-        // Check if part is a [Tag]
-        if (part.startsWith('[') && part.includes(']')) {
-          const bracketEnd = part.indexOf(']')
-          exerciseName = part.slice(1, bracketEnd)
-          const trailingText = part.slice(bracketEnd + 1)
-          
-          exercise = exercises.find(ex => ex.name.toLowerCase() === exerciseName.toLowerCase())
-          
-          if (exercise?.video_url) {
-            return (
-              <span key={i} className="inline-flex items-center gap-1 group">
-                <span className="font-bold text-foreground">{exerciseName}</span>
-                <button 
-                  type="button"
-                  onClick={() => onVideoClick(exercise.video_url, exercise.name)}
-                  className="w-5 h-5 rounded-md bg-primary/20 flex items-center justify-center text-primary hover:bg-primary/30 transition-all align-middle shadow-sm border border-primary/20"
-                >
-                  <Video className="w-3 h-3" />
-                </button>
-                {trailingText}
-              </span>
-            )
-          }
-          return <span key={i}>{part}</span>
-        } 
-        
-        // Check if part is a plain exercise name (auto-link)
-        exercise = blockExercises?.find(ex => ex?.name?.toLowerCase() === part.toLowerCase())
-        if (exercise?.video_url) {
-          return (
-            <span key={i} className="inline-flex items-center gap-1 group">
-              <span className="font-bold text-foreground">{part}</span>
-              <button 
-                type="button"
-                onClick={() => onVideoClick(exercise.video_url, exercise.name)}
-                className="w-5 h-5 rounded-md bg-primary/20 flex items-center justify-center text-primary hover:bg-primary/30 transition-all align-middle shadow-sm border border-primary/20"
-              >
-                <Video className="w-3 h-3" />
-              </button>
-            </span>
-          )
-        }
-
-        return <span key={i}>{part}</span>
-      })}
-    </div>
-  )
-}
