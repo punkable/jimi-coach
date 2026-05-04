@@ -14,6 +14,13 @@ export function SortableBlock({ id, children, block, onRemove, onRename }: any) 
     isDragging,
   } = useSortable({ id })
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : 1,
+    opacity: isDragging ? 0.9 : 1,
+  }
+
   const typeColors: Record<string, string> = {
     strength: 'border-l-[var(--strength)]',
     metcon: 'border-l-[var(--metcon)]',
