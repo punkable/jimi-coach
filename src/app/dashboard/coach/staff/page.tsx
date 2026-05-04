@@ -59,7 +59,7 @@ export default async function StaffPage(props: { searchParams: Promise<{ success
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Email Profesional</label>
-                <Input name="email" type="email" placeholder="coach@jimi.coach" required className="bg-secondary/30" />
+                <Input name="email" type="email" placeholder="coach@ldrfit.com" required className="bg-secondary/30" />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contraseña Temporal</label>

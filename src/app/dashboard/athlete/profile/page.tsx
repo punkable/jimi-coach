@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { LogOut, Flame, Dumbbell, Medal } from 'lucide-react'
 import { signout } from '@/app/login/actions'
@@ -77,7 +78,10 @@ export default async function AthleteProfilePage() {
                 Cerrar Sesión
               </Button>
             </form>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mt-6">Jimi Coach v1.2</p>
+            <div className="flex flex-col items-center gap-3">
+              <Image src="/images/poker.png" alt="Rex Poker" width={60} height={60} className="object-contain opacity-50" />
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em]">LDRFIT v1.2</p>
+            </div>
           </div>
         </div>
       </div>

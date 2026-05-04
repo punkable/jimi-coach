@@ -24,8 +24,9 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
       {!isWorkout && (
         <aside className="hidden md:flex flex-col w-64 border-r border-border/40 bg-card/40 backdrop-blur-xl shrink-0">
           <div className="p-8">
-            <Link href="/dashboard/athlete">
-              <Image src="/images/logo.png" alt="Jimi.coach" width={140} height={40} className="object-contain" />
+            <Link href="/dashboard/athlete" className="flex items-center gap-2">
+              <Image src="/images/logotipo.png" alt="LDRFIT" width={140} height={40} className="object-contain hidden md:block" />
+              <Image src="/images/isotipo.png" alt="L" width={32} height={32} className="object-contain md:hidden" />
             </Link>
           </div>
           <nav className="flex-1 px-4 space-y-1">

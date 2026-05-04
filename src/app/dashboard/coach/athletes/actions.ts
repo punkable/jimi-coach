@@ -19,7 +19,7 @@ export async function createAthlete(formData: FormData) {
 
   const email = formData.get('email') as string
   const fullName = formData.get('full_name') as string
-  const password = formData.get('password') as string || 'JimiCoach2026!' // Default password if not provided
+  const password = formData.get('password') as string || 'LDRFIT2026!' // Default password if not provided
 
   // Use the admin client to bypass RLS and create a user directly
   const supabaseAdmin = createAdminClient(

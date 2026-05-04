@@ -16,9 +16,9 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
       {/* Sidebar for Desktop */}
       <aside className="hidden md:flex flex-col w-64 border-r border-border/40 bg-card/40 backdrop-blur-xl">
         <div className="p-8">
-          <Link href="/dashboard/coach">
-            <Image src="/images/logo.png" alt="Jimi.coach Logo" width={140} height={40} className="object-contain mb-1 hover:opacity-80 transition-opacity" />
-          </Link>
+            <Link href="/dashboard/coach" className="flex items-center gap-2">
+              <Image src="/images/logotipo.png" alt="LDRFIT" width={140} height={40} className="object-contain" />
+            </Link>
           <p className="text-[10px] text-primary font-black uppercase tracking-widest mt-2">Coach Panel</p>
         </div>
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">

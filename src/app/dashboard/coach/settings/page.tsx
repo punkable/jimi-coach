@@ -48,7 +48,7 @@ export default async function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">Administras "Jimi.coach" y tienes acceso completo a todas las funciones Pro de forma vitalicia.</p>
+              <p className="text-sm text-muted-foreground mb-4">Administras "LDRFIT" y tienes acceso completo a todas las funciones Pro de forma vitalicia.</p>
               <Button variant="secondary" className="w-full" disabled>Plan Activo: Fundador</Button>
             </CardContent>
           </Card>

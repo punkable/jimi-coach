@@ -2,8 +2,8 @@ import { MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Jimi Coach',
-    short_name: 'Jimi Coach',
+    name: 'LDRFIT',
+    short_name: 'LDRFIT',
     description: 'Plataforma de entrenamiento CrossFit',
     start_url: '/',
     display: 'standalone',

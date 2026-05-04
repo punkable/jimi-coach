@@ -14,7 +14,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jimi Coach - CrossFit Training App",
+  title: "LDRFIT",
   description: "Plataforma de entrenamiento para atletas y coaches de CrossFit.",
   icons: {
     icon: '/images/isotipo.png',
@@ -23,12 +23,12 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Jimi Coach',
+    title: 'LDRFIT',
   },
 };
 
 export const viewport = {
-  themeColor: '#0f0f11',
+  themeColor: '#0f110a',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

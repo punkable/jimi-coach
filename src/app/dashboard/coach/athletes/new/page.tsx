@@ -37,7 +37,7 @@ export default function NewAthletePage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña Temporal</Label>
-              <Input id="password" name="password" type="text" placeholder="JimiCoach2026!" defaultValue="JimiCoach2026!" required />
+              <Input id="password" name="password" type="text" placeholder="LDRFIT2026!" defaultValue="LDRFIT2026!" required />
               <p className="text-xs text-muted-foreground">El atleta podrá cambiar esta contraseña más adelante.</p>
             </div>
 

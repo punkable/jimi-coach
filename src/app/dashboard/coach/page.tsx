@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Activity, Plus, Dumbbell, TrendingUp, Calendar, ChevronRight, Video } from 'lucide-react'
@@ -102,17 +103,20 @@ export default async function CoachDashboard() {
   return (
     <div className="p-6 md:p-10 space-y-10 max-w-7xl mx-auto">
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 text-primary mb-2">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Resumen de Rendimiento</span>
+        <div className="flex items-center gap-6">
+          <Image src="/images/ready.png" alt="Rex Ready" width={100} height={100} className="object-contain hidden md:block" />
+          <div>
+            <div className="flex items-center gap-2 text-primary mb-2">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em]">Resumen de Rendimiento</span>
+            </div>
+            <h1 className="text-4xl font-black tracking-tight uppercase">Coach {profile?.full_name?.split(' ')[0] || ''}</h1>
+            <p className="text-muted-foreground text-sm font-medium mt-1">Gestiona tu academia y monitorea el progreso de tus atletas.</p>
           </div>
-          <h1 className="text-4xl font-black tracking-tight uppercase">Coach {profile?.full_name?.split(' ')[0] || ''}</h1>
-          <p className="text-muted-foreground text-sm font-medium mt-1">Gestiona tu academia y monitorea el progreso de tus atletas.</p>
         </div>
         <div className="flex gap-3">
           <Link href="/dashboard/coach/plans/new" className="flex-1 md:flex-none">
-            <Button className="w-full md:w-auto h-12 px-6 rounded-2xl font-bold uppercase tracking-widest text-[11px] gap-2 shadow-[0_8px_20px_rgba(var(--primary),0.25)]">
+            <Button className="w-full md:w-auto h-12 px-8 rounded-2xl font-black uppercase tracking-widest text-[11px] gap-2 bg-white text-black hover:bg-white/90 shadow-2xl border-none active:scale-95 transition-all">
               <Plus className="w-4 h-4" />
               Nueva Planificación
             </Button>

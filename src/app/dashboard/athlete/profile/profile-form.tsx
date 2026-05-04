@@ -123,7 +123,7 @@ export default function ProfileForm({ profile }: { profile: any }) {
           </AnimatePresence>
 
           <h2 className="text-2xl font-black tracking-tight uppercase leading-tight mb-1">{formData.fullName || 'Atleta'}</h2>
-          <p className="text-[11px] font-black uppercase tracking-widest text-primary mb-6">Identidad Jimi.coach</p>
+          <p className="text-[11px] font-black uppercase tracking-widest text-primary mb-6">Identidad LDRFIT</p>
           
           <div className="w-full h-px bg-border/20 mb-6" />
           

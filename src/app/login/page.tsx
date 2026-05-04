@@ -8,10 +8,10 @@ import { MultiStepSignup } from './multi-step-signup'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 const highlights = [
-  { icon: Zap, text: 'WOD dinámico con registro de series' },
-  { icon: Target, text: 'Metas e insights de tu coach' },
-  { icon: Users, text: 'Feed social con tu box' },
-  { icon: TrendingUp, text: 'Progreso y rachas en tiempo real' },
+  { icon: Zap, text: 'Cronómetros avanzados (AMRAP, EMOM, Tabata)' },
+  { icon: Target, text: 'Cálculo automático de RM y progresión' },
+  { icon: Users, text: 'Gestión multi-box y comunidad activa' },
+  { icon: TrendingUp, text: 'Rex: Tu asistente inteligente de entrenamiento' },
 ]
 
 export default async function LoginPage({
@@ -36,11 +36,13 @@ export default async function LoginPage({
       {/* ── Left Panel (desktop only) ── */}
       <div className="hidden md:flex md:w-[45%] flex-col justify-between p-12 relative border-r border-border/20">
         {/* Logo + back */}
-        <div className="flex items-center justify-between">
           <Link href="/">
-            <Image src="/images/logo.png" alt="Jimi.coach" width={160} height={44} className="object-contain" />
+            <Image src="/images/logotipo.png" alt="LDRFIT" width={160} height={44} className="object-contain" />
           </Link>
-        </div>
+          <div className="flex flex-col items-center gap-2">
+            <Image src="/images/happy.png" alt="Rex Happy" width={60} height={60} className="object-contain" />
+            <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">¡Hola! Soy Rex</p>
+          </div>
 
         {/* Value prop */}
         <div className="space-y-8">
@@ -66,11 +68,11 @@ export default async function LoginPage({
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-3 gap-3">
-          {[{ v: '100+', l: 'Atletas' }, { v: '5K+', l: 'WODs' }, { v: '98%', l: 'Asistencia' }].map(s => (
-            <div key={s.l} className="glass rounded-2xl p-3 text-center">
-              <p className="text-xl font-black text-primary">{s.v}</p>
-              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">{s.l}</p>
+        <div className="grid grid-cols-3 gap-4">
+          {[{ v: '10K+', l: 'Atletas' }, { v: '50K+', l: 'Marcas' }, { v: '99.9%', l: 'Uptime' }].map(s => (
+            <div key={s.l} className="bg-white/5 backdrop-blur-md rounded-3xl p-4 border border-white/10 text-center shadow-xl">
+              <p className="text-2xl font-black text-primary drop-shadow-[0_0_10px_rgba(var(--primary),0.3)]">{s.v}</p>
+              <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-widest mt-1">{s.l}</p>
             </div>
           ))}
         </div>
@@ -85,7 +87,7 @@ export default async function LoginPage({
             <span className="text-xs font-bold uppercase tracking-widest">Volver</span>
           </Link>
           <Link href="/">
-            <Image src="/images/logo.png" alt="Jimi.coach" width={110} height={32} className="object-contain" />
+            <Image src="/images/isotipo.png" alt="LDRFIT" width={40} height={40} className="object-contain opacity-60 grayscale" />
           </Link>
           <div className="w-16" /> {/* spacer */}
         </div>
@@ -150,7 +152,7 @@ export default async function LoginPage({
                   )}
                   <Button
                     type="submit"
-                    className="w-full h-13 text-sm font-black uppercase tracking-widest rounded-2xl shadow-[0_8px_24px_rgba(var(--primary),0.4)] active:scale-95 transition-all mt-2"
+                    className="w-full h-14 text-sm font-black uppercase tracking-widest rounded-2xl bg-white text-black hover:bg-white/90 shadow-[0_12px_30px_rgba(255,255,255,0.15)] active:scale-95 transition-all mt-4 border-none"
                   >
                     Iniciar Sesión
                   </Button>

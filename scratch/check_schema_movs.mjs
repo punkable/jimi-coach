@@ -7,11 +7,11 @@ const supabase = createClient(
 
 async function checkSchema() {
   try {
-    const { data: sample, error: queryError } = await supabase.from('workout_blocks').select('*').limit(1)
+    const { data: sample, error: queryError } = await supabase.from('workout_movements').select('*').limit(1)
     if (queryError) {
       console.error('Error fetching sample:', queryError)
     } else {
-      console.log('Columns in workout_blocks:', Object.keys(sample[0] || {}))
+      console.log('Columns in workout_movements:', Object.keys(sample[0] || {}))
     }
   } catch (err) {
     console.error('Execution error:', err)

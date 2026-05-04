@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -162,14 +163,19 @@ export default async function AthleteDashboard() {
           </div>
           
           <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="absolute -top-12 -right-4 hidden lg:block">
+                <Image src="/images/train.png" alt="Rex Training" width={100} height={100} className="object-contain" />
+              </div>
+              <div className="lg:hidden">
+                <Image src="/images/train.png" alt="Rex Training" width={60} height={60} className="object-contain" />
+              </div>
+            </div>
             <form action={signout} className="md:hidden">
               <Button variant="ghost" size="icon" type="submit" className="text-destructive hover:bg-destructive/10 rounded-xl">
                 <LogOut className="w-5 h-5" />
               </Button>
             </form>
-            <div className="hidden md:block">
-              <StreakMascot streak={currentStreak} />
-            </div>
           </div>
         </div>
       </div>

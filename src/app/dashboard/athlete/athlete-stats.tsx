@@ -1,17 +1,7 @@
 'use client'
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Trophy, Info, Target, Zap } from 'lucide-react'
-
-// Dummy PR data for the chart
-const prData = [
-  { name: 'Ene', BackSquat: 100, Snatch: 60 },
-  { name: 'Feb', BackSquat: 105, Snatch: 62 },
-  { name: 'Mar', BackSquat: 110, Snatch: 65 },
-  { name: 'Abr', BackSquat: 110, Snatch: 70 },
-  { name: 'May', BackSquat: 120, Snatch: 75 },
-]
 
 export function AthleteStats({ 
   totalWorkouts = 0, 

@@ -117,7 +117,20 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   const [activeVideo, setActiveVideo] = useState<{ url: string, name: string } | null>(null)
 
   const toggleBlock = (blockId: string) => {
-    setCompletedBlocks(prev => ({ ...prev, [blockId]: !prev[blockId] }))
+    const isNowCompleted = !completedBlocks[blockId]
+    setCompletedBlocks(prev => ({ ...prev, [blockId]: isNowCompleted }))
+    
+    // Also mark all sets in this block as completed/uncompleted
+    const block = day.workout_blocks.find((b: any) => b.id === blockId)
+    if (block?.workout_movements) {
+      const newSetsData = { ...allSetsData }
+      block.workout_movements.forEach((mov: any) => {
+        if (newSetsData[mov.id]) {
+          newSetsData[mov.id] = newSetsData[mov.id].map(s => ({ ...s, is_completed: isNowCompleted }))
+        }
+      })
+      setAllSetsData(newSetsData)
+    }
   }
 
   const isWorkoutComplete = () => {
@@ -256,8 +269,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               {/* Chronometer */}
               <Card className="glass border-primary/30">
                 <CardContent className="p-6 flex flex-col items-center">
-                  <Timer className="w-8 h-8 text-primary mb-4" />
-                  <div className="text-6xl font-black tracking-tighter tabular-nums mb-6 text-foreground drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]">
+                  <TimerIcon className="w-8 h-8 text-primary mb-4" />
+                  <div className="text-6xl font-black tracking-tighter tabular-nums mb-6 px-4 py-2 bg-secondary/50 rounded-2xl border border-white/5 drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]">
                     {formatTime(time)}
                   </div>
                   <div className="flex gap-4">
@@ -306,16 +319,16 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                         >
                           <CheckCircle2 className={`w-5 h-5 ${isCompleted ? 'animate-in zoom-in-50' : 'opacity-40'}`} />
                         </button>
-                        <div>
-                          <h3 className={`font-black text-sm tracking-tight uppercase leading-none ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                        <div className="min-w-0">
+                          <h3 className={`font-black text-sm tracking-tight uppercase leading-none truncate ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
                             {block.name}
                           </h3>
-                          <p className="text-[10px] text-muted-foreground mt-1 font-medium">
+                          <p className="text-[10px] text-muted-foreground mt-1 font-medium truncate">
                             {blockMovCount > 0 ? `${blockMovCount} ejercicios` : 'Rutina de texto'}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0 ml-4">
                         {block.timer_type && !isCompleted && (
                           <Button
                             variant="outline"
@@ -390,7 +403,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                                     )}
                                     {mov.rest && (
                                       <span className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-500/20 flex items-center gap-1">
-                                        <Timer className="w-2.5 h-2.5" /> {mov.rest}
+                                        <TimerIcon className="w-2.5 h-2.5" /> {mov.rest}
                                       </span>
                                     )}
                                   </div>
@@ -495,7 +508,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             style={{ bottom: 'calc(env(safe-area-inset-bottom) + 6rem)' }}
           >
             <div className="glass bg-primary/90 text-primary-foreground px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 border border-primary-foreground/20">
-              <Timer className="w-5 h-5 animate-pulse" />
+              <TimerIcon className="w-5 h-5 animate-pulse" />
               <span className="font-mono font-bold text-lg">
                 {Math.floor(restTimerSeconds / 60)}:{(restTimerSeconds % 60).toString().padStart(2, '0')}
               </span>
@@ -517,10 +530,10 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', padding: '4rem 1rem max(env(safe-area-inset-bottom), 16px)' }}
         >
           <Button
-            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl shadow-[0_8px_30px_rgba(var(--primary),0.4)] active:scale-95 transition-all pointer-events-auto"
+            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl bg-white text-black hover:bg-white/90 shadow-[0_12px_40px_rgba(255,255,255,0.15)] active:scale-95 transition-all pointer-events-auto border-none"
             onClick={() => setFinishOpen(true)}
           >
-            Finalizar WOD
+            Finalizar Entrenamiento
           </Button>
         </div>
       )}

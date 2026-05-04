@@ -118,7 +118,7 @@ export function BuilderClient({
         workout_movements: (b.workout_movements || []).map((m: any) => ({
           ...m,
           id: m.id || genId(),
-          exercise: m.exercises || m.exercise
+          exercise: Array.isArray(m.exercises) ? m.exercises[0] : (m.exercises || m.exercise)
         }))
       }))
     }))
@@ -366,15 +366,15 @@ export function BuilderClient({
             <Button 
               onClick={handleSave} 
               disabled={isSaving} 
-              className={`w-full gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl transition-all relative ${
+              className={`w-full gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-2xl transition-all relative ${
                 hasUnsavedChanges 
-                  ? 'bg-primary shadow-lg shadow-primary/20 ring-1 ring-primary ring-offset-2 ring-offset-background' 
+                  ? 'bg-white text-black hover:bg-white/90 shadow-xl shadow-white/5 ring-2 ring-primary ring-offset-4 ring-offset-background' 
                   : 'bg-muted hover:bg-muted/80 text-muted-foreground shadow-none'
               }`}
             >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              {isSaving ? 'Guardando...' : 'Guardar Plan'}
-              {hasUnsavedChanges && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />}
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-4 h-4" />}
+              {isSaving ? 'Guardando...' : 'Guardar Planificación'}
+              {hasUnsavedChanges && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-4 border-background animate-pulse" />}
             </Button>
           </div>
 
@@ -550,14 +550,14 @@ export function BuilderClient({
                                   </Label>
                                   <div className="flex items-center gap-2">
                                     <Popover>
-                                      <PopoverTrigger asChild>
+                                      <PopoverTrigger render={
                                         <Button variant="ghost" size="sm" className={cn(
                                           "h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl transition-all",
                                           block.timer_type ? "bg-primary/10 text-primary border border-primary/20" : "text-muted-foreground hover:text-primary"
                                         )}>
                                           <TimerIcon className="w-3 h-3" /> {block.timer_type ? block.timer_type.replace('_', ' ') : 'Sin Crono'}
                                         </Button>
-                                      </PopoverTrigger>
+                                      } />
                                       <PopoverContent className="w-64 p-4 rounded-2xl border-border/40 shadow-2xl" align="end">
                                         <div className="space-y-4">
                                           <div className="space-y-1.5">
@@ -737,11 +737,11 @@ export function BuilderClient({
                                     <div className="flex justify-end">
                                       <Button 
                                         size="sm" 
-                                        variant="secondary" 
-                                        className="h-8 rounded-xl text-[10px] font-bold uppercase tracking-widest px-4 gap-2"
+                                        variant="default" 
+                                        className="h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest px-6 gap-2 bg-white text-black hover:bg-white/90 shadow-lg"
                                         onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: false }))}
                                       >
-                                        <CheckCircle2 className="w-3.5 h-3.5" /> Finalizar Edición
+                                        <CheckCircle2 className="w-4 h-4" /> Finalizar Edición
                                       </Button>
                                     </div>
                                   </div>

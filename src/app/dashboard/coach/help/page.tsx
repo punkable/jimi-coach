@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { HelpCircle, Users, Dumbbell, Crown, Video, Trash2, Calendar } from 'lucide-react'
 
@@ -5,13 +6,18 @@ export default function HelpCenterPage() {
   return (
     <div className="p-4 md:p-8 space-y-6 max-w-4xl mx-auto">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <HelpCircle className="w-8 h-8 text-primary" />
-          Centro de Ayuda y Guías
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Aprende a sacarle el máximo provecho a la plataforma Jimi.coach.
-        </p>
+        <div className="flex items-center gap-6">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+              <HelpCircle className="w-8 h-8 text-primary" />
+              Centro de Ayuda
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm">
+              Aprende a sacarle el máximo provecho a la plataforma LDRFIT con Rex, tu asistente.
+            </p>
+          </div>
+          <Image src="/images/support.png" alt="Rex Support" width={80} height={80} className="object-contain" />
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

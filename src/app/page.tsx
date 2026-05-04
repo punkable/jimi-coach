@@ -3,43 +3,43 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Zap, Target, TrendingUp, Users, Shield, MessageCircle } from 'lucide-react'
+import { ArrowRight, Zap, Target, TrendingUp, Users, Shield, MessageCircle, Timer as TimerIcon, Weight, Video } from 'lucide-react'
 
 const features = [
   {
-    icon: Zap,
-    title: 'WOD Dinámico',
-    desc: 'Registra series, pesos y repeticiones al instante. Diseñado para manos sudadas.',
+    icon: TimerIcon,
+    title: 'Cronómetros CrossFit',
+    desc: 'AMRAP, EMOM, Tabata y For Time integrados. El coach asigna el timer y el atleta solo entrena.',
     color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
   },
   {
     icon: Target,
-    title: 'Insights del Coach',
-    desc: 'Tu coach te fija metas, benchmarks y correcciones personalizadas directamente en tu app.',
+    title: 'Pesos Inteligentes',
+    desc: 'Cálculo automático basado en tus RMs y el porcentaje (%) asignado por tu coach.',
     color: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
   },
   {
-    icon: TrendingUp,
-    title: 'Progreso Real',
-    desc: 'Visualiza tu evolución de fuerza, rachas y RPE a lo largo del tiempo.',
+    icon: Video,
+    title: 'Librería Técnica',
+    desc: 'Más de 190 ejercicios con videos demostrativos y descripciones detalladas.',
     color: 'text-green-500 bg-green-500/10 border-green-500/20',
   },
   {
-    icon: Users,
-    title: 'Box Feed',
-    desc: 'Mira los logros de tus compañeros y dales un 👊 fist bump para motivarse.',
-    color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-  },
-  {
-    icon: MessageCircle,
-    title: 'Feedback Técnico',
-    desc: 'Sube tu video de técnica y recibe correcciones detalladas de tu coach.',
+    icon: Zap,
+    title: 'WOD Dinámico',
+    desc: 'Registra series y repeticiones al instante con una interfaz optimizada para alta intensidad.',
     color: 'text-primary bg-primary/10 border-primary/20',
   },
   {
+    icon: TrendingUp,
+    title: 'RPE y Feedback',
+    desc: 'Registra el esfuerzo percibido y recibe correcciones técnicas directamente en tu app.',
+    color: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+  },
+  {
     icon: Shield,
-    title: 'Tu Historial, Seguro',
-    desc: 'Todos tus entrenos guardados en la nube. Nunca más perderás un registro.',
+    title: 'Gestión de Box',
+    desc: 'Control total de alumnos, membresías y programación desde un solo lugar.',
     color: 'text-muted-foreground bg-secondary/40 border-border/30',
   },
 ]
@@ -59,13 +59,8 @@ export default function LandingPage() {
         }}
       >
         <Link href="/" className="flex items-center">
-          <Image
-            src="/images/logo.png"
-            alt="Jimi.coach"
-            width={140}
-            height={38}
-            className="object-contain"
-          />
+          <Image src="/images/logotipo.png" alt="LDRFIT" width={140} height={40} className="object-contain hidden md:block" />
+          <Image src="/images/isotipo.png" alt="L" width={32} height={32} className="object-contain md:hidden" />
         </Link>
         <div className="flex items-center gap-2">
           <Link href="/login">
@@ -75,7 +70,7 @@ export default function LandingPage() {
           </Link>
           <Link href="/login?tab=register">
             <Button size="sm" className="text-xs font-black uppercase tracking-widest h-9 px-5 rounded-xl shadow-[0_4px_14px_rgba(var(--primary),0.4)]">
-              Empezar Gratis
+              Empezar
             </Button>
           </Link>
         </div>
@@ -87,7 +82,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0">
           <Image
             src="/images/hero.png"
-            alt="Atleta CrossFit"
+            alt="Atleta CrossFit LDRFIT"
             fill
             priority
             className="object-cover object-center scale-105 md:scale-100 transition-transform duration-[10s]"
@@ -107,29 +102,29 @@ export default function LandingPage() {
             {/* Pill badge */}
             <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-1.5 mb-8 backdrop-blur-md">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary">Plataforma CrossFit Elite</span>
+              <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary">Próxima Generación de Coaching</span>
             </div>
 
             <h1 className="text-6xl md:text-8xl lg:text-[120px] font-black tracking-tighter leading-[0.85] uppercase mb-8">
-              Tu Mejor<br />
-              <span className="text-primary italic">Versión</span><br />
-              Empieza Aquí.
+              Evoluciona<br />
+              <span className="text-primary italic">Tu Box</span><br />
+              con LDRFIT.
             </h1>
 
             <p className="text-muted-foreground text-base md:text-lg lg:text-xl leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
-              Registra cada levantamiento, supera tus límites y mantente conectado con tu coach. La herramienta definitiva para atletas de alto rendimiento.
+              La plataforma definitiva para coaches y atletas de CrossFit. Timers inteligentes, cálculos de RM y gestión total en un solo lugar.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
               <Link href="/login" className="w-full sm:w-auto">
                 <Button className="w-full sm:w-auto h-16 px-10 text-base font-black uppercase tracking-widest rounded-2xl gap-3 shadow-[0_12px_40px_rgba(var(--primary),0.4)] active:scale-95 transition-all">
-                  Empezar Ahora
+                  Entrar Ahora
                   <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
               <a href="#features" className="w-full sm:w-auto">
                 <Button variant="outline" className="w-full sm:w-auto h-16 px-10 text-base font-bold uppercase tracking-widest rounded-2xl backdrop-blur-xl border-white/10 hover:bg-white/5 transition-all">
-                  Explorar Box
+                  Ver Funciones
                 </Button>
               </a>
             </div>
@@ -141,31 +136,37 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-background/40 rounded-[40px] border border-white/20 backdrop-blur-md overflow-hidden shadow-2xl flex flex-col p-8">
               <div className="flex items-center justify-between mb-8">
                 <div className="w-12 h-12 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center">
-                  <Zap className="w-6 h-6 text-primary" />
+                  <TimerIcon className="w-6 h-6 text-primary" />
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Racha Actual</p>
-                  <p className="text-2xl font-black text-primary">14 DÍAS 🔥</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cronómetro Activo</p>
+                  <p className="text-2xl font-black text-primary">AMRAP 12:00</p>
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="h-20 rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
-                      <Target className="w-5 h-5" />
+                      <Weight className="w-5 h-5" />
                     </div>
-                    <span className="font-bold uppercase text-xs">Fran (21-15-9)</span>
+                    <div className="flex flex-col">
+                      <span className="font-bold uppercase text-[10px] text-muted-foreground leading-none">Power Clean</span>
+                      <span className="font-black text-xs">80% de 1RM</span>
+                    </div>
                   </div>
-                  <span className="text-xl font-black">2:45</span>
+                  <div className="text-right">
+                    <span className="text-xl font-black text-primary">92 kg</span>
+                    <p className="text-[8px] uppercase font-bold text-muted-foreground">Calculado</p>
+                  </div>
                 </div>
-                <div className="h-20 rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center justify-between opacity-60">
+                <div className="h-20 rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
-                      <TrendingUp className="w-5 h-5" />
+                      <Video className="w-5 h-5" />
                     </div>
-                    <span className="font-bold uppercase text-xs">Back Squat (1RM)</span>
+                    <span className="font-black uppercase text-xs">Librería de Video</span>
                   </div>
-                  <span className="text-xl font-black">140kg</span>
+                  <span className="text-[9px] font-bold bg-secondary px-2 py-1 rounded-full">+190 EXER</span>
                 </div>
               </div>
               <div className="mt-auto pt-8 flex items-center justify-center">
@@ -185,12 +186,12 @@ export default function LandingPage() {
       <section className="px-5 md:px-10 py-16">
         <div className="max-w-3xl mx-auto grid grid-cols-3 gap-4">
           {[
-            { value: '100+', label: 'Atletas activos' },
-            { value: '5K+', label: 'WODs completados' },
-            { value: '98%', label: 'Asistencia media' },
+            { value: 'CROSSFIT', label: 'Especializado' },
+            { value: '100%', label: 'Cloud Sync' },
+            { value: 'V1.2', label: 'Estable' },
           ].map(stat => (
             <div key={stat.label} className="glass rounded-2xl p-4 md:p-6 text-center">
-              <p className="text-2xl md:text-4xl font-black text-primary leading-none">{stat.value}</p>
+              <p className="text-xl md:text-2xl font-black text-primary leading-none">{stat.value}</p>
               <p className="text-[10px] md:text-xs text-muted-foreground font-bold uppercase tracking-widest mt-2">{stat.label}</p>
             </div>
           ))}
@@ -203,7 +204,7 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary mb-3">Funcionalidades</p>
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight">
-              Todo lo que necesitas
+              Diseñado por y para Coaches
             </h2>
           </div>
 
@@ -234,17 +235,20 @@ export default function LandingPage() {
         <div className="max-w-3xl mx-auto glass rounded-3xl p-10 md:p-16 text-center border-primary/20 bg-gradient-to-br from-primary/10 to-transparent relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-transparent pointer-events-none rounded-3xl" />
           <div className="relative z-10">
+            <div className="flex justify-center mb-6">
+              <Image src="/images/laugh.png" alt="Rex Laugh" width={80} height={80} className="object-contain" />
+            </div>
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-4">Únete hoy</p>
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-tight mb-3">
-              ¿Listo para<br />entrenar distinto?
+              ¿Listo para<br />liderar el box?
             </h2>
             <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto">
-              Habla con tu coach para que te active el acceso y empieza a registrar tu progreso.
+              Optimiza tu box con la herramienta más potente para la gestión y programación de CrossFit.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
               <Link href="/login">
                 <Button className="h-14 px-10 text-base font-black uppercase tracking-widest rounded-2xl shadow-[0_8px_30px_rgba(var(--primary),0.5)] active:scale-95 transition-transform">
-                  Entrar a Jimi.coach
+                  Entrar a LDRFIT
                 </Button>
               </Link>
               <a href="http://wa.me/56972878295" target="_blank" rel="noopener noreferrer">

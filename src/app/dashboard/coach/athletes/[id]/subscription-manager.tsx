@@ -30,7 +30,7 @@ export default function SubscriptionManager({
       await updateAthleteSubscription(profile.id, membership, 0, 0)
       
       // 2. Update Workout Plan Assignment if changed
-      if (activePlanId !== currentPlanId && activePlanId !== "no-plan") {
+      if (activePlanId !== currentPlanId) {
         await assignWorkoutPlan(profile.id, activePlanId)
       }
       
