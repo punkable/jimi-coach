@@ -131,28 +131,28 @@ export default async function CoachDashboard() {
           value={athletes?.length || 0} 
           icon={Users} 
           trend="+12% este mes" 
-          color="primary"
+          color="strength"
         />
         <StatCard 
           title="Planes de WOD" 
           value={plansCount || 0} 
           icon={Activity} 
           trend="8 activos hoy" 
-          color="blue"
+          color="metcon"
         />
         <StatCard 
           title="Biblioteca" 
           value={exercisesCount || 0} 
           icon={Dumbbell} 
           trend="15 videos técnicos" 
-          color="purple"
+          color="gymnastics"
         />
         <StatCard 
           title="Revisiones" 
           value="4" 
           icon={Calendar} 
           trend="Pendientes hoy" 
-          color="orange"
+          color="warmup"
         />
       </div>
 
@@ -259,13 +259,14 @@ export default async function CoachDashboard() {
 function StatCard({ title, value, icon: Icon, trend, color }: { title: string, value: string | number, icon: any, trend: string, color: string }) {
   const colors: any = {
     primary: 'bg-primary/10 text-primary border-primary/20',
-    blue: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-    purple: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-    orange: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
+    strength: 'bg-[var(--strength)]/10 text-[var(--strength)] border-[var(--strength)]/20',
+    metcon: 'bg-[var(--metcon)]/10 text-[var(--metcon)] border-[var(--metcon)]/20',
+    gymnastics: 'bg-[var(--gymnastics)]/10 text-[var(--gymnastics)] border-[var(--gymnastics)]/20',
+    warmup: 'bg-[var(--warmup)]/10 text-[var(--warmup)] border-[var(--warmup)]/20',
   }
 
   return (
-    <div className="glass rounded-3xl p-6 border-border/30 group hover:border-primary/40 transition-all duration-300">
+    <div className="glass-card p-6 group">
       <div className="flex items-center justify-between mb-4">
         <div className={`p-2.5 rounded-xl ${colors[color]} transition-transform group-hover:scale-110`}>
           <Icon className="w-5 h-5" />

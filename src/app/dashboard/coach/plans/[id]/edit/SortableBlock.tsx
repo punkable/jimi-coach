@@ -14,16 +14,18 @@ export function SortableBlock({ id, children, block, onRemove, onRename }: any) 
     isDragging,
   } = useSortable({ id })
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    zIndex: isDragging ? 50 : 1,
-    opacity: isDragging ? 0.9 : 1,
+  const typeColors: Record<string, string> = {
+    strength: 'border-l-[var(--strength)]',
+    metcon: 'border-l-[var(--metcon)]',
+    gymnastics: 'border-l-[var(--gymnastics)]',
+    warmup: 'border-l-[var(--warmup)]',
+    cooldown: 'border-l-[var(--cooldown)]',
   }
+  const accentColor = typeColors[block.type] || 'border-l-primary'
 
   return (
     <div ref={setNodeRef} style={style} className="group/block">
-      <Card className={`border-border/30 bg-card/30 rounded-[24px] overflow-hidden shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/40 ${isDragging ? 'ring-2 ring-primary/20 shadow-2xl' : ''}`}>
+      <Card className={`border-border/30 bg-card/30 rounded-[24px] overflow-hidden shadow-sm hover:shadow-md transition-all border-l-4 ${accentColor} ${isDragging ? 'ring-2 ring-primary/20 shadow-2xl' : ''}`}>
         <div className="p-4 border-b border-border/10 bg-muted/20 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1">
             <div 

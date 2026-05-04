@@ -57,7 +57,7 @@
   --popover-foreground: #1c1c1a;
   --primary: #686D42;
   --primary-foreground: #fcf6ef;
-  --secondary: #e5e7eb;
+  --secondary: #f0f0eb;
   --secondary-foreground: #374151;
   --muted: #f3f4f6;
   --muted-foreground: #6b7280;
@@ -67,12 +67,15 @@
   --border: #e5e7eb;
   --input: #e5e7eb;
   --ring: #686D42;
-  --chart-1: #686D42;
-  --chart-2: #8a8f6d;
-  --chart-3: #4b4f2f;
-  --chart-4: #a3a886;
-  --chart-5: #32351d;
-  --radius: 1rem;
+  
+  /* Semantic Colors */
+  --strength: #ff6b00;
+  --metcon: #0084ff;
+  --gymnastics: #9d00ff;
+  --warmup: #ffcc00;
+  --cooldown: #00d4ff;
+  
+  --radius: 1.25rem;
   --sidebar: #fcf6ef;
   --sidebar-foreground: #1c1c1a;
   --sidebar-primary: #686D42;
@@ -102,11 +105,14 @@
   --border: #2a2e24;
   --input: #2a2e24;
   --ring: #686D42;
-  --chart-1: #686D42;
-  --chart-2: #8a8f6d;
-  --chart-3: #4b4f2f;
-  --chart-4: #a3a886;
-  --chart-5: #32351d;
+  
+  /* Semantic Colors Dark */
+  --strength: #ff8c33;
+  --metcon: #33a1ff;
+  --gymnastics: #b84dff;
+  --warmup: #ffd633;
+  --cooldown: #33e1ff;
+  
   --sidebar: #0f110a;
   --sidebar-foreground: #fcf6ef;
   --sidebar-primary: #686D42;
@@ -148,10 +154,39 @@
 
 @layer utilities {
   .glass {
-    @apply bg-card/70 backdrop-blur-md border border-white/5 shadow-xl;
+    @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-2xl;
   }
+  /* Glassmorphism & Depth */
+  .glass-card {
+    @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08] shadow-[0_8px_32px_rgba(0,0,0,0.12)];
+  }
+
   .glass-strong {
-    @apply bg-card/90 backdrop-blur-xl border border-white/10 shadow-2xl;
+    @apply bg-black/40 backdrop-blur-2xl border border-white/10 shadow-2xl;
+  }
+
+  /* Premium Navigation Glow */
+  .nav-glow {
+    @apply relative;
+  }
+  .nav-glow::after {
+    content: '';
+    @apply absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full opacity-0 transition-all duration-300;
+  }
+  .nav-glow.active::after {
+    @apply w-4 opacity-100 shadow-[0_0_8px_rgba(var(--primary),0.8)];
+  }
+
+  /* Premium Button Style */
+  .btn-premium {
+    @apply h-14 text-sm font-black uppercase tracking-[0.1em] rounded-2xl bg-white text-black hover:bg-white/90 shadow-[0_12px_40px_rgba(255,255,255,0.15)] active:scale-95 transition-all border-none flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary-premium {
+    @apply h-14 text-sm font-black uppercase tracking-[0.1em] rounded-2xl bg-secondary/80 text-white hover:bg-secondary shadow-lg active:scale-95 transition-all border border-white/10 flex items-center justify-center gap-2;
+  }
+  .text-premium {
+    @apply font-black tracking-tight uppercase;
   }
   /* Active nav indicator glow */
   .nav-active {

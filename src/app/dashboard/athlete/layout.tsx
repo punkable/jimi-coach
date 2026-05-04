@@ -78,12 +78,12 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-200 min-w-[52px] ${
-                    isActive ? 'text-primary' : 'text-muted-foreground'
+                  className={`flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl transition-all duration-300 min-w-[64px] nav-glow ${
+                    isActive ? 'text-primary active' : 'text-muted-foreground'
                   }`}
                 >
-                  <Icon className={`h-[22px] w-[22px] transition-all duration-200 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.75]'}`} />
-                  <span className={`text-[10px] font-semibold mt-1 transition-opacity ${isActive ? 'opacity-100' : 'opacity-50'}`}>
+                  <Icon className={`h-6 w-6 transition-all duration-300 ${isActive ? 'stroke-[2.5] scale-110' : 'stroke-[1.75]'}`} />
+                  <span className={`text-[10px] font-black uppercase tracking-widest mt-1 transition-all ${isActive ? 'opacity-100 scale-90' : 'opacity-40'}`}>
                     {label}
                   </span>
                 </Link>

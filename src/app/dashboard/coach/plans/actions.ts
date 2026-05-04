@@ -217,7 +217,7 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
         const incomingMovIds = block.workout_movements.map((m: any) => m.id).filter((id: string) => id.length > 15)
         const movsToDelete = existingMovs.filter(m => !incomingMovIds.includes(m.id)).map(m => m.id)
 
-        if (movsToDelete.length > 0) {
+    if (movsToDelete.length > 0) {
           const { error: delMovErr } = await supabase.from('workout_movements').delete().in('id', movsToDelete)
           if (delMovErr) throw delMovErr
         }
@@ -246,12 +246,14 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       }
     }
 
-    // Return the updated structure
+    // Return the updated structure with explicit ordering
     const { data: updatedDays, error: finalFetchErr } = await supabase
       .from('workout_days')
       .select('*, workout_blocks(*, workout_movements(*, exercises(*)))')
       .eq('plan_id', planId)
       .order('day_of_week', { ascending: true })
+      .order('order_index', { foreignTable: 'workout_blocks', ascending: true })
+      .order('order_index', { foreignTable: 'workout_blocks.workout_movements', ascending: true })
 
     if (finalFetchErr) throw finalFetchErr
 

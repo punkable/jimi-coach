@@ -21,10 +21,10 @@ const insightIconMap: Record<string, any> = {
   note: StickyNote,
 }
 const insightColorMap: Record<string, string> = {
-  goal: 'from-blue-500/20 to-blue-500/5 border-blue-500/20 text-blue-400',
-  benchmark: 'from-amber-500/20 to-amber-500/5 border-amber-500/20 text-amber-400',
-  achievement: 'from-green-500/20 to-green-500/5 border-green-500/20 text-green-400',
-  note: 'from-primary/20 to-primary/5 border-primary/20 text-primary',
+  goal: 'from-[var(--metcon)]/20 to-[var(--metcon)]/5 border-[var(--metcon)]/20 text-[var(--metcon)]',
+  benchmark: 'from-[var(--strength)]/20 to-[var(--strength)]/5 border-[var(--strength)]/20 text-[var(--strength)]',
+  achievement: 'from-[var(--warmup)]/20 to-[var(--warmup)]/5 border-[var(--warmup)]/20 text-[var(--warmup)]',
+  note: 'from-[var(--gymnastics)]/20 to-[var(--gymnastics)]/5 border-[var(--gymnastics)]/20 text-[var(--gymnastics)]',
 }
 
 export default async function AthleteDashboard() {
@@ -138,8 +138,8 @@ export default async function AthleteDashboard() {
   return (
     <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 40px)' }}>
       {/* ── Hero Header ── */}
-      <div className="relative pt-10 pb-8 md:pt-14 md:pb-12 px-8 md:px-12 overflow-hidden rounded-[40px] mb-8 bg-secondary/10 border border-border/5">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+      <div className="relative pt-10 pb-8 md:pt-14 md:pb-12 px-8 md:px-12 overflow-hidden rounded-[40px] mb-8 bg-card border border-border/10 shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[var(--metcon)]/5 to-transparent pointer-events-none" />
         
         <div className="relative flex items-center justify-between">
           <div className="flex-1">

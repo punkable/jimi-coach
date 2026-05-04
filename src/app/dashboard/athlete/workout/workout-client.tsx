@@ -296,14 +296,25 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               {day.workout_blocks.map((block: any) => {
                 const isCompleted = completedBlocks[block.id]
                 const blockMovCount = block.workout_movements?.length ?? 0
+                
+                const typeColors: Record<string, string> = {
+                  strength: 'border-l-[var(--strength)]',
+                  metcon: 'border-l-[var(--metcon)]',
+                  gymnastics: 'border-l-[var(--gymnastics)]',
+                  warmup: 'border-l-[var(--warmup)]',
+                  cooldown: 'border-l-[var(--cooldown)]',
+                }
+                const accentColor = typeColors[block.type] || 'border-l-primary'
+                const bgAccent = block.type ? `bg-[var(--${block.type})]/5` : 'bg-primary/5'
+                const iconBg = block.type ? `bg-[var(--${block.type})]/10 text-[var(--${block.type})]` : 'bg-primary/10 text-primary'
 
                 return (
                   <div
                     key={block.id}
-                    className={`rounded-2xl border transition-all duration-300 overflow-hidden ${
+                    className={`rounded-2xl border transition-all duration-300 overflow-hidden border-l-4 ${accentColor} ${
                       isCompleted
-                        ? 'border-primary/20 opacity-60 bg-primary/5'
-                        : 'glass border-border/40 shadow-sm'
+                        ? 'opacity-60 bg-secondary/10'
+                        : `glass-card border-border/10 shadow-xl ${bgAccent}`
                     }`}
                   >
                     {/* Block header */}
@@ -313,8 +324,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                           onClick={() => toggleBlock(block.id)}
                           className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                             isCompleted 
-                              ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.6)]' 
-                              : 'bg-secondary/50 text-muted-foreground border border-border/40'
+                              ? 'bg-primary text-primary-foreground shadow-lg' 
+                              : `${iconBg} border border-border/10`
                           }`}
                         >
                           <CheckCircle2 className={`w-5 h-5 ${isCompleted ? 'animate-in zoom-in-50' : 'opacity-40'}`} />
