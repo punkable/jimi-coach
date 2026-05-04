@@ -919,8 +919,6 @@ export function BuilderClient({
                   </div>
                 )
               })}
-                )
-              })}
               
               {/* Add Day Button Placeholder */}
               <Button 

@@ -38,8 +38,8 @@ const features = [
   },
   {
     icon: Shield,
-    title: 'Gestión de Box',
-    desc: 'Control total de alumnos, membresías y programación desde un solo lugar.',
+    title: 'Coaching 1:1',
+    desc: 'Gestión directa de atletas, programación personalizada y seguimiento individualizado en un solo lugar.',
     color: 'text-muted-foreground bg-secondary/40 border-border/30',
   },
 ]
@@ -105,14 +105,14 @@ export default function LandingPage() {
               <span className="text-[10px] md:text-[11px] font-black uppercase tracking-[0.3em] text-primary">Próxima Generación de Coaching</span>
             </div>
 
-            <h1 className="text-6xl md:text-8xl lg:text-[120px] font-black tracking-tighter leading-[0.85] uppercase mb-8">
+            <h1 className="text-6xl md:text-8xl lg:text-[110px] font-black tracking-tighter leading-[0.85] uppercase mb-8">
               Evoluciona<br />
-              <span className="text-primary italic">Tu Box</span><br />
+              <span className="text-primary italic">Tu Coaching</span><br />
               con LDRFIT.
             </h1>
 
             <p className="text-muted-foreground text-base md:text-lg lg:text-xl leading-relaxed mb-10 max-w-lg mx-auto lg:mx-0">
-              La plataforma definitiva para coaches y atletas de CrossFit. Timers inteligentes, cálculos de RM y gestión total en un solo lugar.
+              La plataforma definitiva para el entrenamiento personalizado. Timers inteligentes, cálculos de RM y feedback directo Coach-Atleta.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center lg:justify-start">
@@ -204,7 +204,7 @@ export default function LandingPage() {
           <div className="text-center mb-12">
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-primary mb-3">Funcionalidades</p>
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight">
-              Diseñado por y para Coaches
+              Diseñado para el Entrenamiento Personalizado
             </h2>
           </div>
 
@@ -240,10 +240,10 @@ export default function LandingPage() {
             </div>
             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary mb-4">Únete hoy</p>
             <h2 className="text-3xl md:text-5xl font-black uppercase tracking-tight leading-tight mb-3">
-              ¿Listo para<br />liderar el box?
+              ¿Listo para<br />elevar tu coaching?
             </h2>
             <p className="text-muted-foreground text-sm mb-8 max-w-sm mx-auto">
-              Optimiza tu box con la herramienta más potente para la gestión y programación de CrossFit.
+              Potencia tu asesoría 1:1 con la herramienta más potente para la programación y feedback de CrossFit.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
               <Link href="/login">
