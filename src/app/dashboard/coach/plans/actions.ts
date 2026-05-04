@@ -188,13 +188,15 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
         
         const blockData = {
           workout_day_id: dayId,
-          name: block.name,
+          name: block.name || 'Sin nombre',
           description: block.description || '',
-          type: block.type,
+          type: block.type || 'strength',
           timer_type: block.timer_type,
           timer_config: block.timer_config,
           order_index: i
         }
+
+        console.log(`SAVING BLOCK ${block.id}:`, { name: blockData.name, descLength: blockData.description?.length })
 
         let blockId = block.id
         if (isNewBlock) {

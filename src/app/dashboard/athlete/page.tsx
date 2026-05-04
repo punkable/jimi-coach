@@ -136,43 +136,49 @@ export default async function AthleteDashboard() {
   }
 
   return (
-    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto" style={{ paddingTop: 'max(env(safe-area-inset-top), 40px)' }}>
+    <div className="min-h-[100dvh] pb-8 px-4 md:px-8 lg:px-10 max-w-7xl mx-auto relative" style={{ paddingTop: 'max(env(safe-area-inset-top), 40px)' }}>
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(204,255,0,0.05)_0%,transparent_70%)] pointer-events-none" />
+
       {/* ── Hero Header ── */}
-      <div className="relative pt-10 pb-8 md:pt-14 md:pb-12 px-8 md:px-12 overflow-hidden rounded-[40px] mb-8 bg-card border border-border/10 shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-[var(--metcon)]/5 to-transparent pointer-events-none" />
+      <div className="relative pt-12 pb-10 md:pt-20 md:pb-16 px-10 md:px-16 overflow-hidden rounded-[40px] mb-10 bg-white/[0.02] border border-white/5 backdrop-blur-3xl shadow-[0_30px_100px_rgba(0,0,0,0.4)]">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
         
         <div className="relative flex items-center justify-between">
           <div className="flex-1">
+            <div className="flex items-center gap-2 text-primary mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Elite Status</span>
+            </div>
             <AthleteGreeting name={firstName} />
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-6 flex flex-wrap gap-3">
               {trainedToday ? (
-                <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-primary/30">
-                  <Zap className="w-3 h-3 fill-primary" /> Entrenado
-                </span>
+                <div className="bg-primary/20 text-primary px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-primary/30 shadow-[0_0_20px_rgba(204,255,0,0.1)]">
+                  <Zap className="w-3.5 h-3.5 fill-primary" /> Hoy: Entrenado
+                </div>
               ) : (
-                <span className="bg-secondary/50 text-muted-foreground px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-border/40">
-                  <Calendar className="w-3 h-3" /> WOD Pendiente
-                </span>
+                <div className="bg-white/5 text-white/40 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/5">
+                  <Calendar className="w-3.5 h-3.5" /> Sesión Programada
+                </div>
               )}
               {currentStreak > 0 && (
-                <span className="bg-orange-500/20 text-orange-400 px-3 py-1 rounded-full text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-1.5 border border-orange-500/30">
-                  <Flame className="w-3 h-3 fill-orange-400" /> {currentStreak} Días
-                </span>
+                <div className="bg-orange-500/20 text-orange-400 px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-orange-500/30">
+                  <Flame className="w-3.5 h-3.5 fill-orange-400" /> {currentStreak} Días Racha
+                </div>
               )}
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="absolute -top-12 -right-4 hidden lg:block">
-                <Image src="/images/train.png" alt="Rex Training" width={100} height={100} className="object-contain" />
-              </div>
-              <div className="lg:hidden">
-                <Image src="/images/train.png" alt="Rex Training" width={60} height={60} className="object-contain" />
+          <div className="flex items-center gap-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+              <div className="relative transform hover:scale-110 transition-transform duration-700">
+                <Image src="/images/train.png" alt="Rex Training" width={140} height={140} className="object-contain hidden lg:block" />
+                <Image src="/images/train.png" alt="Rex Training" width={80} height={80} className="object-contain lg:hidden" />
               </div>
             </div>
             <form action={signout} className="md:hidden">
-              <Button variant="ghost" size="icon" type="submit" className="text-destructive hover:bg-destructive/10 rounded-xl">
+              <Button variant="ghost" size="icon" type="submit" className="w-12 h-12 text-white/20 hover:text-destructive hover:bg-destructive/10 rounded-2xl border border-white/5 transition-all">
                 <LogOut className="w-5 h-5" />
               </Button>
             </form>
@@ -211,45 +217,47 @@ export default async function AthleteDashboard() {
 
         {/* Right Column: Coach Insights & Streak Mascot on Mobile */}
         <div className="lg:col-span-4 space-y-8">
-          <section className="glass rounded-3xl p-6 md:p-8">
-            <div className="flex items-center gap-2 mb-6">
-              <Target className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-black uppercase tracking-tight">Coach Insights</h2>
+          <section className="bg-white/[0.03] border border-white/5 rounded-[40px] p-8 backdrop-blur-3xl shadow-2xl">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
+                <Target className="w-5 h-5 text-primary" />
+              </div>
+              <h2 className="text-2xl font-black uppercase tracking-tight">Mis Metas</h2>
             </div>
             
             {insights && insights.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {insights.map((insight: any) => {
                   const Icon = insightIconMap[insight.type] || StickyNote
                   const colorClass = insightColorMap[insight.type] || insightColorMap.note
                   return (
                     <div 
                       key={insight.id}
-                      className={`p-4 rounded-2xl border bg-gradient-to-br ${colorClass} flex gap-4`}
+                      className={`p-6 rounded-[28px] border bg-gradient-to-br transition-all hover:scale-[1.02] ${colorClass} flex gap-5`}
                     >
                       <div className="shrink-0 pt-1">
-                        <Icon className="w-5 h-5" />
+                        <Icon className="w-6 h-6" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-bold text-sm leading-tight uppercase tracking-tight truncate">{insight.title}</h4>
+                        <div className="flex items-start justify-between gap-3">
+                          <h4 className="font-black text-sm leading-tight uppercase tracking-tight">{insight.title}</h4>
                           {insight.target_value && (
-                            <span className="text-[10px] font-black shrink-0 bg-background/20 px-2 py-0.5 rounded-lg">
+                            <span className="text-[10px] font-black shrink-0 bg-white/10 px-2.5 py-1 rounded-full border border-white/10">
                               {insight.target_value}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs opacity-80 mt-1 leading-relaxed">{insight.body}</p>
+                        <p className="text-xs opacity-70 mt-2 leading-relaxed font-medium">{insight.body}</p>
                       </div>
                     </div>
                   )
                 })}
               </div>
             ) : (
-              <div className="text-center py-12 px-4 border-2 border-dashed border-border/30 rounded-3xl">
-                <Star className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-xs font-bold text-muted-foreground/60 uppercase tracking-widest leading-relaxed">
-                  Tu coach te asignará<br />metas pronto
+              <div className="text-center py-16 px-6 border-2 border-dashed border-white/5 rounded-[32px]">
+                <Star className="w-10 h-10 text-white/5 mx-auto mb-4" />
+                <p className="text-[10px] font-black text-white/20 uppercase tracking-[0.25em] leading-relaxed">
+                  Pronto recibirás metas<br />de tu coach
                 </p>
               </div>
             )}

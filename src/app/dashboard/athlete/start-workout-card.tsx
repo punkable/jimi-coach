@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
-  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap
+  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap, Trophy
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -13,6 +13,7 @@ interface StartWorkoutCardProps {
   plan: any
   planDays: any[]
   trainedToday: boolean
+  trainedPercentage?: number
 }
 
 export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWorkoutCardProps) {
@@ -40,8 +41,9 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
       </div>
 
       {/* Day Selector Hub */}
-      <div className="bg-card rounded-[32px] p-2 border border-border/10 shadow-lg">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1">
+      <div className="bg-card/40 backdrop-blur-xl rounded-[28px] p-2 border border-border/10 shadow-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
+        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10">
           {planDays.map((day, idx) => {
             const isSelected = selectedDayIdx === idx
             const dayLabel = dayNames[(day.day_of_week - 1) % 7]
@@ -51,17 +53,23 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
                 key={day.id}
                 onClick={() => setSelectedDayIdx(idx)}
                 className={cn(
-                  "flex-1 min-w-[64px] py-4 rounded-[24px] flex flex-col items-center gap-1 transition-all duration-300",
+                  "flex-1 min-w-[72px] py-5 rounded-[22px] flex flex-col items-center gap-1.5 transition-all duration-500 relative group",
                   isSelected 
-                    ? "bg-primary text-primary-foreground shadow-[0_8px_20px_rgba(var(--primary),0.3)] scale-105" 
-                    : "hover:bg-secondary/50 text-muted-foreground border border-transparent"
+                    ? "bg-primary text-primary-foreground shadow-[0_0_30px_rgba(204,255,0,0.3)] scale-[1.02]" 
+                    : "hover:bg-white/5 text-muted-foreground border border-transparent"
                 )}
               >
+                {isSelected && (
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-[22px] pointer-events-none" />
+                )}
                 <span className={cn(
-                  "text-[8px] font-black tracking-widest uppercase",
-                  isSelected ? "opacity-70" : "text-muted-foreground/40"
+                  "text-[9px] font-black tracking-[0.2em] uppercase",
+                  isSelected ? "text-primary-foreground/80" : "text-muted-foreground/30"
                 )}>{dayLabel}</span>
-                <span className="text-xl font-black leading-none">{day.day_of_week}</span>
+                <span className="text-2xl font-black leading-none tracking-tighter">{day.day_of_week}</span>
+                {isSelected && (
+                  <div className="absolute -bottom-1 w-6 h-1 bg-white/40 rounded-full" />
+                )}
               </button>
             )
           })}
@@ -70,47 +78,58 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
 
       {/* Selected Day Preview Card */}
       {selectedDay && (
-        <Card className="glass-card overflow-hidden relative group border-none">
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--metcon)]/10 via-transparent to-transparent opacity-50" />
-          <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:opacity-[0.1] transition-opacity rotate-12">
-            <PlayCircle className="w-40 h-40" />
+        <Card className="glass-card overflow-hidden relative group border-none rounded-[32px] min-h-[220px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
+          <div className="absolute -bottom-20 -right-20 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-all duration-700 rotate-12 scale-150 group-hover:scale-125">
+            <PlayCircle className="w-80 h-80" />
           </div>
-          <CardContent className="p-8 relative z-10">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-              <div className="space-y-4 text-center md:text-left">
-                <div className="flex flex-col md:flex-row items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-white text-black flex items-center justify-center shadow-2xl font-black text-lg">
-                    {selectedDay.day_of_week}
+          
+          <CardContent className="p-10 relative z-10 h-full flex flex-col justify-center">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-10">
+              <div className="space-y-6 text-center md:text-left flex-1">
+                <div className="flex flex-col md:flex-row items-center gap-6">
+                  <div className="w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] font-black text-2xl relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
+                    <span className="relative">{selectedDay.day_of_week}</span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-foreground">
+                    <h3 className="text-3xl font-black uppercase tracking-tight text-white mb-1">
                       {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(selectedDay.day_of_week - 1) % 7]}
                     </h3>
-                    <p className="text-primary font-black uppercase tracking-widest text-[10px] mt-1">
-                      {selectedDay.title || 'Sesión de Entrenamiento'}
-                    </p>
+                    <div className="flex items-center justify-center md:justify-start gap-3">
+                      <span className="text-primary font-black uppercase tracking-[0.2em] text-[11px]">
+                        {selectedDay.title || 'Sesión Programada'}
+                      </span>
+                      <div className="h-1 w-1 rounded-full bg-white/20" />
+                      <span className="text-white/40 font-bold uppercase tracking-widest text-[9px]">
+                        {selectedDay.workout_blocks?.length || 0} Bloques
+                      </span>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-center md:justify-start gap-4">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-border/20">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--metcon)]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">
-                      {selectedDay.workout_blocks?.length || 0} Bloques
+                <div className="flex items-center justify-center md:justify-start gap-3">
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
+                    <Zap className="w-4 h-4 text-primary fill-primary/20" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
+                      CrossFit Elite
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-secondary/50 border border-border/20">
-                    <Zap className="w-3.5 h-3.5 text-[var(--warmup)]" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">
-                      CrossFit
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
+                    <Trophy className="w-4 h-4 text-[var(--strength)]" />
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
+                      Progreso Real
                     </span>
                   </div>
                 </div>
               </div>
 
               <Link href={`/dashboard/athlete/workout?dayId=${selectedDay.id}`} className="w-full md:w-auto">
-                <Button className="btn-premium w-full md:w-auto h-16 px-10 text-xs gap-3">
-                  Entrenar Ahora <ChevronRight className="w-5 h-5" />
+                <Button className="h-20 px-12 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none">
+                  Entrenar Ahora
+                  <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
                 </Button>
               </Link>
             </div>

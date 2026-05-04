@@ -16,8 +16,7 @@ export async function createMembership(formData: FormData) {
   const { error } = await supabase.from('memberships').insert({
     name,
     description,
-    price,
-    default_classes: defaultClasses
+    price
   })
 
   if (error) throw error

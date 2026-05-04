@@ -36,8 +36,8 @@ export function PostFeedForm() {
           <Megaphone className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h3 className="font-black text-sm uppercase tracking-tight">Comunicado al Box</h3>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Publicar en el feed social</p>
+          <h3 className="font-black text-sm uppercase tracking-tight">Notificación al Equipo</h3>
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Anuncios y avisos generales</p>
         </div>
       </div>
 

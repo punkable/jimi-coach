@@ -45,15 +45,9 @@ export default async function MembershipsPage() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Descripción Corta</label>
                   <Textarea name="description" placeholder="Ej: Acceso ilimitado y seguimiento..." className="bg-secondary/30 rounded-xl resize-none h-20" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Precio ($)</label>
-                    <Input name="price" type="number" placeholder="45000" className="bg-secondary/30 rounded-xl" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Clases/Mes</label>
-                    <Input name="defaultClasses" type="number" placeholder="12" className="bg-secondary/30 rounded-xl" />
-                  </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Precio ($)</label>
+                  <Input name="price" type="number" placeholder="45000" className="bg-secondary/30 rounded-xl" />
                 </div>
                 <Button type="submit" className="w-full font-black uppercase tracking-widest text-xs h-12 rounded-xl mt-2 shadow-lg shadow-primary/20">
                   Crear Modalidad
@@ -87,12 +81,8 @@ export default async function MembershipsPage() {
                   <CardContent>
                     <div className="flex flex-col gap-3 mt-2">
                       <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground flex items-center gap-2"><CreditCard className="w-3 h-3"/> Precio</span>
+                        <span className="text-muted-foreground flex items-center gap-2"><CreditCard className="w-3 h-3"/> Valor</span>
                         <span className="font-black text-primary">${Number(m.price).toLocaleString()}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground flex items-center gap-2"><CheckCircle2 className="w-3 h-3"/> Créditos</span>
-                        <span className="font-bold">{m.default_classes} clases</span>
                       </div>
                     </div>
                   </CardContent>

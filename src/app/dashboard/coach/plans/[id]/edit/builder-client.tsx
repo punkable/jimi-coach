@@ -278,38 +278,55 @@ export function BuilderClient({
   }
 
   const addBlock = (dayId: string) => {
-    const n = [...days]
-    const idx = n.findIndex(d => d.id === dayId)
-    const blockCount = n[idx].workout_blocks.length
-    const blockLetter = String.fromCharCode(65 + blockCount)
-    n[idx].workout_blocks.push({ 
-      id: genId(), 
-      name: `Bloque ${blockLetter}`, 
-      type: 'strength', 
-      description: '',
-      workout_movements: [] 
+    updateDays((prev: Day[]) => {
+      const n: Day[] = JSON.parse(JSON.stringify(prev))
+      const idx = n.findIndex((d: Day) => d.id === dayId)
+      if (idx === -1) return prev
+      const blockCount = n[idx].workout_blocks.length
+      const blockLetter = String.fromCharCode(65 + blockCount)
+      n[idx].workout_blocks.push({ 
+        id: genId(), 
+        name: `Bloque ${blockLetter}`, 
+        type: 'strength', 
+        description: '',
+        workout_movements: [] 
+      })
+      return n
     })
-    updateDays(n)
   }
 
   const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number, sets: number = 3) => {
-    const n = JSON.parse(JSON.stringify(days))
-    const newMov = {
-      id: genId(),
-      exercise_id: exercise.id,
-      exercise: exercise,
-      sets: sets,
-      reps: sets > 0 ? '10' : '',
-      weight_percentage: '',
-      notes: ''
-    }
-    
-    if (typeof atIdx === 'number') {
-      n[dIdx].workout_blocks[bIdx].workout_movements.splice(atIdx, 0, newMov)
-    } else {
-      n[dIdx].workout_blocks[bIdx].workout_movements.push(newMov)
-    }
-    updateDays(n)
+    updateDays((prev: Day[]) => {
+      const n: Day[] = JSON.parse(JSON.stringify(prev))
+      const block = n[dIdx].workout_blocks[bIdx]
+      const newMov = {
+        id: genId(),
+        exercise_id: exercise.id,
+        sets,
+        reps: '10',
+        weight_percentage: '',
+        notes: '',
+        order_index: block.workout_movements.length,
+        exercise: exercise
+      }
+      if (typeof atIdx === 'number') {
+        block.workout_movements.splice(atIdx, 0, newMov)
+      } else {
+        block.workout_movements.push(newMov)
+      }
+      return n
+    })
+  }
+
+  const removeBlock = (dayId: string, bIdx: number) => {
+    updateDays((prev: Day[]) => {
+      const n: Day[] = JSON.parse(JSON.stringify(prev))
+      const idx = n.findIndex((d: Day) => d.id === dayId)
+      if (idx !== -1) {
+        n[idx].workout_blocks.splice(bIdx, 1)
+      }
+      return n
+    })
   }
 
   const handleSave = async () => {
@@ -534,11 +551,28 @@ export function BuilderClient({
                             key={block.id} 
                             id={block.id} 
                             block={block} 
-                            onRemove={() => {
-                              const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks.splice(bIdx, 1); updateDays(n);
-                            }}
+                            onRemove={() => removeBlock(day.id, bIdx)}
                             onRename={(val: string) => {
-                              const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].name = val; updateDays(n);
+                              updateDays((prev: Day[]) => {
+                                const n = JSON.parse(JSON.stringify(prev))
+                                const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                if (dIdx !== -1 && bIdx !== -1) {
+                                  n[dIdx].workout_blocks[bIdx].name = val
+                                }
+                                return n
+                              })
+                            }}
+                            onTypeChange={(val: string) => {
+                              updateDays((prev: Day[]) => {
+                                const n = JSON.parse(JSON.stringify(prev))
+                                const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                if (dIdx !== -1 && bIdx !== -1) {
+                                  n[dIdx].workout_blocks[bIdx].type = val
+                                }
+                                return n
+                              })
                             }}
                           >
                             <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-4">
@@ -698,9 +732,10 @@ export function BuilderClient({
                                                     updateDays((prev: Day[]) => {
                                                       const n: Day[] = JSON.parse(JSON.stringify(prev))
                                                       const dIdx = n.findIndex((d: Day) => d.id === day.id)
-                                                      if (dIdx !== -1) {
+                                                      const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                                      if (dIdx !== -1 && bIdx !== -1) {
                                                         const currentDesc = n[dIdx].workout_blocks[bIdx].description || ''
-                                                        n[dIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tagName
+                                                        n[dIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? '\n' : '') + tagName
                                                       }
                                                       return n
                                                     })
@@ -739,7 +774,8 @@ export function BuilderClient({
                                         updateDays((prev: Day[]) => {
                                           const n: Day[] = JSON.parse(JSON.stringify(prev))
                                           const dIdx = n.findIndex((d: Day) => d.id === day.id)
-                                          if (dIdx !== -1) {
+                                          const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                          if (dIdx !== -1 && bIdx !== -1) {
                                             n[dIdx].workout_blocks[bIdx].description = val
                                           }
                                           return n
@@ -800,16 +836,48 @@ export function BuilderClient({
                                       mov={mov} 
                                       mIdx={mIdx}
                                       updateSets={(val: string) => {
-                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0; updateDays(n);
+                                        updateDays((prev: Day[]) => {
+                                          const n = JSON.parse(JSON.stringify(prev))
+                                          const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                          const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                          if (dIdx !== -1 && bIdx !== -1) {
+                                            n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(val) || 0
+                                          }
+                                          return n
+                                        })
                                       }}
                                       updateReps={(val: string) => {
-                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val; updateDays(n);
+                                        updateDays((prev: Day[]) => {
+                                          const n = JSON.parse(JSON.stringify(prev))
+                                          const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                          const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                          if (dIdx !== -1 && bIdx !== -1) {
+                                            n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = val
+                                          }
+                                          return n
+                                        })
                                       }}
                                       updateWeight={(val: string) => {
-                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val; updateDays(n);
+                                        updateDays((prev: Day[]) => {
+                                          const n = JSON.parse(JSON.stringify(prev))
+                                          const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                          const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                          if (dIdx !== -1 && bIdx !== -1) {
+                                            n[dIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = val
+                                          }
+                                          return n
+                                        })
                                       }}
                                       removeMov={() => {
-                                        const n = JSON.parse(JSON.stringify(days)); n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1); updateDays(n);
+                                        updateDays((prev: Day[]) => {
+                                          const n = JSON.parse(JSON.stringify(prev))
+                                          const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                          const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                          if (dIdx !== -1 && bIdx !== -1) {
+                                            n[dIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1)
+                                          }
+                                          return n
+                                        })
                                       }}
                                     />
                                   ))}

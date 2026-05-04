@@ -86,14 +86,14 @@ function NavItem({ href, icon: Icon, label, variant = 'default', pathname }: { h
   const isActive = pathname === href || (href !== '/dashboard/coach' && pathname.startsWith(href))
   
   return (
-    <Link href={href} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-sm font-semibold ${
+    <Link href={href} className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-black uppercase tracking-widest ${
       isActive 
-        ? 'bg-primary/10 text-primary shadow-[0_0_15px_rgba(var(--primary),0.1)]' 
+        ? 'bg-primary text-primary-foreground shadow-[0_0_20px_rgba(204,255,0,0.2)] scale-[1.02]' 
         : variant === 'default'
-          ? 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
-          : 'text-muted-foreground/60 hover:text-foreground hover:bg-secondary/30'
+          ? 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+          : 'text-muted-foreground/60 hover:text-foreground hover:bg-white/5'
     }`}>
-      <Icon className={`h-4 w-4 ${isActive ? 'animate-pulse' : ''}`} />
+      <Icon className={`h-4 w-4 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
       {label}
     </Link>
   )
@@ -103,9 +103,12 @@ function MobileNavItem({ href, icon: Icon, label, pathname }: { href: string, ic
   const isActive = pathname === href || (href !== '/dashboard/coach' && pathname.startsWith(href))
   
   return (
-    <Link href={href} className={`flex flex-col items-center justify-center gap-0.5 min-w-[50px] py-2 transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-      <Icon className={`h-5 w-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
-      <span className={`text-[9px] font-bold uppercase tracking-tighter ${isActive ? 'opacity-100' : 'opacity-60'}`}>{label}</span>
+    <Link href={href} className={`flex flex-col items-center justify-center gap-1.5 min-w-[64px] py-2 transition-all duration-500 relative ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+      {isActive && (
+        <div className="absolute -top-1 w-12 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(204,255,0,0.8)]" />
+      )}
+      <Icon className={`h-6 w-6 transition-all duration-300 ${isActive ? 'stroke-[2.5] scale-110 drop-shadow-[0_0_8px_rgba(204,255,0,0.4)]' : 'stroke-[1.5]'}`} />
+      <span className={`text-[8px] font-black uppercase tracking-[0.15em] transition-all ${isActive ? 'opacity-100' : 'opacity-40'}`}>{label}</span>
     </Link>
   )
 }

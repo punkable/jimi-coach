@@ -55,72 +55,72 @@
   --card-foreground: #1c1c1a;
   --popover: #ffffff;
   --popover-foreground: #1c1c1a;
-  --primary: #686D42;
-  --primary-foreground: #fcf6ef;
+  --primary: #ccff00; /* Rex Electric Lime */
+  --primary-foreground: #000000;
   --secondary: #f0f0eb;
   --secondary-foreground: #374151;
   --muted: #f3f4f6;
   --muted-foreground: #6b7280;
-  --accent: #686D42;
-  --accent-foreground: #fcf6ef;
-  --destructive: #ef4444;
+  --accent: #ccff00;
+  --accent-foreground: #000000;
+  --destructive: #ff4b4b;
   --border: #e5e7eb;
   --input: #e5e7eb;
-  --ring: #686D42;
+  --ring: #ccff00;
   
-  /* Semantic Colors */
+  /* Semantic Colors - High Saturation */
   --strength: #ff6b00;
-  --metcon: #0084ff;
-  --gymnastics: #9d00ff;
+  --metcon: #8b5cf6; /* Vibrant Purple */
+  --gymnastics: #0ea5e9; /* Sky Blue */
   --warmup: #ffcc00;
   --cooldown: #00d4ff;
   
-  --radius: 1.25rem;
+  --radius: 1rem; /* Standardizing radius */
   --sidebar: #fcf6ef;
   --sidebar-foreground: #1c1c1a;
-  --sidebar-primary: #686D42;
-  --sidebar-primary-foreground: #fcf6ef;
+  --sidebar-primary: #ccff00;
+  --sidebar-primary-foreground: #000000;
   --sidebar-accent: #f3f4f6;
   --sidebar-accent-foreground: #1c1c1a;
   --sidebar-border: #e5e7eb;
-  --sidebar-ring: #686D42;
+  --sidebar-ring: #ccff00;
 }
 
 .dark {
-  --background: #0f110a;
-  --foreground: #fcf6ef;
-  --card: #161a12;
-  --card-foreground: #fcf6ef;
-  --popover: #161a12;
-  --popover-foreground: #fcf6ef;
-  --primary: #686D42;
-  --primary-foreground: #fcf6ef;
-  --secondary: #1f291a;
-  --secondary-foreground: #fcf6ef;
-  --muted: #1a1e14;
-  --muted-foreground: #9ca3af;
-  --accent: #686D42;
-  --accent-foreground: #fcf6ef;
-  --destructive: #ef4444;
-  --border: #2a2e24;
-  --input: #2a2e24;
-  --ring: #686D42;
+  --background: #000000; /* Pure black for premium feel */
+  --foreground: #ffffff;
+  --card: #0a0a0a;
+  --card-foreground: #ffffff;
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
+  --primary: #ccff00;
+  --primary-foreground: #000000;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ffffff;
+  --muted: #111111;
+  --muted-foreground: #888888;
+  --accent: #ccff00;
+  --accent-foreground: #000000;
+  --destructive: #ff4b4b;
+  --border: #1a1a1a;
+  --input: #1a1a1a;
+  --ring: #ccff00;
   
-  /* Semantic Colors Dark */
+  /* Semantic Colors Dark - Glow Style */
   --strength: #ff8c33;
-  --metcon: #33a1ff;
-  --gymnastics: #b84dff;
+  --metcon: #a78bfa;
+  --gymnastics: #38bdf8;
   --warmup: #ffd633;
   --cooldown: #33e1ff;
   
-  --sidebar: #0f110a;
-  --sidebar-foreground: #fcf6ef;
-  --sidebar-primary: #686D42;
-  --sidebar-primary-foreground: #fcf6ef;
-  --sidebar-accent: #1a1e14;
-  --sidebar-accent-foreground: #fcf6ef;
-  --sidebar-border: #2a2e24;
-  --sidebar-ring: #686D42;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ccff00;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #111111;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1a1a1a;
+  --sidebar-ring: #ccff00;
 }
 
 .hide-close > button:last-of-type {

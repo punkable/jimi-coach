@@ -46,7 +46,7 @@ export async function createAthlete(formData: FormData) {
   redirect('/dashboard/coach/athletes')
 }
 
-export async function updateAthleteSubscription(athleteId: string, plan: string, totalClasses: number, classesUsed: number) {
+export async function updateAthleteSubscription(athleteId: string, plan: string) {
   const supabase = await createClient()
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -66,9 +66,7 @@ export async function updateAthleteSubscription(athleteId: string, plan: string,
   const { error } = await supabaseAdmin
     .from('profiles')
     .update({ 
-      subscription_plan: plan,
-      total_classes: totalClasses,
-      classes_used: classesUsed
+      subscription_plan: plan
     })
     .eq('id', athleteId)
 
