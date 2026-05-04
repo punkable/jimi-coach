@@ -36,6 +36,7 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
     .from('workout_days')
     .select('*, workout_blocks(*, workout_movements(*, exercises(*)))')
     .eq('plan_id', activeAssignment.plan_id)
+    .eq('is_published', true)
     .order('day_of_week', { ascending: true })
     .order('order_index', { foreignTable: 'workout_blocks', ascending: true })
     .order('order_index', { foreignTable: 'workout_blocks.workout_movements', ascending: true })

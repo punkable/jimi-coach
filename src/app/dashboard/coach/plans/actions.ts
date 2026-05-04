@@ -134,7 +134,8 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       plan_id: planId,
       day_of_week: day.day_of_week,
       title: day.title,
-      week_number: day.week_number || 1
+      week_number: day.week_number || 1,
+      is_published: day.is_published ?? true
     }
 
     let dayId = day.id
@@ -213,6 +214,27 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
         }
       }
     }
+  }
+
+  revalidatePath(`/dashboard/coach/plans/${planId}/edit`)
+  revalidatePath('/dashboard/athlete')
+  revalidatePath('/dashboard/athlete/workout')
+}
+
+export async function toggleWeekStatus(planId: string, weekNumber: number, isPublished: boolean) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('workout_days')
+    .update({ is_published: isPublished })
+    .eq('plan_id', planId)
+    .eq('week_number', weekNumber)
+
+  if (error) {
+    console.error('Error toggling week status:', error)
+    throw new Error('Failed to update week status')
   }
 
   revalidatePath(`/dashboard/coach/plans/${planId}/edit`)

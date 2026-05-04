@@ -55,6 +55,7 @@ export default async function AthleteDashboard() {
       .from('workout_days')
       .select('*, workout_blocks(*)')
       .eq('plan_id', planId)
+      .eq('is_published', true)
       .order('day_of_week', { ascending: true })
     planDays = data || []
   }

@@ -7,10 +7,11 @@ import { cn } from '@/lib/utils'
 import { 
   Plus, Trash2, Dumbbell, Save, Loader2, 
   Search, X, Calendar, Layout, Edit3,
-  GripHorizontal, ChevronRight, Hash, Info, Video
+  GripHorizontal, ChevronRight, Hash, Info, Video,
+  Eye, EyeOff
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { savePlanStructure } from '../../actions'
+import { savePlanStructure, toggleWeekStatus } from '../../actions'
 import { 
   DndContext, 
   closestCenter, 
@@ -41,7 +42,7 @@ import { Textarea } from '@/components/ui/textarea'
 type Exercise = { id: string, name: string, category: string, difficulty_level: string }
 type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
 type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[] }
-type Day = { id: string, day_of_week: number, title: string, week_number: number, workout_blocks: Block[] }
+type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
 
@@ -107,6 +108,7 @@ export function BuilderClient({
     return rawDays.map(d => ({
       ...d,
       id: d.id || genId(),
+      is_published: d.is_published ?? true,
       workout_blocks: (d.workout_blocks || []).map((b: any) => ({
         ...b,
         id: b.id || genId(),
@@ -234,6 +236,7 @@ export function BuilderClient({
       week_number: weekNum, 
       day_of_week: nextDayNum, 
       title: `Entrenamiento ${nextDayNum}`, 
+      is_published: true,
       workout_blocks: [] 
     }
     setDays([...days, newDay])
@@ -246,6 +249,7 @@ export function BuilderClient({
       week_number: nextWeek, 
       day_of_week: 1, 
       title: 'Entrenamiento 1', 
+      is_published: true,
       workout_blocks: [] 
     }])
     setActiveWeek(nextWeek.toString())
@@ -304,7 +308,24 @@ export function BuilderClient({
   )
 
   const currentWeekDays = days.filter(d => d.week_number === parseInt(activeWeek))
+  const isWeekPublished = currentWeekDays.every(d => d.is_published)
   const totalWeeks = Array.from(new Set(days.map(d => d.week_number || 1))).sort((a,b) => a-b)
+
+  const handleToggleWeekPublish = async () => {
+    const newStatus = !isWeekPublished
+    // Optimistic update
+    const n = days.map(d => d.week_number === parseInt(activeWeek) ? { ...d, is_published: newStatus } : d)
+    setDays(n)
+    
+    try {
+      await toggleWeekStatus(planId, parseInt(activeWeek), newStatus)
+    } catch (e) {
+      console.error(e)
+      alert('Error al actualizar estado de la semana')
+      // Rollback
+      setDays(days)
+    }
+  }
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -389,19 +410,54 @@ export function BuilderClient({
               </Button>
             </div>
 
-            <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
-              <TabsList className="bg-secondary/20 p-1 rounded-xl h-12 border border-border/10 w-full md:w-auto justify-start overflow-x-auto overflow-y-hidden">
-                {totalWeeks.map(w => (
-                  <TabsTrigger 
-                    key={w} 
-                    value={w.toString()}
-                    className="rounded-lg font-black uppercase tracking-widest text-[10px] px-8 h-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all"
-                  >
-                    Semana {w}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
+              <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full md:w-auto">
+                <TabsList className="bg-secondary/20 p-1 rounded-xl h-12 border border-border/10 w-full md:w-auto justify-start overflow-x-auto overflow-y-hidden">
+                  {totalWeeks.map(w => {
+                    const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
+                    return (
+                      <TabsTrigger 
+                        key={w} 
+                        value={w.toString()}
+                        className="rounded-lg font-black uppercase tracking-widest text-[10px] px-8 h-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all flex items-center gap-2"
+                      >
+                        Semana {w}
+                        {!isWPublished && (
+                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[8px] h-4 px-1 rounded-md">Borrador</Badge>
+                        )}
+                      </TabsTrigger>
+                    )
+                  })}
+                </TabsList>
+              </Tabs>
+
+              <div className="flex items-center gap-4 bg-secondary/10 p-2 rounded-2xl border border-border/5">
+                <div className="flex flex-col items-end px-2">
+                  <span className="text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">Estado Semana {activeWeek}</span>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-widest",
+                    isWeekPublished ? "text-primary" : "text-amber-500"
+                  )}>
+                    {isWeekPublished ? 'Publicada (Visible)' : 'Borrador (Oculta)'}
+                  </span>
+                </div>
+                <Button 
+                  onClick={handleToggleWeekPublish}
+                  variant={isWeekPublished ? "outline" : "default"}
+                  size="sm"
+                  className={cn(
+                    "h-10 rounded-xl px-4 font-black uppercase tracking-widest text-[9px] gap-2 transition-all",
+                    !isWeekPublished && "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20"
+                  )}
+                >
+                  {isWeekPublished ? (
+                    <><EyeOff className="w-3.5 h-3.5" /> Ocultar Semana</>
+                  ) : (
+                    <><Eye className="w-3.5 h-3.5" /> Publicar Semana</>
+                  )}
+                </Button>
+              </div>
+            </div>
           </div>
 
           {/* Days Grid */}
@@ -459,11 +515,11 @@ export function BuilderClient({
                                     <Edit3 className="w-3 h-3" /> Entrenamiento / WOD
                                   </Label>
                                   <Popover open={openPopoverId === block.id} onOpenChange={(open) => setOpenPopoverId(open ? block.id : null)}>
-                                    <PopoverTrigger asChild>
+                                    <PopoverTrigger render={
                                       <Button variant="outline" size="sm" className="h-7 px-3 text-[9px] font-black uppercase tracking-widest gap-2 rounded-xl border-primary/20 text-primary hover:bg-primary/5 transition-all">
                                         <Video className="w-3 h-3" /> Vincular Video
                                       </Button>
-                                    </PopoverTrigger>
+                                    } />
                                     <PopoverContent className="w-72 p-0 rounded-2xl overflow-hidden border-border/40 shadow-2xl" align="end">
                                       <div className="p-3 border-b border-border/10 bg-secondary/10">
                                         <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Busca para insertar link de video</p>
