@@ -148,7 +148,10 @@ export default async function AthleteDashboard() {
           <div className="flex-1">
             <div className="flex items-center gap-2 text-primary mb-4">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Elite Status</span>
+            <div className="flex items-center gap-2 text-primary mb-4">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Plan Actual: {plan?.title || 'Personalizado'}</span>
+            </div>
             </div>
             <AthleteGreeting name={firstName} />
             <div className="mt-6 flex flex-wrap gap-3">
@@ -222,7 +225,7 @@ export default async function AthleteDashboard() {
               <div className="p-2.5 rounded-xl bg-primary/10 border border-primary/20">
                 <Target className="w-5 h-5 text-primary" />
               </div>
-              <h2 className="text-2xl font-black uppercase tracking-tight">Mis Metas</h2>
+              <h2 className="text-2xl font-black uppercase tracking-tight">Mis Objetivos</h2>
             </div>
             
             {insights && insights.length > 0 ? (

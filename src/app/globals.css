@@ -55,7 +55,7 @@
   --card-foreground: #1c1c1a;
   --popover: #ffffff;
   --popover-foreground: #1c1c1a;
-  --primary: #ccff00; /* Rex Electric Lime */
+  --primary: #84cc16; /* Balanced Logo Green */
   --primary-foreground: #000000;
   --secondary: #f0f0eb;
   --secondary-foreground: #374151;
@@ -93,18 +93,18 @@
   --card-foreground: #ffffff;
   --popover: #0a0a0a;
   --popover-foreground: #ffffff;
-  --primary: #ccff00;
+  --primary: #84cc16; /* Balanced Logo Green */
   --primary-foreground: #000000;
   --secondary: #1a1a1a;
   --secondary-foreground: #ffffff;
   --muted: #111111;
   --muted-foreground: #888888;
-  --accent: #ccff00;
+  --accent: #84cc16;
   --accent-foreground: #000000;
   --destructive: #ff4b4b;
   --border: #1a1a1a;
   --input: #1a1a1a;
-  --ring: #ccff00;
+  --ring: #84cc16;
   
   /* Semantic Colors Dark - Glow Style */
   --strength: #ff8c33;

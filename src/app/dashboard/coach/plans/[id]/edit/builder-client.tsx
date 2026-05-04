@@ -140,7 +140,12 @@ export function BuilderClient({
 
   // Immutable state update helper
   const updateDays = (updater: Day[] | ((prev: Day[]) => Day[])) => {
-    setDays(updater)
+    setDays(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      // Robust debug log to track description persistence
+      console.log('DAYS UPDATED - DESC CHECK:', next.map(d => d.workout_blocks.map(b => b.description?.substring(0, 10))))
+      return next
+    })
     setHasUnsavedChanges(true)
   }
 
@@ -378,8 +383,10 @@ export function BuilderClient({
       <div className="flex h-full gap-6 overflow-hidden">
         
         {/* ── Sidebar: Library ── */}
-        <aside className="w-80 flex flex-col gap-4 bg-background/40 border border-border/20 rounded-[24px] p-4 shrink-0 shadow-sm">
-          <div className="pb-2 border-b border-border/10">
+        <aside className="w-85 flex flex-col gap-4 bg-[#111111] border-r border-white/5 p-5 shrink-0 shadow-2xl relative z-20">
+          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+          
+          <div className="relative z-10 pb-4 border-b border-white/5">
             <Button 
               onClick={handleSave} 
               disabled={isSaving} 
@@ -425,10 +432,12 @@ export function BuilderClient({
         <main className="flex-1 flex flex-col gap-6 overflow-hidden">
           
           {/* Header & Week Tabs */}
-          <div className="bg-background/40 border border-border/20 rounded-[24px] p-6 space-y-6 shrink-0 shadow-sm">
-            <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
-              <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center shrink-0">
-                <Layout className="w-6 h-6 text-primary-foreground" />
+          <div className="bg-[#161616] border border-white/5 rounded-[32px] p-8 space-y-8 shrink-0 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full -z-10 group-hover:bg-primary/10 transition-colors duration-700" />
+            
+            <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+                <Layout className="w-7 h-7 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-4 mb-1">
@@ -512,18 +521,20 @@ export function BuilderClient({
           </div>
 
           {/* Days Grid */}
-          <ScrollArea className="flex-1 -mr-4 pr-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 pb-12">
-              {currentWeekDays.map((day, dIdxInWeek) => {
+          <ScrollArea className="flex-1 -mr-4 pr-4 bg-[#0a0a0a]/50 p-6 rounded-[40px] border border-white/5 shadow-inner">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-8 pb-12">
+              {currentWeekDays.map((day) => {
                 const globalDIdx = days.findIndex(d => d.id === day.id)
                 return (
-                  <div key={day.id} className="flex flex-col gap-4">
+                  <div key={day.id} className="flex flex-col gap-6 bg-[#161616] rounded-[32px] p-8 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:border-primary/20 transition-all group/day relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover/day:bg-primary transition-colors" />
+                    
                     {/* Day Header */}
-                    <div className="flex items-center justify-between group">
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary font-black px-2.5 h-6 rounded-lg text-[9px] shrink-0 uppercase">
+                    <div className="flex items-center justify-between pb-6 border-b border-white/5">
+                      <div className="flex items-center gap-5 min-w-0 flex-1">
+                        <div className="px-5 py-2.5 bg-primary/10 border border-primary/20 text-primary font-black rounded-xl text-[11px] shrink-0 uppercase tracking-widest shadow-[0_0_20px_rgba(var(--primary),0.1)]">
                           {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
-                        </Badge>
+                        </div>
                         <Input 
                           placeholder="Añadir subtítulo (ej: Pierna, Descanso...)"
                           className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-bold text-sm tracking-tight truncate w-full placeholder:opacity-30"
@@ -764,20 +775,22 @@ export function BuilderClient({
                                   <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <Textarea 
                                       placeholder="Ej: AMRAP 15 min de:
-   10 Pull Ups
-   5 Snatch
-   20 Box Jumps"
-                                      className="min-h-[160px] bg-background/50 border-border/20 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner"
+    10 Pull Ups
+    5 Snatch
+    20 Box Jumps"
+                                      className="min-h-[160px] bg-black/40 border border-white/10 text-sm font-medium leading-relaxed resize-none rounded-[16px] focus:ring-primary/20 p-4 shadow-inner text-white placeholder:text-white/10"
                                       value={block.description || ''}
                                       onChange={(e) => {
                                         const val = e.target.value
                                         updateDays((prev: Day[]) => {
-                                          const n: Day[] = JSON.parse(JSON.stringify(prev))
-                                          const dIdx = n.findIndex((d: Day) => d.id === day.id)
-                                          const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
-                                          if (dIdx !== -1 && bIdx !== -1) {
-                                            n[dIdx].workout_blocks[bIdx].description = val
-                                          }
+                                          const n = [...prev]
+                                          const dIdx = n.findIndex(d => d.id === day.id)
+                                          if (dIdx === -1) return prev
+                                          const nextBlocks = [...n[dIdx].workout_blocks]
+                                          const bIdx = nextBlocks.findIndex(b => b.id === block.id)
+                                          if (bIdx === -1) return prev
+                                          nextBlocks[bIdx] = { ...nextBlocks[bIdx], description: val }
+                                          n[dIdx] = { ...n[dIdx], workout_blocks: nextBlocks }
                                           return n
                                         })
                                       }}
@@ -904,6 +917,8 @@ export function BuilderClient({
                       <Plus className="w-3 h-3 mr-2" /> Añadir Bloque
                     </Button>
                   </div>
+                )
+              })}
                 )
               })}
               
