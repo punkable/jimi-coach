@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { 
-  PlayCircle, Calendar, ChevronRight, CheckCircle2
+  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
