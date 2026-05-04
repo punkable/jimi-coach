@@ -222,7 +222,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               className={`rounded-full w-9 h-9 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
               onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
             >
-              {activeTab === 'tools' ? <X className="w-4 h-4" /> : <Timer className="w-4 h-4" />}
+              {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
             </Button>
           </div>
         </div>
