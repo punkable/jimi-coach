@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Activity, Plus, Dumbbell, TrendingUp, Calendar, ChevronRight, Video } from 'lucide-react'
+import { Users, Activity, Plus, Dumbbell, TrendingUp, Calendar, ChevronRight, Video, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { DashboardCharts } from './dashboard-charts'
