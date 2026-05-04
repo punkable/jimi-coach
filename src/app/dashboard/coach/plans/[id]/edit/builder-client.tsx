@@ -695,9 +695,9 @@ export function BuilderClient({
                                                   className="w-full text-left px-3 py-2.5 text-[10px] font-bold hover:bg-primary/10 rounded-xl transition-all flex items-center justify-between group"
                                                   onClick={() => {
                                                     const tagName = `[${ex.name}]`
-                                                    updateDays(prev => {
-                                                      const n = JSON.parse(JSON.stringify(prev))
-                                                      const dIdx = n.findIndex(d => d.id === day.id)
+                                                    updateDays((prev: Day[]) => {
+                                                      const n: Day[] = JSON.parse(JSON.stringify(prev))
+                                                      const dIdx = n.findIndex((d: Day) => d.id === day.id)
                                                       if (dIdx !== -1) {
                                                         const currentDesc = n[dIdx].workout_blocks[bIdx].description || ''
                                                         n[dIdx].workout_blocks[bIdx].description = currentDesc + (currentDesc ? ' ' : '') + tagName
@@ -705,27 +705,26 @@ export function BuilderClient({
                                                       return n
                                                     })
                                                     setOpenPopoverId(null)
-                                                    // Automatically enable editing if it wasn't
                                                     setEditingBlocks(prev => ({ ...prev, [block.id]: true }))
                                                   }}
-                                                  >
-                                                    <div className="flex flex-col">
-                                                      <span className="uppercase tracking-tight">{ex.name}</span>
-                                                      <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
-                                                    </div>
-                                                    <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                      <Plus className="w-3.5 h-3.5 text-primary" />
-                                                    </div>
-                                                  </button>
-                                                ))}
-                                              </div>
-                                            </ScrollArea>
-                                          </PopoverContent>
-                                        </Popover>
-                                      )}
+                                                >
+                                                  <div className="flex flex-col">
+                                                    <span className="uppercase tracking-tight">{ex.name}</span>
+                                                    <span className="text-[8px] opacity-40 font-black">{ex.category}</span>
+                                                  </div>
+                                                  <div className="w-6 h-6 rounded-lg bg-primary/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Plus className="w-3.5 h-3.5 text-primary" />
+                                                  </div>
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </ScrollArea>
+                                        </PopoverContent>
+                                      </Popover>
+                                    )}
                                   </div>
                                 </div>
-  
+
                                 {(editingBlocks[block.id] || !block.description) ? (
                                   <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                                     <Textarea 
@@ -737,9 +736,9 @@ export function BuilderClient({
                                       value={block.description || ''}
                                       onChange={(e) => {
                                         const val = e.target.value
-                                        updateDays(prev => {
-                                          const n = JSON.parse(JSON.stringify(prev))
-                                          const dIdx = n.findIndex(d => d.id === day.id)
+                                        updateDays((prev: Day[]) => {
+                                          const n: Day[] = JSON.parse(JSON.stringify(prev))
+                                          const dIdx = n.findIndex((d: Day) => d.id === day.id)
                                           if (dIdx !== -1) {
                                             n[dIdx].workout_blocks[bIdx].description = val
                                           }
@@ -781,7 +780,7 @@ export function BuilderClient({
                                     </div>
                                   </div>
                                 )}
-  
+
                                 <p className="text-[8px] text-muted-foreground/40 font-medium italic px-1">
                                   El alumno verá un icono de video <Video className="w-2 h-2 inline" /> junto a los nombres de ejercicios vinculados.
                                 </p>
