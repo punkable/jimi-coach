@@ -3,8 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Crown, Plus, Trash2, CreditCard, Users, CheckCircle2 } from 'lucide-react'
-import { createMembership, deleteMembership } from './actions'
+import { Crown, Plus, Trash2, CreditCard } from 'lucide-react'
+import { createMembership, deleteMembership, updateMembership } from './actions'
 
 export default async function MembershipsPage() {
   const supabase = await createClient()
@@ -76,15 +76,41 @@ export default async function MembershipsPage() {
                       </form>
                     </div>
                     <CardTitle className="text-xl font-black uppercase tracking-tight mt-4">{m.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground font-medium h-8 line-clamp-2">{m.description}</p>
+                    <p className="text-xs text-muted-foreground font-medium min-h-8 line-clamp-2">{m.description}</p>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex flex-col gap-3 mt-2">
+                    <div className="flex flex-col gap-3 mt-2 mb-5">
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground flex items-center gap-2"><CreditCard className="w-3 h-3"/> Valor</span>
                         <span className="font-black text-primary">${Number(m.price).toLocaleString()}</span>
                       </div>
                     </div>
+                    <form action={updateMembership.bind(null, m.id)} className="space-y-3 border-t border-border/20 pt-4">
+                      <div className="grid grid-cols-1 gap-2">
+                        <Input
+                          name="name"
+                          defaultValue={m.name}
+                          aria-label="Nombre del plan"
+                          className="h-9 bg-secondary/30 rounded-xl text-xs font-bold"
+                        />
+                        <Textarea
+                          name="description"
+                          defaultValue={m.description || ''}
+                          aria-label="Descripción del plan"
+                          className="bg-secondary/30 rounded-xl resize-none min-h-16 text-xs"
+                        />
+                        <Input
+                          name="price"
+                          type="number"
+                          defaultValue={m.price || 0}
+                          aria-label="Precio del plan"
+                          className="h-9 bg-secondary/30 rounded-xl text-xs font-bold"
+                        />
+                      </div>
+                      <Button type="submit" variant="outline" className="w-full h-9 rounded-xl text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/10">
+                        Guardar Cambios
+                      </Button>
+                    </form>
                   </CardContent>
                 </Card>
               ))

@@ -9,21 +9,42 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 export default async function AthletesPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id)
+    .single()
 
-  // Fetch athletes and their plans
-  const { data: athletes } = await supabase
+  let athleteQuery = supabase
     .from('profiles')
     .select('*, assigned_plans!assigned_plans_athlete_id_fkey(created_at, workout_plans(title))')
     .eq('role', 'athlete')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
+  if (profile?.role === 'coach') {
+    const { data: relationships } = await supabase
+      .from('coach_athletes')
+      .select('athlete_id')
+      .eq('coach_id', user?.id)
+
+    const athleteIds = relationships?.map((relationship) => relationship.athlete_id) || []
+    athleteQuery = athleteIds.length > 0
+      ? athleteQuery.in('id', athleteIds)
+      : athleteQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const { data: athletes } = await athleteQuery
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Alumnos</h1>
-          <p className="text-muted-foreground mt-1">Gestiona los atletas de tu academia.</p>
+          <h1 className="text-3xl font-bold tracking-tight">{profile?.role === 'admin' ? 'Usuarios' : 'Alumnos'}</h1>
+          <p className="text-muted-foreground mt-1">
+            {profile?.role === 'admin' ? 'Gestiona usuarios y relaciones de coaches.' : 'Gestiona los atletas de tu academia.'}
+          </p>
         </div>
         <Link href="/dashboard/coach/athletes/new">
           <Button className="gap-2">

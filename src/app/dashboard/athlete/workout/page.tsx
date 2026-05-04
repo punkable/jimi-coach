@@ -113,7 +113,7 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
     })
   })
 
-  let prs: Record<string, { weight: number, reps: number }> = {}
+  const prs: Record<string, { weight: number, reps: number }> = {}
   if (exerciseIds.length > 0) {
     const { data: pastSets } = await supabase
       .from('workout_set_results')

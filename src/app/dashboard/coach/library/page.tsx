@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Video, PlaySquare, Archive, Edit } from 'lucide-react'
+import { Plus, Archive, Edit } from 'lucide-react'
 import Link from 'next/link'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { archiveExercise } from './actions'
+import { ExerciseVideoPreview } from '@/components/exercise-video-preview'
 
 export default async function LibraryPage() {
   const supabase = await createClient()
@@ -50,17 +51,9 @@ export default async function LibraryPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="mt-auto pt-4 flex gap-2">
-                {ex.video_url ? (
-                  <a href={ex.video_url} target="_blank" rel="noreferrer" className="flex-1">
-                    <Button variant="default" className="w-full gap-2" size="sm">
-                      <PlaySquare className="w-4 h-4" /> Video
-                    </Button>
-                  </a>
-                ) : (
-                  <Button variant="secondary" className="flex-1 opacity-50 cursor-not-allowed" size="sm" disabled>
-                    <Video className="w-4 h-4 mr-2" /> Sin video
-                  </Button>
-                )}
+                <div className="flex-1">
+                  <ExerciseVideoPreview url={ex.video_url} name={ex.name} />
+                </div>
                 <Link href={`/dashboard/coach/library/${ex.id}/edit`}>
                   <Button variant="outline" size="icon" className="shrink-0">
                     <Edit className="w-4 h-4" />

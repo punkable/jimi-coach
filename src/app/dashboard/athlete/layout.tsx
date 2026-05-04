@@ -3,11 +3,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Home, TrendingUp, User, Users, LogOut } from 'lucide-react'
+import { BookOpen, Calculator, Home, TrendingUp, User, LogOut } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
 const navItems = [
   { href: '/dashboard/athlete', icon: Home, label: 'Hoy', exact: true },
+  { href: '/dashboard/athlete/tools', icon: Calculator, label: 'Tools', exact: false },
+  { href: '/dashboard/athlete/library', icon: BookOpen, label: 'Biblioteca', exact: false },
   { href: '/dashboard/athlete/progress', icon: TrendingUp, label: 'Progreso', exact: false },
   { href: '/dashboard/athlete/profile', icon: User, label: 'Perfil', exact: false },
 ]
@@ -79,7 +81,7 @@ export default function AthleteLayout({ children }: { children: React.ReactNode 
                 <Link
                   key={href}
                   href={href}
-                  className={`flex flex-col items-center justify-center gap-1.5 px-3 py-2 transition-all duration-500 min-w-[70px] relative ${
+                  className={`flex flex-col items-center justify-center gap-1.5 px-2 py-2 transition-all duration-500 min-w-[58px] relative ${
                     isActive ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >

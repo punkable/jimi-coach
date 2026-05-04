@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { UserPlus, Users, Mail, Shield, Trash2, ChevronRight, CheckCircle2 } from 'lucide-react'
-import { registerCoach } from './actions'
+import { UserPlus, Users, Shield, Trash2, ChevronRight, CheckCircle2 } from 'lucide-react'
+import { assignAthleteToCoach, deleteCoach, registerCoach } from './actions'
 
 export default async function StaffPage(props: { searchParams: Promise<{ success?: string }> }) {
   const searchParams = await props.searchParams
@@ -26,7 +26,15 @@ export default async function StaffPage(props: { searchParams: Promise<{ success
     .from('profiles')
     .select('*')
     .eq('role', 'coach')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
+
+  const { data: athletes } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, managed_by')
+    .eq('role', 'athlete')
+    .is('deleted_at', null)
+    .order('full_name', { ascending: true })
 
   return (
     <div className="p-6 md:p-8 space-y-8 max-w-5xl mx-auto">
@@ -93,9 +101,11 @@ export default async function StaffPage(props: { searchParams: Promise<{ success
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <form action={deleteCoach.bind(null, coach.id)}>
+                        <Button variant="ghost" size="icon" type="submit" className="text-muted-foreground hover:text-destructive" aria-label={`Eliminar coach ${coach.full_name || coach.email}`}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </form>
                       <ChevronRight className="w-4 h-4 text-muted-foreground/20" />
                     </div>
                   </div>
@@ -110,6 +120,37 @@ export default async function StaffPage(props: { searchParams: Promise<{ success
           </CardContent>
         </Card>
       </div>
+
+      <Card className="glass border-primary/10">
+        <CardHeader>
+          <CardTitle className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" /> Asignar Alumnos
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form action={assignAthleteToCoach} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-3">
+            <select name="athleteId" required className="h-11 rounded-xl bg-secondary/30 border border-border px-3 text-sm font-bold">
+              <option value="">Seleccionar alumno</option>
+              {athletes?.map((athlete) => (
+                <option key={athlete.id} value={athlete.id}>
+                  {athlete.full_name || athlete.email}
+                </option>
+              ))}
+            </select>
+            <select name="coachId" required className="h-11 rounded-xl bg-secondary/30 border border-border px-3 text-sm font-bold">
+              <option value="">Asignar coach</option>
+              {coaches?.map((coach) => (
+                <option key={coach.id} value={coach.id}>
+                  {coach.full_name || coach.email}
+                </option>
+              ))}
+            </select>
+            <Button type="submit" className="h-11 rounded-xl font-black uppercase tracking-widest text-xs">
+              Guardar
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

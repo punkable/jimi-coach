@@ -8,6 +8,12 @@ import SubscriptionManager from './subscription-manager'
 export default async function AthleteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: viewer } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id)
+    .single()
 
   // Fetch athlete profile
   const { data: profile } = await supabase
@@ -23,12 +29,17 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
     .is('deleted_at', null)
     .order('name', { ascending: true })
 
-  // Fetch all workout plans
-  const { data: plans } = await supabase
+  let plansQuery = supabase
     .from('workout_plans')
     .select('id, title')
     .is('is_archived', false)
     .order('title', { ascending: true })
+
+  if (viewer?.role === 'coach') {
+    plansQuery = plansQuery.eq('created_by', user?.id)
+  }
+
+  const { data: plans } = await plansQuery
 
   // Fetch their current plan assignment
   const { data: assignment } = await supabase

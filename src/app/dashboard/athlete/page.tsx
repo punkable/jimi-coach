@@ -92,7 +92,7 @@ export default async function AthleteDashboard() {
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString().split('T')[0]
     if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      let checkDate = new Date(uniqueDates[0])
+      const checkDate = new Date(uniqueDates[0])
       currentStreak = 1
       for (let i = 1; i < uniqueDates.length; i++) {
         checkDate.setDate(checkDate.getDate() - 1)
@@ -140,18 +140,15 @@ export default async function AthleteDashboard() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[radial-gradient(circle_at_50%_0%,rgba(204,255,0,0.05)_0%,transparent_70%)] pointer-events-none" />
 
       {/* ── Hero Header ── */}
-      <div className="relative pt-12 pb-10 md:pt-20 md:pb-16 px-10 md:px-16 overflow-hidden rounded-[40px] mb-10 bg-white/[0.02] border border-white/5 backdrop-blur-3xl shadow-[0_30px_100px_rgba(0,0,0,0.4)]">
+      <div className="relative pt-10 pb-8 md:pt-20 md:pb-16 px-5 sm:px-8 md:px-16 overflow-hidden rounded-[28px] md:rounded-[40px] mb-8 md:mb-10 bg-white/[0.02] border border-white/5 backdrop-blur-3xl shadow-[0_30px_100px_rgba(0,0,0,0.4)]">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent pointer-events-none" />
         <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/10 blur-[120px] rounded-full pointer-events-none" />
         
-        <div className="relative flex items-center justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-primary mb-4">
+        <div className="relative flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 text-primary mb-4 min-w-0">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            <div className="flex items-center gap-2 text-primary mb-4">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-[0.4em]">Plan Actual: {plan?.title || 'Personalizado'}</span>
-            </div>
+              <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.24em] sm:tracking-[0.4em] truncate">Plan Actual: {plan?.title || 'Personalizado'}</span>
             </div>
             <AthleteGreeting name={firstName} />
             <div className="mt-6 flex flex-wrap gap-3">
@@ -172,7 +169,7 @@ export default async function AthleteDashboard() {
             </div>
           </div>
           
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 sm:gap-6 shrink-0">
             <div className="relative group">
               <div className="absolute inset-0 bg-primary/20 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
               <div className="relative transform hover:scale-110 transition-transform duration-700">
@@ -272,13 +269,13 @@ export default async function AthleteDashboard() {
           </div>
 
           <section className="glass rounded-3xl p-6 md:p-8 bg-primary/5 border-primary/20">
-            <h3 className="text-lg font-black uppercase tracking-tight mb-4">Ayuda Técnica</h3>
+            <h3 className="text-lg font-black uppercase tracking-tight mb-4">Biblioteca</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-6">
-              ¿Tienes dudas con un movimiento? Graba tu técnica y súbela en el WOD para que tu coach la revise.
+              Revisa videos y claves de movimiento. Si necesitas corrección, sube tu video al finalizar el WOD.
             </p>
-            <Link href="/dashboard/athlete/profile">
+            <Link href="/dashboard/athlete/library">
               <Button variant="outline" className="w-full h-12 rounded-xl text-xs font-bold uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/10">
-                Ver Mi Perfil
+                Abrir Biblioteca
               </Button>
             </Link>
           </section>

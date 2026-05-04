@@ -10,17 +10,43 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/comp
 
 export default async function PlansPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user?.id)
+    .single()
 
-  const { data: plans } = await supabase
+  let plansQuery = supabase
     .from('workout_plans')
     .select('*')
     .is('is_archived', false)
     .order('created_at', { ascending: false })
 
-  const { data: athletes } = await supabase
+  if (profile?.role === 'coach') {
+    plansQuery = plansQuery.eq('created_by', user?.id)
+  }
+
+  const { data: plans } = await plansQuery
+
+  let athletesQuery = supabase
     .from('profiles')
     .select('id, full_name, email')
     .eq('role', 'athlete')
+
+  if (profile?.role === 'coach') {
+    const { data: relationships } = await supabase
+      .from('coach_athletes')
+      .select('athlete_id')
+      .eq('coach_id', user?.id)
+
+    const athleteIds = relationships?.map((relationship) => relationship.athlete_id) || []
+    athletesQuery = athleteIds.length > 0
+      ? athletesQuery.in('id', athleteIds)
+      : athletesQuery.eq('id', '00000000-0000-0000-0000-000000000000')
+  }
+
+  const { data: athletes } = await athletesQuery
 
   return (
     <div className="p-4 md:p-8 space-y-6">

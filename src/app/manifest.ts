@@ -8,15 +8,15 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     display: 'standalone',
     background_color: '#000000',
-    theme_color: '#8A0000', // Un rojo vibrante por defecto basado en los colores dark
+    theme_color: '#0f110a',
     icons: [
       {
-        src: '/images/isotipo.png',
+        src: '/icon.png',
         sizes: '192x192',
         type: 'image/png',
       },
       {
-        src: '/images/isotipo.png',
+        src: '/icon.png',
         sizes: '512x512',
         type: 'image/png',
       },

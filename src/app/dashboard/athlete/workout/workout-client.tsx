@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer as TimerIcon, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Timer as TimerIcon, X, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -14,6 +14,64 @@ import { Battery, Brain, Activity } from 'lucide-react'
 import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 import { CrossFitTimer, TimerType } from './crossfit-timer'
+
+function buildWorkoutSignature(day: any) {
+  return JSON.stringify({
+    id: day?.id,
+    blocks: day?.workout_blocks?.map((block: any) => ({
+      id: block.id,
+      name: block.name,
+      type: block.type,
+      description: block.description || '',
+      timer_type: block.timer_type || null,
+      timer_config: block.timer_config || {},
+      movements: block.workout_movements?.map((mov: any) => ({
+        id: mov.id,
+        exercise_id: mov.exercises?.id || mov.exercise_id,
+        sets: mov.sets,
+        reps: mov.reps,
+        weight_percentage: mov.weight_percentage,
+        rest: mov.rest,
+        notes: mov.notes,
+        tracking_type: mov.exercises?.tracking_type,
+      })) || [],
+    })) || [],
+  })
+}
+
+function reconcileSavedProgress(day: any, savedSets: Record<string, WorkoutSet[]> = {}, savedBlocks: Record<string, boolean> = {}) {
+  const currentMovementIds = new Set<string>()
+  const compatibleSets: Record<string, WorkoutSet[]> = {}
+  const compatibleBlocks: Record<string, boolean> = {}
+
+  day?.workout_blocks?.forEach((block: any) => {
+    block.workout_movements?.forEach((mov: any) => {
+      currentMovementIds.add(mov.id)
+    })
+  })
+
+  Object.entries(savedSets).forEach(([movementId, sets]) => {
+    if (currentMovementIds.has(movementId)) {
+      compatibleSets[movementId] = sets
+    }
+  })
+
+  day?.workout_blocks?.forEach((block: any) => {
+    const trackedMovements = block.workout_movements?.filter((mov: any) => (mov.sets || 0) > 0) || []
+
+    if (trackedMovements.length === 0) {
+      compatibleBlocks[block.id] = !!savedBlocks[block.id]
+      return
+    }
+
+    compatibleBlocks[block.id] = trackedMovements.every((mov: any) => {
+      const sets = compatibleSets[mov.id]
+      return sets?.length > 0 && sets.every((set) => set.is_completed)
+    })
+  })
+
+  return { compatibleSets, compatibleBlocks }
+}
 
 export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[] }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
@@ -38,28 +96,39 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
   // ── Persist workout progress to localStorage ──────────────────────────────
   const [isLoaded, setIsLoaded] = useState(false)
+  const [resumedSession, setResumedSession] = useState(false)
+  const [updatedSavedSession, setUpdatedSavedSession] = useState(false)
   const storageKey = `wod-progress-${day?.id}`
+  const workoutSignature = useMemo(() => buildWorkoutSignature(day), [day])
   
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
-        const { sets, blocks, timestamp } = JSON.parse(saved)
+        const { sets, blocks, timestamp, signature } = JSON.parse(saved)
         // Only resume if it's from today
         const isToday = new Date(timestamp).toDateString() === new Date().toDateString()
-        if (isToday) {
+        const matchesCurrentWorkout = signature === workoutSignature
+        if (isToday && matchesCurrentWorkout) {
           if (sets) setAllSetsData(sets)
           if (blocks) setCompletedBlocks(blocks)
+          setResumedSession(true)
+        } else if (isToday) {
+          const { compatibleSets, compatibleBlocks } = reconcileSavedProgress(day, sets, blocks)
+          setAllSetsData(compatibleSets)
+          setCompletedBlocks(compatibleBlocks)
+          setUpdatedSavedSession(true)
         } else {
           localStorage.removeItem(storageKey)
         }
       }
     } catch (e) {
       console.error('Error loading progress:', e)
+      localStorage.removeItem(storageKey)
     } finally {
       setIsLoaded(true)
     }
-  }, [storageKey])
+  }, [day, storageKey, workoutSignature])
 
   useEffect(() => {
     if (!day?.id || !isLoaded) return
@@ -67,12 +136,13 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
       localStorage.setItem(storageKey, JSON.stringify({ 
         sets: allSetsData, 
         blocks: completedBlocks,
+        signature: workoutSignature,
         timestamp: new Date().toISOString()
       }))
     } catch (e) {
       console.error('Error saving progress:', e)
     }
-  }, [allSetsData, completedBlocks, storageKey, isLoaded])
+  }, [allSetsData, completedBlocks, storageKey, workoutSignature, isLoaded])
   // ─────────────────────────────────────────────────────────────────────────
 
   // Timer Tick
@@ -191,30 +261,27 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               <p className="text-white/40 text-xs">Video no disponible</p>
             )}
           </div>
-          <div className="p-4 bg-secondary/20">
-            <Button className="w-full" onClick={() => setActiveVideo(null)}>Cerrar</Button>
-          </div>
         </DialogContent>
       </Dialog>
 
       {/* Header — pt-safe ensures notch/dynamic-island doesn't overlap */}
       <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl border-b border-border/30"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-2 px-3 sm:px-4 min-h-14 py-2">
+          <div className="flex items-center gap-2 min-w-0">
             <Link href="/dashboard/athlete">
-              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 -ml-1">
+              <Button variant="ghost" size="icon" className="rounded-full w-9 h-9 -ml-1 shrink-0" aria-label="Volver al inicio">
                 <ArrowLeft className="w-4.5 h-4.5" />
               </Button>
             </Link>
-            <div>
-              <h1 className="text-sm font-black tracking-tight leading-none uppercase">{day.name || day.title || 'WOD'}</h1>
-              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
+            <div className="min-w-0">
+              <h1 className="text-[13px] sm:text-sm font-black tracking-tight leading-tight uppercase truncate max-w-[52vw] sm:max-w-[18rem]">{day.name || day.title || 'WOD'}</h1>
+              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate">
                 {day.workout_blocks?.length ?? 0} bloques · {day.workout_blocks?.reduce((a: number, b: any) => a + (b.workout_movements?.length ?? 0), 0) ?? 0} ejercicios
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
             <Button
               variant="ghost"
               size="icon"
@@ -226,6 +293,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 }
               }}
               title="Reiniciar Sesión"
+              aria-label="Reiniciar sesión"
             >
               <RotateCcw className="w-4 h-4" />
             </Button>
@@ -234,6 +302,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
               size="icon"
               className={`rounded-full w-9 h-9 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
               onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
+              aria-label={activeTab === 'tools' ? 'Cerrar herramientas' : 'Abrir herramientas'}
             >
               {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
             </Button>
@@ -257,6 +326,16 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
       {/* Main Content Area — pb-36 leaves room for finish button + home indicator */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6" style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
+        {resumedSession && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/10 px-4 py-3 text-[11px] font-black uppercase tracking-widest text-primary">
+            Sesión reanudada automáticamente con progreso guardado de hoy.
+          </div>
+        )}
+        {updatedSavedSession && (
+          <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-[11px] font-bold leading-relaxed text-amber-200">
+            La rutina fue actualizada por tu coach. Conservamos tus series compatibles y ajustamos el progreso a la versión vigente.
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {activeTab === 'tools' ? (
             <motion.div 
@@ -318,11 +397,11 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                     }`}
                   >
                     {/* Block header */}
-                    <div className={`flex items-center justify-between px-4 py-4 border-b border-border/10 ${isCompleted ? 'bg-primary/5' : ''}`}>
-                      <div className="flex items-center gap-3">
+                    <div className={`flex items-center justify-between gap-3 px-4 py-4 border-b border-border/10 ${isCompleted ? 'bg-primary/5' : ''}`}>
+                      <div className="flex items-center gap-3 min-w-0">
                         <button
                           onClick={() => toggleBlock(block.id)}
-                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                          className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${
                             isCompleted 
                               ? 'bg-primary text-primary-foreground shadow-lg' 
                               : `${iconBg} border border-border/10`
@@ -339,7 +418,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 ml-4">
+                      <div className="flex items-center gap-2 shrink-0">
                         {block.timer_type && !isCompleted && (
                           <Button
                             variant="outline"
@@ -754,5 +833,3 @@ function ReadinessSlider({ label, value, onChange, icon: Icon, labels }: { label
     </div>
   )
 }
-
-

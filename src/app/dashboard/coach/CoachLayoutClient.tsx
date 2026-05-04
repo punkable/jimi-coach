@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Users, Library, Calendar, LayoutDashboard, Settings, LogOut, Video, Crown, HelpCircle, Target, Activity, ShieldCheck } from 'lucide-react'
+import { Users, Library, Calendar, LayoutDashboard, Settings, LogOut, Video, Crown, HelpCircle, Target, Activity, ShieldCheck, Calculator } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { NotificationsBell } from '@/components/notifications-bell'
 import { Button } from '@/components/ui/button'
@@ -23,8 +23,9 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
         </div>
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <NavItem href="/dashboard/coach" icon={LayoutDashboard} label="Dashboard" pathname={pathname} />
-          <NavItem href="/dashboard/coach/athletes" icon={Users} label="Alumnos" pathname={pathname} />
+          <NavItem href="/dashboard/coach/athletes" icon={Users} label={isAdmin ? 'Usuarios' : 'Alumnos'} pathname={pathname} />
           <NavItem href="/dashboard/coach/plans" icon={Calendar} label="Planificaciones" pathname={pathname} />
+          <NavItem href="/dashboard/coach/tools" icon={Calculator} label="Tools" pathname={pathname} />
           <NavItem href="/dashboard/coach/insights" icon={Target} label="Insights" pathname={pathname} />
           <NavItem href="/dashboard/coach/library" icon={Library} label="Biblioteca" pathname={pathname} />
           <NavItem href="/dashboard/coach/memberships" icon={Crown} label="Modalidades" pathname={pathname} />
@@ -73,7 +74,8 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
       {/* Mobile Bottom Nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 h-nav-safe border-t border-border/30 bg-background/90 backdrop-blur-xl px-1 flex items-center justify-around z-50 pb-safe">
         <MobileNavItem href="/dashboard/coach" icon={LayoutDashboard} label="Inicio" pathname={pathname} />
-        <MobileNavItem href="/dashboard/coach/athletes" icon={Users} label="Alumnos" pathname={pathname} />
+        <MobileNavItem href="/dashboard/coach/athletes" icon={Users} label={isAdmin ? 'Usuarios' : 'Alumnos'} pathname={pathname} />
+        <MobileNavItem href="/dashboard/coach/tools" icon={Calculator} label="Tools" pathname={pathname} />
         <MobileNavItem href="/dashboard/coach/feed" icon={Activity} label="Feed" pathname={pathname} />
         <MobileNavItem href="/dashboard/coach/plans" icon={Calendar} label="Planes" pathname={pathname} />
         {isAdmin && <MobileNavItem href="/dashboard/coach/staff" icon={ShieldCheck} label="Staff" pathname={pathname} />}
@@ -103,7 +105,7 @@ function MobileNavItem({ href, icon: Icon, label, pathname }: { href: string, ic
   const isActive = pathname === href || (href !== '/dashboard/coach' && pathname.startsWith(href))
   
   return (
-    <Link href={href} className={`flex flex-col items-center justify-center gap-1.5 min-w-[64px] py-2 transition-all duration-500 relative ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
+    <Link href={href} className={`flex flex-col items-center justify-center gap-1.5 min-w-[54px] py-2 transition-all duration-500 relative ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
       {isActive && (
         <div className="absolute -top-1 w-12 h-1 bg-primary rounded-full shadow-[0_0_15px_rgba(204,255,0,0.8)]" />
       )}

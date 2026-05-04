@@ -28,7 +28,7 @@ export default async function AthleteProfilePage() {
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString().split('T')[0]
     if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      let checkDate = new Date(uniqueDates[0])
+      const checkDate = new Date(uniqueDates[0])
       currentStreak = 1
       for (let i = 1; i < uniqueDates.length; i++) {
         checkDate.setDate(checkDate.getDate() - 1)
