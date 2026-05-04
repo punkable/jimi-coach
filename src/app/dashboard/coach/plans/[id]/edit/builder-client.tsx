@@ -383,47 +383,65 @@ export function BuilderClient({
       <div className="flex h-full gap-6 overflow-hidden">
         
         {/* ── Sidebar: Library ── */}
-        <aside className="w-85 flex flex-col gap-4 bg-[#111111] border-r border-white/5 p-5 shrink-0 shadow-2xl relative z-20">
+        <aside className="w-96 flex flex-col gap-6 bg-[#0a0a0a] border-r border-white/5 p-6 shrink-0 shadow-2xl relative z-20">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
           
-          <div className="relative z-10 pb-4 border-b border-white/5">
-            <Button 
-              onClick={handleSave} 
-              disabled={isSaving} 
-              className={`w-full gap-2 font-black uppercase tracking-widest text-[10px] h-12 rounded-2xl transition-all relative ${
-                hasUnsavedChanges 
-                  ? 'bg-white text-black hover:bg-white/90 shadow-xl shadow-white/5 ring-2 ring-primary ring-offset-4 ring-offset-background' 
-                  : 'bg-muted hover:bg-muted/80 text-muted-foreground shadow-none'
-              }`}
-            >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-4 h-4" />}
-              {isSaving ? 'Guardando...' : 'Guardar Planificación'}
-              {hasUnsavedChanges && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full border-4 border-background animate-pulse" />}
-            </Button>
+          <div className="relative z-10 space-y-6">
+            <div className="pb-6 border-b border-white/5">
+              <Button 
+                onClick={handleSave} 
+                disabled={isSaving} 
+                className={`w-full gap-3 font-black uppercase tracking-[0.2em] text-[10px] h-16 rounded-[24px] transition-all relative ${
+                  hasUnsavedChanges 
+                    ? 'bg-white text-black hover:bg-white/90 shadow-[0_20px_50px_rgba(255,255,255,0.1)] ring-2 ring-primary ring-offset-4 ring-offset-black' 
+                    : 'bg-white/5 hover:bg-white/10 text-white/40 shadow-none border border-white/5'
+                }`}
+              >
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
+                {isSaving ? 'Guardando...' : 'Guardar Planificación'}
+                {hasUnsavedChanges && (
+                  <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-black"></span>
+                  </div>
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Dumbbell className="w-3.5 h-3.5" /> Biblioteca de Ejercicios
+                </h3>
+                <Badge variant="outline" className="text-[8px] font-black border-white/10 text-white/30">{library.length} ITEMS</Badge>
+              </div>
+              <p className="text-[10px] text-white/30 font-medium leading-relaxed">
+                Arrastra ejercicios a los bloques para construir tu rutina.
+              </p>
+            </div>
+            
+            <div className="relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-primary transition-colors" />
+              <Input 
+                placeholder="Buscar movimiento..." 
+                className="h-12 text-xs bg-white/5 border-white/10 pl-11 rounded-2xl focus:border-primary/50 transition-all placeholder:text-white/10"
+                value={libSearch}
+                onChange={(e) => setLibSearch(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="space-y-1">
-            <h3 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-              <Dumbbell className="w-3 h-3" /> Biblioteca
-            </h3>
-            <p className="text-[10px] text-muted-foreground font-medium">Arrastra al bloque deseado.</p>
-          </div>
-          
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/30" />
-            <Input 
-              placeholder="Buscar ejercicio..." 
-              className="h-9 text-xs bg-background/50 border-border/20 pl-9 rounded-xl"
-              value={libSearch}
-              onChange={(e) => setLibSearch(e.target.value)}
-            />
-          </div>
-
-          <ScrollArea className="flex-1 -mr-2 pr-2">
-            <div className="space-y-1">
+          <ScrollArea className="flex-1 -mr-4 pr-4">
+            <div className="space-y-2 pb-10">
               {filteredLibrary.map(ex => (
                 <DraggableExercise key={ex.id} exercise={ex} />
               ))}
+              {filteredLibrary.length === 0 && (
+                <div className="py-20 text-center space-y-3 opacity-20">
+                  <Search className="w-10 h-10 mx-auto" />
+                  <p className="text-[10px] font-black uppercase tracking-widest">No se encontraron resultados</p>
+                </div>
+              )}
             </div>
           </ScrollArea>
         </aside>
@@ -436,54 +454,60 @@ export function BuilderClient({
             <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full -z-10 group-hover:bg-primary/10 transition-colors duration-700" />
             
             <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-                <Layout className="w-7 h-7 text-primary" />
+              <div className="w-16 h-16 rounded-[24px] bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 shadow-[0_0_30px_rgba(var(--primary),0.1)]">
+                <Layout className="w-8 h-8 text-primary" />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-4 mb-1">
-                  <Input 
-                    className="text-xl font-black uppercase tracking-tight bg-transparent border-none p-0 h-auto focus-visible:ring-0 placeholder:opacity-20"
-                    value={planMeta.title}
-                    placeholder="NOMBRE DEL PLAN..."
-                    onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
-                  />
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary/30 rounded-full border border-border/20">
+              <div className="flex-1 space-y-4 w-full">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1.5 flex-1 group/title relative">
+                    <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/60">Título del Programa</Label>
+                    <Input 
+                      className="bg-black/40 border-white/10 hover:border-primary/40 focus:border-primary h-12 rounded-xl text-xl font-black tracking-tight transition-all placeholder:text-white/5 shadow-inner"
+                      value={planMeta.title}
+                      placeholder="Ej: Programa de Fuerza Pro..."
+                      onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
+                    />
+                  </div>
+                  <div className="flex items-center gap-3 bg-black/40 p-3 rounded-2xl border border-white/10 self-start md:self-auto">
                     <Switch 
                       id="community-mode" 
                       checked={planMeta.is_community_enabled}
                       onCheckedChange={(checked) => setPlanMeta({...planMeta, is_community_enabled: checked})}
                     />
                     <Label htmlFor="community-mode" className="text-[9px] font-black uppercase tracking-widest cursor-pointer select-none">
-                      Comunidad {planMeta.is_community_enabled ? 'ON' : 'OFF'}
+                      Feed Comunitario {planMeta.is_community_enabled ? 'ON' : 'OFF'}
                     </Label>
                   </div>
                 </div>
-                <Input 
-                  className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 text-muted-foreground text-sm font-medium placeholder:opacity-20"
-                  value={planMeta.description}
-                  placeholder="Añade una descripción corta del programa..."
-                  onChange={(e) => setPlanMeta({...planMeta, description: e.target.value})}
-                />
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Descripción y Objetivos</Label>
+                  <Input 
+                    className="bg-black/20 border-white/5 hover:border-white/10 focus:border-primary/50 h-10 rounded-xl text-sm font-medium transition-all placeholder:text-white/5"
+                    value={planMeta.description}
+                    placeholder="Añade una descripción corta del programa..."
+                    onChange={(e) => setPlanMeta({...planMeta, description: e.target.value})}
+                  />
+                </div>
               </div>
-              <Button variant="outline" onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-10 rounded-xl px-6 border-primary/20 text-primary hover:bg-primary/5">
-                <Plus className="w-3.5 h-3.5" /> Nueva Semana
+              <Button onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-14 rounded-2xl px-8 bg-primary text-black hover:bg-primary/90 shadow-2xl shadow-primary/20 shrink-0">
+                <Plus className="w-4 h-4" /> Nueva Semana
               </Button>
             </div>
 
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full">
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between w-full pt-4 border-t border-white/5">
               <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full md:w-auto">
-                <TabsList className="bg-secondary/20 p-1 rounded-xl h-12 border border-border/10 w-full md:w-auto justify-start overflow-x-auto overflow-y-hidden">
+                <TabsList className="bg-black/40 p-1.5 rounded-2xl h-14 border border-white/10 w-full md:w-auto justify-start overflow-x-auto overflow-y-hidden shadow-inner">
                   {totalWeeks.map(w => {
                     const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
                     return (
                       <TabsTrigger 
                         key={w} 
                         value={w.toString()}
-                        className="rounded-lg font-black uppercase tracking-widest text-[10px] px-8 h-full data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all flex items-center gap-2"
+                        className="rounded-xl font-black uppercase tracking-widest text-[11px] px-10 h-full data-[state=active]:bg-primary data-[state=active]:text-black data-[state=active]:shadow-lg transition-all flex items-center gap-3"
                       >
                         Semana {w}
                         {!isWPublished && (
-                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[8px] h-4 px-1 rounded-md">Borrador</Badge>
+                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] h-5 px-2 rounded-lg font-black uppercase">Draft</Badge>
                         )}
                       </TabsTrigger>
                     )
@@ -491,29 +515,28 @@ export function BuilderClient({
                 </TabsList>
               </Tabs>
 
-              <div className="flex items-center gap-4 bg-secondary/10 p-2 rounded-2xl border border-border/5">
-                <div className="flex flex-col items-end px-2">
-                  <span className="text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground/60">Estado Semana {activeWeek}</span>
+              <div className="flex items-center gap-5 bg-black/20 p-3 rounded-[24px] border border-white/5 shadow-xl">
+                <div className="flex flex-col items-end px-3">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40">Visibilidad Semana {activeWeek}</span>
                   <span className={cn(
-                    "text-[10px] font-bold uppercase tracking-widest",
+                    "text-[11px] font-black uppercase tracking-widest mt-0.5",
                     isWeekPublished ? "text-primary" : "text-amber-500"
                   )}>
-                    {isWeekPublished ? 'Publicada (Visible)' : 'Borrador (Oculta)'}
+                    {isWeekPublished ? 'Pública para Atletas' : 'Borrador Privado'}
                   </span>
                 </div>
                 <Button 
                   onClick={handleToggleWeekPublish}
                   variant={isWeekPublished ? "outline" : "default"}
-                  size="sm"
                   className={cn(
-                    "h-10 rounded-xl px-4 font-black uppercase tracking-widest text-[9px] gap-2 transition-all",
-                    !isWeekPublished && "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20"
+                    "h-12 rounded-2xl px-6 font-black uppercase tracking-widest text-[10px] gap-3 transition-all shadow-2xl",
+                    isWeekPublished ? "border-white/10 hover:bg-white/5" : "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
                   )}
                 >
                   {isWeekPublished ? (
-                    <><EyeOff className="w-3.5 h-3.5" /> Ocultar Semana</>
+                    <><EyeOff className="w-4 h-4" /> Ocultar Semana</>
                   ) : (
-                    <><Eye className="w-3.5 h-3.5" /> Publicar Semana</>
+                    <><Eye className="w-4 h-4" /> Publicar Semana</>
                   )}
                 </Button>
               </div>
@@ -521,28 +544,31 @@ export function BuilderClient({
           </div>
 
           {/* Days Grid */}
-          <ScrollArea className="flex-1 -mr-4 pr-4 bg-[#0a0a0a]/50 p-6 rounded-[40px] border border-white/5 shadow-inner">
-            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-8 pb-12">
+          <ScrollArea className="flex-1 -mr-4 pr-4 bg-[#0a0a0a] p-8 rounded-[48px] border border-white/5 shadow-2xl overflow-hidden">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-10 pb-16">
               {currentWeekDays.map((day) => {
                 const globalDIdx = days.findIndex(d => d.id === day.id)
                 return (
-                  <div key={day.id} className="flex flex-col gap-6 bg-[#161616] rounded-[32px] p-8 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:border-primary/20 transition-all group/day relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-primary/20 group-hover/day:bg-primary transition-colors" />
+                  <div key={day.id} className="flex flex-col gap-8 bg-[#161616] rounded-[40px] p-8 border border-white/10 shadow-2xl hover:border-primary/30 transition-all group/day relative overflow-hidden ring-1 ring-white/5">
+                    <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover/day:bg-primary transition-all duration-500" />
                     
                     {/* Day Header */}
-                    <div className="flex items-center justify-between pb-6 border-b border-white/5">
-                      <div className="flex items-center gap-5 min-w-0 flex-1">
-                        <div className="px-5 py-2.5 bg-primary/10 border border-primary/20 text-primary font-black rounded-xl text-[11px] shrink-0 uppercase tracking-widest shadow-[0_0_20px_rgba(var(--primary),0.1)]">
+                    <div className="flex items-center justify-between pb-8 border-b border-white/5">
+                      <div className="flex items-center gap-6 min-w-0 flex-1">
+                        <div className="px-6 py-3 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[12px] shrink-0 uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(var(--primary),0.1)]">
                           {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
                         </div>
-                        <Input 
-                          placeholder="Añadir subtítulo (ej: Pierna, Descanso...)"
-                          className="bg-transparent border-none p-0 h-auto focus-visible:ring-0 font-bold text-sm tracking-tight truncate w-full placeholder:opacity-30"
-                          value={day.title}
-                          onChange={(e) => {
-                            const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n);
-                          }}
-                        />
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Foco del Día</Label>
+                          <Input 
+                            placeholder="Añadir enfoque (ej: Pierna, Descanso...)"
+                            className="bg-black/20 border-white/5 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full placeholder:opacity-10 rounded-xl"
+                            value={day.title}
+                            onChange={(e) => {
+                              const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n);
+                            }}
+                          />
+                        </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md" onClick={() => addBlock(day.id)}>
