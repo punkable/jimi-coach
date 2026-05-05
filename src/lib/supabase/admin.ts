@@ -14,6 +14,11 @@ export function getSupabaseAdmin() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       serviceRoleKey,
       {
+        global: {
+          headers: {
+            'User-Agent': 'ldrfit-server/1.0',
+          },
+        },
         auth: {
           persistSession: false,
           autoRefreshToken: false,
