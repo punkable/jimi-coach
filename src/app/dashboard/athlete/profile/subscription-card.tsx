@@ -1,50 +1,47 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Flame, Activity, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, ClipboardList, Activity } from 'lucide-react'
 
-export default function SubscriptionCard({ profile }: { profile: any }) {
-  const plan = profile?.subscription_plan || 'Sin plan activo'
-  const total = profile?.total_classes || 0
-  const used = profile?.classes_used || 0
-  const remaining = Math.max(0, total - used)
-  
-  const progressPercentage = total > 0 ? (used / total) * 100 : 0
-
+export default function PlanStatusCard({ assignedPlan }: { assignedPlan: { title: string; start_date?: string } | null }) {
   return (
-    <Card className="border-primary/20 bg-card/40 backdrop-blur-md shadow-xl overflow-hidden relative">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-bl-full -z-10" />
-      <CardHeader>
-        <CardTitle className="text-xl flex items-center gap-2 uppercase tracking-widest text-primary">
-          <Flame className="w-5 h-5" />
-          Tu Suscripción
-        </CardTitle>
-        <CardDescription>
-          Estado actual de tu plan de entrenamiento
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div>
-          <p className="text-sm text-muted-foreground uppercase tracking-widest font-bold mb-1">Estado</p>
-          <div className="flex items-center gap-3">
-            <div className="text-2xl font-black uppercase text-foreground">
-              {plan !== 'Sin plan activo' ? 'Activa' : 'Inactiva'}
-            </div>
-            {plan !== 'Sin plan activo' && (
-              <span className="flex h-6 items-center gap-1.5 px-3 rounded-full bg-primary/20 text-primary text-[10px] font-black uppercase tracking-widest border border-primary/20">
-                <CheckCircle2 className="w-3 h-3" /> {plan}
-              </span>
-            )}
-          </div>
+    <div className="ios-panel p-5">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <ClipboardList className="w-4 h-4 text-primary" />
         </div>
-
-        <div className="flex items-center gap-3 text-sm text-muted-foreground bg-secondary/10 p-4 rounded-2xl border border-border/10">
-          <Activity className="w-5 h-5 text-primary/50" />
-          <p className="text-xs leading-relaxed">
-            {plan !== 'Sin plan activo' 
-              ? 'Tienes acceso ilimitado a tus WODs y seguimiento de progreso.' 
-              : 'Habla con tu coach para activar tu membresía y comenzar a entrenar.'}
+        <div>
+          <p className="section-title mb-0.5">Plan de entrenamiento</p>
+          <p className="text-sm font-black uppercase tracking-tight">
+            {assignedPlan ? 'Plan activo' : 'Sin plan asignado'}
           </p>
         </div>
-      </CardContent>
-    </Card>
+        {assignedPlan && (
+          <CheckCircle2 className="w-5 h-5 text-primary ml-auto shrink-0" />
+        )}
+      </div>
+
+      {assignedPlan ? (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3 p-3 bg-primary/8 rounded-xl border border-primary/15">
+            <Activity className="w-4 h-4 text-primary shrink-0" />
+            <div>
+              <p className="font-bold text-sm">{assignedPlan.title}</p>
+              {assignedPlan.start_date && (
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  Desde {new Date(assignedPlan.start_date).toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}
+                </p>
+              )}
+            </div>
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Tu coach ha configurado este plan para ti. Entrena los días indicados y registra cada sesión.
+          </p>
+        </div>
+      ) : (
+        <div className="p-3 bg-secondary rounded-xl">
+          <p className="text-[11px] text-muted-foreground leading-relaxed">
+            Aún no tienes un plan asignado. Tu coach te asignará uno pronto. Mientras tanto, puedes explorar la biblioteca técnica.
+          </p>
+        </div>
+      )}
+    </div>
   )
 }
