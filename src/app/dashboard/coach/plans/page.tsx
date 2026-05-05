@@ -120,10 +120,11 @@ export default async function PlansPage() {
                       <AssignDialog planId={plan.id} athletes={athletes || []} />
                       <form action={async () => { 'use server'; await archivePlan(plan.id) }}>
                         <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" type="submit" className="w-9 h-9 rounded-xl text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10">
-                              <Archive className="w-4 h-4" />
-                            </Button>
+                          <TooltipTrigger
+                            type="submit"
+                            className="w-9 h-9 rounded-xl inline-flex items-center justify-center text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10 transition-all"
+                          >
+                            <Archive className="w-4 h-4" />
                           </TooltipTrigger>
                           <TooltipContent><p className="text-xs">Archivar</p></TooltipContent>
                         </Tooltip>

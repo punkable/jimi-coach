@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import {
   Users, Library, Calendar, LayoutDashboard,
   Settings, LogOut, Video, Crown, HelpCircle,
-  Target, Activity, ShieldCheck, ChevronRight,
+  Target, Activity, ShieldCheck, ChevronRight, Wrench,
 } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { NotificationsBell } from '@/components/notifications-bell'
@@ -20,6 +20,7 @@ const mainNav = [
   { href: '/dashboard/coach/memberships',icon: Crown,           label: 'Modalidades'},
   { href: '/dashboard/coach/reviews',    icon: Video,           label: 'Revisiones'},
   { href: '/dashboard/coach/feed',       icon: Activity,        label: 'Box Feed'  },
+  { href: '/dashboard/coach/tools',      icon: Wrench,          label: 'Herramientas'},
 ]
 
 const bottomNav = [

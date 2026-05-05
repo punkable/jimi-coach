@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
 import { Plus, Settings, PauseCircle, UserX, Users } from 'lucide-react'
 import Link from 'next/link'
-import { deleteAthlete, hardDeleteAthlete, toggleAthleteAccess } from './actions'
+import { hardDeleteAthlete, toggleAthleteAccess } from './actions'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 
 export default async function AthletesPage() {
@@ -114,17 +114,15 @@ export default async function AthletesPage() {
                       await toggleAthleteAccess(athlete.id, !isSuspended)
                     }}>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost" size="icon" type="submit"
-                            className={`w-9 h-9 rounded-xl transition-all ${
-                              isSuspended
-                                ? 'text-primary hover:bg-primary/10'
-                                : 'text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10'
-                            }`}
-                          >
-                            <PauseCircle className="w-4 h-4" />
-                          </Button>
+                        <TooltipTrigger
+                          type="submit"
+                          className={`w-9 h-9 rounded-xl transition-all inline-flex items-center justify-center ${
+                            isSuspended
+                              ? 'text-primary hover:bg-primary/10'
+                              : 'text-muted-foreground hover:text-orange-500 hover:bg-orange-500/10'
+                          }`}
+                        >
+                          <PauseCircle className="w-4 h-4" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="text-xs">{isSuspended ? 'Reactivar acceso' : 'Suspender acceso'}</p>
@@ -135,11 +133,11 @@ export default async function AthletesPage() {
                     {/* Permanently delete */}
                     <form action={async () => { 'use server'; await hardDeleteAthlete(athlete.id) }}>
                       <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" type="submit"
-                            className="w-9 h-9 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10">
-                            <UserX className="w-4 h-4" />
-                          </Button>
+                        <TooltipTrigger
+                          type="submit"
+                          className="w-9 h-9 rounded-xl inline-flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+                        >
+                          <UserX className="w-4 h-4" />
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="text-xs text-destructive font-bold">Eliminar permanentemente</p>

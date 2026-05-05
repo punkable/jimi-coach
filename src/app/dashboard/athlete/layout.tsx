@@ -3,15 +3,16 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Home, TrendingUp, User, LogOut, BookOpen, MessageSquareText } from 'lucide-react'
+import { Home, TrendingUp, User, LogOut, BookOpen, MessageSquareText, Wrench } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
 const navItems = [
-  { href: '/dashboard/athlete',           icon: Home,              label: 'Hoy',      exact: true  },
-  { href: '/dashboard/athlete/library',   icon: BookOpen,          label: 'Técnica',  exact: false },
-  { href: '/dashboard/athlete/feedback',  icon: MessageSquareText, label: 'Feedback', exact: false },
-  { href: '/dashboard/athlete/progress',  icon: TrendingUp,        label: 'Progreso', exact: false },
-  { href: '/dashboard/athlete/profile',   icon: User,              label: 'Perfil',   exact: false },
+  { href: '/dashboard/athlete',           icon: Home,              label: 'Hoy',       exact: true  },
+  { href: '/dashboard/athlete/library',   icon: BookOpen,          label: 'Técnica',   exact: false },
+  { href: '/dashboard/athlete/tools',     icon: Wrench,            label: 'Tools',     exact: false },
+  { href: '/dashboard/athlete/feedback',  icon: MessageSquareText, label: 'Feedback',  exact: false },
+  { href: '/dashboard/athlete/progress',  icon: TrendingUp,        label: 'Progreso',  exact: false },
+  { href: '/dashboard/athlete/profile',   icon: User,              label: 'Perfil',    exact: false },
 ]
 
 export default function AthleteLayout({ children }: { children: React.ReactNode }) {
