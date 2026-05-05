@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Outfit, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const outfit = Outfit({
   variable: "--font-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
         <TooltipProvider delay={300}>
           {children}
         </TooltipProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
