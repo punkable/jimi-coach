@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { Bell, Check } from 'lucide-react'
 import { createBrowserClient } from '@supabase/ssr'
 import { Button } from '@/components/ui/button'
@@ -9,7 +9,6 @@ import {
   PopoverContent, 
   PopoverTrigger 
 } from '@/components/ui/popover'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 type Notification = {
@@ -25,14 +24,20 @@ export function NotificationsBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
+  const [isAvailable, setIsAvailable] = useState(true)
   const router = useRouter()
   
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const supabase = useMemo(
+    () => createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    ),
+    []
   )
 
   useEffect(() => {
+    if (!isAvailable) return
+
     fetchNotifications()
 
     // Subscribe to new notifications
@@ -51,18 +56,27 @@ export function NotificationsBell() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [supabase])
+  }, [isAvailable, supabase])
 
   const fetchNotifications = async () => {
+    if (!isAvailable) return
+
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('notifications')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20)
+
+    if (error) {
+      setIsAvailable(false)
+      setNotifications([])
+      setUnreadCount(0)
+      return
+    }
 
     if (data) {
       setNotifications(data)
@@ -71,6 +85,8 @@ export function NotificationsBell() {
   }
 
   const markAsRead = async (id: string, link: string | null) => {
+    if (!isAvailable) return
+
     // Optimistic UI
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n))
     setUnreadCount(prev => Math.max(0, prev - 1))
@@ -84,6 +100,8 @@ export function NotificationsBell() {
   }
 
   const markAllAsRead = async () => {
+    if (!isAvailable) return
+
     const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id)
     if (unreadIds.length === 0) return
 
@@ -108,7 +126,7 @@ export function NotificationsBell() {
           <h4 className="font-bold text-sm">Notificaciones</h4>
           {unreadCount > 0 && (
             <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-auto p-1 text-xs text-muted-foreground hover:text-foreground">
-              <Check className="w-3 h-3 mr-1" /> Marcar todas leídas
+              <Check className="w-3 h-3 mr-1" /> Marcar todas leidas
             </Button>
           )}
         </div>
