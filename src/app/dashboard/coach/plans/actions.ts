@@ -66,21 +66,14 @@ export async function createPlan(formData: FormData) {
 }
 
 export async function archivePlan(planId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const { user, role } = await getAuthorizedCoach()
+  await assertCanManagePlan(planId, user.id, role)
 
-  // Role check
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'coach' && profile?.role !== 'admin') {
-    throw new Error('Not authorized')
-  }
-
-  const { error } = await supabase
+  const db = getSupabaseAdmin()
+  const { error } = await db
     .from('workout_plans')
     .update({ is_archived: true })
     .eq('id', planId)
-    .eq('created_by', user.id)
 
   if (error) {
     console.error('Error archiving plan:', error)
@@ -320,11 +313,11 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
 }
 
 export async function toggleWeekStatus(planId: string, weekNumber: number, isPublished: boolean) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('Not authenticated')
+  const { user, role } = await getAuthorizedCoach()
+  await assertCanManagePlan(planId, user.id, role)
 
-  const { error } = await supabase
+  const db = getSupabaseAdmin()
+  const { error } = await db
     .from('workout_days')
     .update({ is_published: isPublished })
     .eq('plan_id', planId)
