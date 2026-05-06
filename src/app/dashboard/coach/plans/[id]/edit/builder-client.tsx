@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { 
-  Plus, Trash2, Dumbbell, Save, Loader2, 
+import {
+  Plus, Trash2, Dumbbell, Save, Loader2, X,
   Search, Layout, Edit3,
   Hash, Video,
-  Eye, EyeOff, CheckCircle2, Timer as TimerIcon
+  Eye, EyeOff, CheckCircle2, Timer as TimerIcon,
+  ChevronUp, ChevronDown, Copy
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure, toggleWeekStatus, updateBlockDescription } from '../../actions'
@@ -359,15 +360,70 @@ export function BuilderClient({
 
   const addWeek = () => {
     const nextWeek = Math.max(0, ...days.map(d => d.week_number || 1)) + 1
-    updateDays([...days, { 
-      id: genId(), 
-      week_number: nextWeek, 
-      day_of_week: 1, 
-      title: 'Entrenamiento 1', 
+    updateDays([...days, {
+      id: genId(),
+      week_number: nextWeek,
+      day_of_week: 1,
+      title: 'Entrenamiento 1',
       is_published: true,
-      workout_blocks: [] 
+      workout_blocks: []
     }])
     setActiveWeek(nextWeek.toString())
+  }
+
+  const removeWeek = (weekNum: number) => {
+    const remaining = days.filter(d => d.week_number !== weekNum)
+    const weeks = Array.from(new Set(remaining.map(d => d.week_number || 1))).sort((a, b) => a - b)
+    const renumbered = remaining.map(d => ({ ...d, week_number: weeks.indexOf(d.week_number) + 1 }))
+    updateDays(renumbered)
+    setActiveWeek('1')
+  }
+
+  const moveWeek = (weekNum: number, direction: 'up' | 'down') => {
+    const sortedWeeks = Array.from(new Set(days.map(d => d.week_number || 1))).sort((a, b) => a - b)
+    const idx = sortedWeeks.indexOf(weekNum)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= sortedWeeks.length) return
+    const newOrder = [...sortedWeeks]
+    ;[newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]]
+    const mapping: Record<number, number> = {}
+    newOrder.forEach((originalWeek, newIdx) => { mapping[originalWeek] = newIdx + 1 })
+    updateDays(prev => prev.map(d => ({ ...d, week_number: mapping[d.week_number] ?? d.week_number })))
+    setActiveWeek((swapIdx + 1).toString())
+  }
+
+  const duplicateWeek = (weekNum: number) => {
+    const newWeekNum = Math.max(0, ...days.map(d => d.week_number || 1)) + 1
+    const weekDays = days.filter(d => d.week_number === weekNum)
+    const newDays = weekDays.map(d => ({
+      ...JSON.parse(JSON.stringify(d)),
+      id: genId(),
+      week_number: newWeekNum,
+      is_published: true,
+      workout_blocks: d.workout_blocks.map((b: Block) => ({
+        ...JSON.parse(JSON.stringify(b)),
+        id: genId(),
+        workout_movements: b.workout_movements.map((m: Movement) => ({ ...JSON.parse(JSON.stringify(m)), id: genId() }))
+      }))
+    }))
+    updateDays([...days, ...newDays])
+    setActiveWeek(newWeekNum.toString())
+  }
+
+  const duplicateDay = (dayId: string) => {
+    const day = days.find(d => d.id === dayId)
+    if (!day) return
+    const newDay = {
+      ...JSON.parse(JSON.stringify(day)),
+      id: genId(),
+      title: `${day.title} (copia)`,
+      workout_blocks: day.workout_blocks.map((b: Block) => ({
+        ...JSON.parse(JSON.stringify(b)),
+        id: genId(),
+        workout_movements: b.workout_movements.map((m: Movement) => ({ ...JSON.parse(JSON.stringify(m)), id: genId() }))
+      }))
+    }
+    updateDays([...days, newDay])
   }
 
   const addBlock = (dayId: string) => {
@@ -608,56 +664,154 @@ export function BuilderClient({
                   />
                 </div>
               </div>
-              <Button onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-11 rounded-2xl px-5 shrink-0">
-                <Plus className="w-4 h-4" /> Nueva Semana
-              </Button>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between w-full pt-4 border-t border-border/60">
-              <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full lg:w-auto min-w-0">
-                <TabsList className="bg-background/55 p-1.5 rounded-2xl h-auto min-h-12 border border-border/70 w-full lg:w-auto justify-start overflow-x-auto overflow-y-hidden">
-                  {totalWeeks.map(w => {
-                    const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
-                    return (
-                      <TabsTrigger 
-                        key={w} 
-                        value={w.toString()}
-                        className="rounded-xl font-black uppercase tracking-widest text-[10px] px-4 md:px-6 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
+            {/* Plan overview: weeks × weekdays grid */}
+            {totalWeeks.length > 0 && (
+              <div className="pt-4 border-t border-border/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Vista general del plan</span>
+                  <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary inline-block" /> Con ejercicios</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500/60 inline-block" /> Vacío</span>
+                  </div>
+                </div>
+                <div className="grid gap-1" style={{ gridTemplateColumns: 'minmax(60px, auto) repeat(7, minmax(0, 1fr))' }}>
+                  <div />
+                  {['L','M','X','J','V','S','D'].map((d, i) => (
+                    <div key={i} className="text-[9px] font-black uppercase text-center text-muted-foreground/50">{d}</div>
+                  ))}
+                  {totalWeeks.map(w => (
+                    <div key={w} className="contents">
+                      <button
+                        type="button"
+                        onClick={() => setActiveWeek(w.toString())}
+                        className={cn(
+                          'text-[10px] font-black uppercase tracking-widest text-left transition-colors px-1 py-1 rounded-lg',
+                          parseInt(activeWeek) === w ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        S{w}
+                      </button>
+                      {[1,2,3,4,5,6,7].map(dow => {
+                        const dayObj = days.find(d => d.week_number === w && d.day_of_week === dow)
+                        const hasBlocks = dayObj && dayObj.workout_blocks.length > 0
+                        const isEmpty = dayObj && !hasBlocks
+                        return (
+                          <button
+                            key={dow}
+                            type="button"
+                            onClick={() => setActiveWeek(w.toString())}
+                            title={dayObj ? `${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][dow-1]} · ${dayObj.workout_blocks.length} bloques` : 'Sin día'}
+                            className={cn(
+                              'h-6 rounded transition-all',
+                              hasBlocks && 'bg-primary hover:opacity-80',
+                              isEmpty && 'bg-amber-500/40 hover:bg-amber-500/60',
+                              !dayObj && 'bg-secondary/40 border border-border/30 hover:bg-secondary'
+                            )}
+                          />
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Week tabs + management row */}
+            <div className="flex flex-col gap-3 w-full pt-4 border-t border-border/60">
+              {/* Tabs with always-visible delete */}
+              <div className="flex flex-wrap gap-2 items-center">
+                {totalWeeks.map(w => {
+                  const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
+                  const isActive = parseInt(activeWeek) === w
+                  return (
+                    <div key={w} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveWeek(w.toString())}
+                        className={cn(
+                          'h-9 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 whitespace-nowrap transition-all border',
+                          isActive
+                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                            : 'bg-background/55 text-muted-foreground border-border/70 hover:border-primary/40 hover:text-foreground'
+                        )}
                       >
                         Semana {w}
                         {!isWPublished && (
-                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] h-5 px-2 rounded-lg font-black uppercase">Draft</Badge>
+                          <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] h-4 px-1.5 rounded font-black uppercase leading-none flex items-center">Oculta</span>
                         )}
-                      </TabsTrigger>
-                    )
-                  })}
-                </TabsList>
-              </Tabs>
+                      </button>
+                      {totalWeeks.length > 1 && (
+                        <button
+                          type="button"
+                          title={`Eliminar Semana ${w}`}
+                          onClick={() => { if (confirm(`¿Eliminar Semana ${w} y todos sus días? Esta acción no se puede deshacer.`)) removeWeek(w) }}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all border border-border/50 hover:border-destructive/30 shrink-0"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={addWeek}
+                  className="h-9 px-3 rounded-xl border border-dashed border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Semana
+                </button>
+              </div>
 
-              <div className="w-full lg:w-auto flex flex-col sm:flex-row sm:items-center gap-3 bg-background/45 p-3 rounded-2xl border border-border/70">
-                <div className="flex flex-col sm:items-end px-1 sm:px-3">
-                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Visibilidad semana {activeWeek}</span>
+              {/* Active week controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-1">Sem {activeWeek}:</span>
+                <button
+                  type="button"
+                  title="Mover semana hacia arriba"
+                  disabled={parseInt(activeWeek) === totalWeeks[0]}
+                  onClick={() => moveWeek(parseInt(activeWeek), 'up')}
+                  className="h-7 px-2.5 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  <ChevronUp className="w-3 h-3" /> Subir
+                </button>
+                <button
+                  type="button"
+                  title="Mover semana hacia abajo"
+                  disabled={parseInt(activeWeek) === totalWeeks[totalWeeks.length - 1]}
+                  onClick={() => moveWeek(parseInt(activeWeek), 'down')}
+                  className="h-7 px-2.5 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  <ChevronDown className="w-3 h-3" /> Bajar
+                </button>
+                <button
+                  type="button"
+                  title="Duplicar esta semana"
+                  onClick={() => duplicateWeek(parseInt(activeWeek))}
+                  className="h-7 px-2.5 rounded-lg border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  <Copy className="w-3 h-3" /> Duplicar
+                </button>
+                <div className="ml-auto flex items-center gap-2">
                   <span className={cn(
-                    "text-[11px] font-black uppercase tracking-widest mt-0.5",
+                    "text-[10px] font-black uppercase tracking-widest",
                     isWeekPublished ? "text-primary" : "text-amber-500"
                   )}>
-                    {isWeekPublished ? 'Pública para Atletas' : 'Borrador Privado'}
+                    {isWeekPublished ? 'Visible para atletas' : 'Oculta para atletas'}
                   </span>
+                  <Button
+                    onClick={handleToggleWeekPublish}
+                    variant={isWeekPublished ? "outline" : "default"}
+                    size="sm"
+                    className={cn(
+                      "h-7 rounded-xl px-3 font-black uppercase tracking-widest text-[9px] gap-2 transition-all",
+                      isWeekPublished ? "border-border/70 hover:bg-secondary" : "bg-amber-500 hover:bg-amber-600 text-white"
+                    )}
+                  >
+                    {isWeekPublished ? <><EyeOff className="w-3 h-3" /> Ocultar</> : <><Eye className="w-3 h-3" /> Publicar</>}
+                  </Button>
                 </div>
-                <Button 
-                  onClick={handleToggleWeekPublish}
-                  variant={isWeekPublished ? "outline" : "default"}
-                  className={cn(
-                    "h-11 rounded-2xl px-5 font-black uppercase tracking-widest text-[10px] gap-3 transition-all sm:ml-auto",
-                    isWeekPublished ? "border-border/70 hover:bg-secondary" : "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
-                  )}
-                >
-                  {isWeekPublished ? (
-                    <><EyeOff className="w-4 h-4" /> Ocultar Semana</>
-                  ) : (
-                    <><Eye className="w-4 h-4" /> Publicar Semana</>
-                  )}
-                </Button>
               </div>
             </div>
           </div>
@@ -672,31 +826,56 @@ export function BuilderClient({
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)] opacity-75" />
                     
                     {/* Day Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
-                        <div className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[11px] shrink-0 uppercase tracking-[0.16em] w-fit">
-                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
-                        </div>
-                        <div className="flex-1 space-y-1 min-w-0">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Título visible del entrenamiento</Label>
-                          <Input 
-                            placeholder="Ej: Tren superior, WOD largo, Descanso activo..."
-                            className="bg-background/55 border-border/70 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full rounded-xl"
-                            value={day.title}
-                            onChange={(e) => {
-                              const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n);
-                            }}
-                          />
+                    <div className="flex flex-col gap-3 pb-4 border-b border-border/60">
+                      <div className="flex items-center justify-between gap-2">
+                        <select
+                          value={day.day_of_week}
+                          onChange={(e) => {
+                            const n: Day[] = JSON.parse(JSON.stringify(days))
+                            n[globalDIdx].day_of_week = parseInt(e.target.value)
+                            updateDays(n)
+                          }}
+                          className="h-9 px-3 bg-primary/10 border border-primary/20 text-primary font-black rounded-xl text-[11px] shrink-0 uppercase tracking-[0.12em] focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                          {['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map((name, i) => (
+                            <option key={i + 1} value={i + 1} className="bg-background text-foreground normal-case">{name}</option>
+                          ))}
+                        </select>
+                        <div className="flex items-center gap-1 ml-auto">
+                          <button
+                            type="button"
+                            title="Añadir bloque"
+                            onClick={() => addBlock(day.id)}
+                            className="w-7 h-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Duplicar día"
+                            onClick={() => duplicateDay(day.id)}
+                            className="w-7 h-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Eliminar día"
+                            onClick={() => { if (confirm('¿Eliminar este día?')) updateDays(days.filter(d => d.id !== day.id)) }}
+                            className="w-7 h-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon-sm" className="rounded-xl" onClick={() => addBlock(day.id)}>
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon-sm" className="rounded-xl hover:text-destructive" onClick={() => updateDays(days.filter(d => d.id !== day.id))}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      <Input
+                        placeholder="Ej: Tren superior, WOD largo, Descanso activo..."
+                        className="bg-background/55 border-border/70 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full rounded-xl"
+                        value={day.title}
+                        onChange={(e) => {
+                          const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n)
+                        }}
+                      />
                     </div>
 
                     {/* Blocks in Day */}
