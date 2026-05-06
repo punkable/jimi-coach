@@ -5,11 +5,10 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Users, Library, Calendar, LayoutDashboard,
-  Settings, LogOut, Video, HelpCircle,
+  Settings, LogOut, Video,
   Target, Activity, ShieldCheck, ChevronRight, Wrench,
 } from 'lucide-react'
 import { signout } from '@/app/login/actions'
-import { NotificationsBell } from '@/components/notifications-bell'
 
 const mainNav = [
   { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard',    exact: true },
@@ -96,19 +95,13 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
         </nav>
 
         <div className="px-3 pb-4 pt-3 border-t border-border space-y-0.5">
-          {[
-            { href: '/dashboard/coach/settings', icon: Settings,    label: 'Ajustes' },
-            { href: '/dashboard/coach/help',     icon: HelpCircle,  label: 'Ayuda'   },
-          ].map(({ href, icon: Icon, label }) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-            >
-              <Icon className="w-4 h-4 stroke-[1.8] shrink-0" />
-              {label}
-            </Link>
-          ))}
+          <Link
+            href="/dashboard/coach/settings"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+          >
+            <Settings className="w-4 h-4 stroke-[1.8] shrink-0" />
+            Ajustes
+          </Link>
           <form action={signout}>
             <button
               type="submit"
@@ -135,7 +128,6 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
             </div>
             <div className="hidden md:block" />
             <div className="flex items-center gap-3 ml-auto">
-              <NotificationsBell />
               {isAdmin && (
                 <span className="hidden md:inline-flex text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
                   Admin

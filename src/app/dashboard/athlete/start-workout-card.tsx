@@ -4,156 +4,197 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap, Video
+import {
+  PlayCircle, ChevronRight, CheckCircle2, Zap, Video, Calendar, AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const DAY_NAMES_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
+const DAY_NAMES_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+/** Returns the Monday of the ISO week containing `date` (1=Mon … 7=Sun). */
+function getMondayOfWeek(date: Date): Date {
+  const d = new Date(date)
+  const jsDay  = d.getDay()
+  const isoDay = jsDay === 0 ? 7 : jsDay
+  d.setDate(d.getDate() - (isoDay - 1))
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+function fmtDate(date: Date): string {
+  return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+}
+
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 interface StartWorkoutCardProps {
   plan: any
   planDays: any[]
   trainedToday: boolean
-  trainedPercentage?: number
 }
 
 export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWorkoutCardProps) {
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
-  
-  // Set initial selected day based on day of week or first available
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayIsoDay = today.getDay() === 0 ? 7 : today.getDay()
+
+  // Auto-select today's workout day on mount, fallback to first
   useEffect(() => {
-    const today = new Date().getDay() // 0 = Sun, 1 = Mon...
-    const adjustedToday = today === 0 ? 7 : today
-    const todayIdx = planDays.findIndex(d => d.day_of_week === adjustedToday)
-    if (todayIdx !== -1) setSelectedDayIdx(todayIdx)
-  }, [planDays])
+    const idx = planDays.findIndex(d => d.day_of_week === todayIsoDay)
+    if (idx !== -1) setSelectedDayIdx(idx)
+  }, [planDays, todayIsoDay])
 
   const selectedDay = planDays[selectedDayIdx]
-  const dayNames = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']
-  const selectedBlocks = selectedDay?.workout_blocks ?? []
-  const selectedMovements = selectedBlocks.flatMap((block: any) => block.workout_movements ?? [])
-  const videoCount = selectedMovements.filter((movement: any) => movement.exercises?.video_url || movement.exercise?.video_url).length
-  const mainTimer = selectedBlocks.find((block: any) => block.timer_type && block.timer_type !== 'none')?.timer_type
-  const blockTypes = Array.from(new Set<string>(selectedBlocks.map((block: any) => block.type).filter(Boolean)))
+
+  // Block / movement helpers
+  const selectedBlocks    = selectedDay?.workout_blocks ?? []
+  const selectedMovements = selectedBlocks.flatMap((b: any) => b.workout_movements ?? [])
+  const videoCount        = selectedMovements.filter((m: any) => m.exercises?.video_url || m.exercise?.video_url).length
+  const mainTimer         = selectedBlocks.find((b: any) => b.timer_type && b.timer_type !== 'none')?.timer_type
+  const blockTypes        = Array.from(new Set<string>(selectedBlocks.map((b: any) => b.type).filter(Boolean)))
   const blockTypeLabels: Record<string, string> = {
-    warmup: 'Calentamiento',
-    strength: 'Fuerza',
-    metcon: 'Metcon',
-    gymnastics: 'Gimnasia',
-    cooldown: 'Vuelta a calma',
-    wod: 'WOD',
+    warmup: 'Calentamiento', strength: 'Fuerza', metcon: 'Metcon',
+    gymnastics: 'Gimnasia', cooldown: 'Vuelta a calma', wod: 'WOD',
   }
   const focusLabel =
     selectedDay?.title ||
-    blockTypes.map((type: string) => blockTypeLabels[type] || type).slice(0, 2).join(' + ') ||
-    'Entrenamiento del dia'
+    blockTypes.map((t: string) => blockTypeLabels[t] || t).slice(0, 2).join(' + ') ||
+    'Entrenamiento del día'
   const timerLabel = mainTimer
     ? `Timer ${String(mainTimer).toUpperCase()}`
-    : `${selectedBlocks.length} ${selectedBlocks.length === 1 ? 'bloque' : 'bloques'} listos`
+    : `${selectedBlocks.length} ${selectedBlocks.length === 1 ? 'bloque' : 'bloques'}`
   const mediaLabel = videoCount > 0
-    ? `${videoCount} ${videoCount === 1 ? 'video tecnico' : 'videos tecnicos'}`
-    : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'} del plan`
+    ? `${videoCount} ${videoCount === 1 ? 'video técnico' : 'videos técnicos'}`
+    : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'}`
+
+  // Date helpers: map each plan day to the real calendar date for the current week
+  const weekMonday = getMondayOfWeek(today)
+  const dayDate = (dayOfWeek: number) => {
+    const d = new Date(weekMonday)
+    d.setDate(d.getDate() + (dayOfWeek - 1))
+    return d
+  }
+  const isDayToday = (dow: number) => dow === todayIsoDay
+  const isDayPast  = (dow: number) => dow < todayIsoDay
+
+  const selectedDate    = selectedDay ? dayDate(selectedDay.day_of_week) : null
+  const isSelectedToday = selectedDay ? isDayToday(selectedDay.day_of_week) : false
+  const isSelectedPast  = selectedDay ? isDayPast(selectedDay.day_of_week) : false
+  const hasTodayDay     = planDays.some(d => isDayToday(d.day_of_week))
 
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between px-1">
         <div>
           <h2 className="text-2xl font-black uppercase tracking-tight">Mi Planificación</h2>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">{plan?.title || 'Sin Plan Asignado'}</p>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+            {plan?.title || 'Sin Plan Asignado'}
+          </p>
         </div>
         <Calendar className="w-5 h-5 text-primary/40" />
       </div>
 
-      {/* Day Selector Hub */}
+      {/* Day Selector */}
       <div className="bg-card/40 backdrop-blur-xl rounded-[28px] p-2 border border-border/10 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
         <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
           {planDays.map((day, idx) => {
             const isSelected = selectedDayIdx === idx
-            const dayLabel = dayNames[(day.day_of_week - 1) % 7]
+            const isToday    = isDayToday(day.day_of_week)
+            const date       = dayDate(day.day_of_week)
 
             return (
               <button
                 key={day.id}
                 onClick={() => setSelectedDayIdx(idx)}
                 className={cn(
-                  "shrink-0 w-[72px] py-5 rounded-[22px] flex flex-col items-center gap-1.5 transition-all duration-300 relative group snap-start",
+                  'shrink-0 w-[72px] py-4 rounded-[22px] flex flex-col items-center gap-1 transition-all duration-300 relative group snap-start',
                   isSelected
-                    ? "bg-primary text-primary-foreground shadow-[0_0_30px_rgba(204,255,0,0.3)]"
-                    : "hover:bg-white/5 text-muted-foreground border border-transparent"
+                    ? 'bg-primary text-primary-foreground shadow-[0_0_30px_rgba(204,255,0,0.3)]'
+                    : isToday
+                    ? 'border border-primary/40 text-primary hover:bg-primary/10'
+                    : 'hover:bg-white/5 text-muted-foreground border border-transparent'
                 )}
               >
                 {isSelected && (
                   <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-[22px] pointer-events-none" />
                 )}
                 <span className={cn(
-                  "text-[9px] font-black tracking-[0.2em] uppercase",
-                  isSelected ? "text-primary-foreground/80" : "text-muted-foreground/30"
-                )}>{dayLabel}</span>
-                <span className="text-2xl font-black leading-none tracking-tighter">{day.day_of_week}</span>
-                {isSelected && (
-                  <div className="absolute -bottom-1 w-6 h-1 bg-white/40 rounded-full" />
-                )}
+                  'text-[9px] font-black tracking-[0.2em] uppercase',
+                  isSelected ? 'text-primary-foreground/80' : isToday ? 'text-primary' : 'text-muted-foreground/50'
+                )}>
+                  {DAY_NAMES_SHORT[(day.day_of_week - 1) % 7]}
+                </span>
+                <span className="text-xl font-black leading-none tracking-tighter">{date.getDate()}</span>
+                {isToday && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                {isSelected && <div className="absolute -bottom-1 w-6 h-1 bg-white/40 rounded-full" />}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Selected Day Preview Card */}
+      {/* Selected Day Preview */}
       {selectedDay && (
         <Card className="glass-card overflow-hidden relative group border-none rounded-[32px] min-h-[220px]">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
           <div className="absolute -bottom-20 -right-20 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-all duration-700 rotate-12 scale-150 group-hover:scale-125">
             <PlayCircle className="w-80 h-80" />
           </div>
-          
-          <CardContent className="p-10 relative z-10 h-full flex flex-col justify-center">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-10">
-              <div className="space-y-6 text-center md:text-left flex-1">
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] font-black text-2xl relative overflow-hidden">
+
+          <CardContent className="p-8 relative z-10 h-full flex flex-col justify-center">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+              <div className="space-y-5 text-center md:text-left flex-1">
+                <div className="flex flex-col md:flex-row items-center gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] font-black text-xl relative overflow-hidden shrink-0">
                     <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
-                    <span className="relative">{selectedDay.day_of_week}</span>
+                    <span className="relative">{selectedDate?.getDate()}</span>
                   </div>
                   <div>
-                    <h3 className="text-3xl font-black uppercase tracking-tight text-white mb-1">
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(selectedDay.day_of_week - 1) % 7]}
+                    <h3 className="text-2xl font-black uppercase tracking-tight text-white mb-0.5">
+                      {DAY_NAMES_FULL[(selectedDay.day_of_week - 1) % 7]}
+                      {selectedDate && (
+                        <span className="ml-2 text-base font-bold text-white/50">{fmtDate(selectedDate)}</span>
+                      )}
                     </h3>
                     <div className="flex items-center justify-center md:justify-start gap-3">
-                      <span className="text-primary font-black uppercase tracking-[0.2em] text-[11px]">
-                        {focusLabel}
-                      </span>
+                      <span className="text-primary font-black uppercase tracking-[0.2em] text-[11px]">{focusLabel}</span>
                       <div className="h-1 w-1 rounded-full bg-white/20" />
                       <span className="text-white/40 font-bold uppercase tracking-widest text-[9px]">
-                        {trainedToday ? 'Completado hoy' : 'Pendiente por registrar'}
+                        {isSelectedToday
+                          ? (trainedToday ? 'Completado hoy' : 'Pendiente')
+                          : isSelectedPast ? 'Día pasado' : 'Próximo'}
                       </span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center justify-center md:justify-start gap-3">
                   <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
                     <Zap className="w-4 h-4 text-primary fill-primary/20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      {timerLabel}
-                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">{timerLabel}</span>
                   </div>
                   <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
-                    {trainedToday ? (
+                    {isSelectedToday && trainedToday ? (
                       <CheckCircle2 className="w-4 h-4 text-[var(--strength)]" />
                     ) : (
                       <Video className="w-4 h-4 text-[var(--strength)]" />
                     )}
                     <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      {trainedToday ? 'Resultado guardado' : mediaLabel}
+                      {isSelectedToday && trainedToday ? 'Resultado guardado' : mediaLabel}
                     </span>
                   </div>
                 </div>
               </div>
 
               <Link href={`/dashboard/athlete/workout?dayId=${selectedDay.id}`} className="w-full md:w-auto">
-                <Button className="h-20 px-12 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none">
-                  Entrenar Ahora
+                <Button className="h-16 px-10 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none w-full md:w-auto justify-center">
+                  {isSelectedToday ? 'Entrenar Ahora' : isSelectedPast ? 'Ver Entrenamiento' : 'Ver Día'}
                   <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
                     <ChevronRight className="w-5 h-5" />
                   </div>
@@ -166,7 +207,18 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
 
       {!selectedDay && (
         <div className="py-12 text-center border-2 border-dashed border-border/20 rounded-[32px]">
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">No hay días configurados en este plan</p>
+          <AlertCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en este plan</p>
+        </div>
+      )}
+
+      {/* Today has no workout — show clear message */}
+      {!hasTodayDay && planDays.length > 0 && (
+        <div className="ios-panel p-4 flex items-center gap-3">
+          <Calendar className="w-5 h-5 text-muted-foreground/40 shrink-0" />
+          <p className="text-sm text-muted-foreground font-semibold">
+            Hoy no hay entrenamiento programado. Selecciona otro día arriba.
+          </p>
         </div>
       )}
     </section>

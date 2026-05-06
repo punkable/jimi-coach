@@ -27,9 +27,9 @@ function VideoModal({ exercise, onClose }: { exercise: Exercise; onClose: () => 
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 backdrop-blur-sm overflow-y-auto"
       onClick={onClose}
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 1rem)' }}
+      style={{ padding: 'max(env(safe-area-inset-top), 1rem) 1rem 1rem' }}
     >
       <div
         className="relative w-full max-w-2xl bg-card rounded-3xl overflow-hidden shadow-2xl border border-border my-auto"
@@ -167,19 +167,19 @@ export function ExerciseLibraryClient({ exercises }: { exercises: Exercise[] }) 
           {filtered.map((exercise) => (
             <article
               key={exercise.id}
-              className="ios-panel p-5 flex flex-col gap-4 min-h-[260px] overflow-hidden"
+              className="ios-panel p-5 flex flex-col gap-4"
             >
-              {/* Header row: keep icon and chips on opposite sides without overlap */}
-              <div className="flex items-start justify-between gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
+              {/* Header: icon + chips */}
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                   <Dumbbell className="w-5 h-5 text-primary" />
                 </div>
-                <div className="flex flex-wrap justify-end gap-1.5 min-w-0 max-w-[60%]">
-                  <span className="px-2.5 py-1 rounded-lg bg-[var(--gymnastics)]/10 border border-[var(--gymnastics)]/20 text-[var(--gymnastics)] text-[9px] font-black uppercase tracking-widest truncate">
+                <div className="flex flex-wrap gap-1.5 min-w-0 flex-1">
+                  <span className="px-2.5 py-1 rounded-lg bg-[var(--gymnastics)]/10 border border-[var(--gymnastics)]/20 text-[var(--gymnastics)] text-[9px] font-black uppercase tracking-widest max-w-full truncate">
                     {exercise.category || 'General'}
                   </span>
                   {exercise.difficulty_level && (
-                    <span className="px-2.5 py-1 rounded-lg bg-[var(--strength)]/10 border border-[var(--strength)]/20 text-[var(--strength)] text-[9px] font-black uppercase tracking-widest truncate">
+                    <span className="px-2.5 py-1 rounded-lg bg-[var(--strength)]/10 border border-[var(--strength)]/20 text-[var(--strength)] text-[9px] font-black uppercase tracking-widest max-w-full truncate">
                       {exercise.difficulty_level}
                     </span>
                   )}

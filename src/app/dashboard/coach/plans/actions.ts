@@ -10,7 +10,9 @@ async function getAuthorizedCoach() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  // Use admin client for role check to avoid RLS issues
+  const db = getSupabaseAdmin()
+  const { data: profile } = await db.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'coach' && profile?.role !== 'admin') {
     throw new Error('Not authorized')
   }
@@ -85,32 +87,37 @@ export async function archivePlan(planId: string) {
 
 export async function assignPlan(formData: FormData) {
   const supabase = await createClient()
-
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
 
-  const planId = formData.get('plan_id') as string
+  const planId    = formData.get('plan_id')    as string
   const athleteId = formData.get('athlete_id') as string
   const startDate = formData.get('start_date') as string
 
-  const assignment = {
-    plan_id: planId,
-    athlete_id: athleteId,
-    start_date: startDate,
-    assigned_by: user.id
-  }
+  if (!planId || !athleteId) throw new Error('Faltan datos')
 
-  const { error } = await supabase
-    .from('assigned_plans')
-    .insert(assignment)
+  // Use admin client to bypass RLS — this is a coach/admin action
+  const db = getSupabaseAdmin()
+
+  // Remove any existing assignment first (one plan per athlete)
+  await db.from('assigned_plans').delete().eq('athlete_id', athleteId)
+
+  const { error } = await db.from('assigned_plans').insert({
+    plan_id:     planId,
+    athlete_id:  athleteId,
+    start_date:  startDate,
+    assigned_by: user.id,
+  })
 
   if (error) {
     console.error('Error assigning plan:', error)
-    throw new Error('Failed to assign plan')
+    throw new Error('No se pudo asignar el plan')
   }
 
   revalidatePath('/dashboard/coach/plans')
   revalidatePath('/dashboard/coach/athletes')
+  revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
+  revalidatePath('/dashboard/athlete')
 }
 
 export async function savePlanStructure(planId: string, days: any[], planMeta?: { title: string, description: string, is_community_enabled?: boolean }) {

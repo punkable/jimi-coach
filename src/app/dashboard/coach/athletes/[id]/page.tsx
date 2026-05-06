@@ -1,45 +1,54 @@
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Phone, Ruler, Weight, Calendar, Target } from 'lucide-react'
+import { ArrowLeft, User, Phone, Ruler, Weight, Calendar, Activity } from 'lucide-react'
 import Link from 'next/link'
 import SubscriptionManager from './subscription-manager'
 
 export default async function AthleteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
 
-  // Fetch athlete profile
-  const { data: profile } = await supabase
+  // Gate: must be coach or admin
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Use admin client for all data fetching — this is a coach-only page
+  const admin = getSupabaseAdmin()
+
+  const { data: profile } = await admin
     .from('profiles')
     .select('*')
     .eq('id', id)
-    .single()
-
-  // Fetch all workout plans
-  const { data: plans } = await supabase
-    .from('workout_plans')
-    .select('id, title')
-    .is('is_archived', false)
-    .order('title', { ascending: true })
-
-  // Fetch their current plan assignment
-  const { data: assignment } = await supabase
-    .from('assigned_plans')
-    .select('plan_id')
-    .eq('athlete_id', id)
-    .order('created_at', { ascending: false })
-    .limit(1)
     .single()
 
   if (!profile) {
     return <div className="p-8 text-center text-destructive font-bold">Atleta no encontrado.</div>
   }
 
-  // Fetch their latest workout results (RPE)
-  const { data: results } = await supabase
+  // Fetch all workout plans (not archived)
+  const { data: plans } = await admin
+    .from('workout_plans')
+    .select('id, title')
+    .eq('is_archived', false)
+    .order('title', { ascending: true })
+
+  // Fetch current plan assignment (latest)
+  const { data: assignments } = await admin
+    .from('assigned_plans')
+    .select('plan_id')
+    .eq('athlete_id', id)
+    .order('created_at', { ascending: false })
+    .limit(1)
+
+  const currentPlanId = assignments?.[0]?.plan_id ?? undefined
+
+  // Fetch latest workout results
+  const { data: results } = await admin
     .from('workout_results')
-    .select('*, workout_days(title)')
+    .select('id, rpe, video_link, created_at, workout_day_id')
     .eq('athlete_id', id)
     .order('created_at', { ascending: false })
     .limit(5)
@@ -100,12 +109,14 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
           <SubscriptionManager
             profile={profile}
             plans={plans || []}
-            currentPlanId={assignment?.plan_id}
+            currentPlanId={currentPlanId}
           />
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg uppercase tracking-widest text-primary">Últimos Entrenamientos</CardTitle>
+              <CardTitle className="text-lg uppercase tracking-widest text-primary flex items-center gap-2">
+                <Activity className="w-5 h-5" /> Últimos Entrenamientos
+              </CardTitle>
               <CardDescription>RPE e historial reciente del alumno</CardDescription>
             </CardHeader>
             <CardContent>
@@ -114,15 +125,17 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
                   {results.map((res: any) => (
                     <div key={res.id} className="flex justify-between items-center p-3 bg-secondary/10 border border-border rounded-lg">
                       <div>
-                        <p className="font-bold">{res.workout_days?.title || 'Día de entrenamiento'}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(res.created_at).toLocaleDateString()}</p>
+                        <p className="font-bold text-sm">Entrenamiento completado</p>
+                        <p className="text-xs text-muted-foreground">{new Date(res.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
                       </div>
-                      <div className="text-right">
-                        <span className="inline-block bg-primary/20 text-primary px-2 py-1 rounded font-black text-sm">
-                          RPE: {res.rpe}
-                        </span>
+                      <div className="text-right space-y-1">
+                        {res.rpe != null && (
+                          <span className="inline-block bg-primary/20 text-primary px-2 py-1 rounded font-black text-sm">
+                            RPE: {res.rpe}
+                          </span>
+                        )}
                         {res.video_link && (
-                          <a href={res.video_link} target="_blank" rel="noreferrer" className="block text-xs text-blue-400 mt-1 hover:underline">
+                          <a href={res.video_link} target="_blank" rel="noreferrer" className="block text-xs text-blue-400 hover:underline">
                             Ver Video
                           </a>
                         )}

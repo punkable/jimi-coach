@@ -1,4 +1,6 @@
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Plus, Edit, CalendarDays, Users, Layers3, Archive, MoreHorizontal } from 'lucide-react'
 import Link from 'next/link'
@@ -17,14 +19,19 @@ const objectiveLabel: Record<string, string> = {
 
 export default async function PlansPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  const { data: plans } = await supabase
+  // Use admin client for all queries — this is a coach-only page
+  const admin = getSupabaseAdmin()
+
+  const { data: plans } = await admin
     .from('workout_plans')
     .select('*, workout_days(id)')
     .eq('is_archived', false)
     .order('created_at', { ascending: false })
 
-  const { data: athletes } = await supabase
+  const { data: athletes } = await admin
     .from('profiles')
     .select('id, full_name, email, emoji')
     .eq('role', 'athlete')

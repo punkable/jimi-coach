@@ -38,18 +38,20 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
 
   // ── Persist workout progress to localStorage ──────────────────────────────
   const [isLoaded, setIsLoaded] = useState(false)
+  const [workoutStartTime, setWorkoutStartTime] = useState<number>(Date.now())
+  const [workoutElapsed, setWorkoutElapsed] = useState(0)
   const storageKey = `wod-progress-${day?.id}`
-  
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
-        const { sets, blocks, timestamp } = JSON.parse(saved)
-        // Only resume if it's from today
+        const { sets, blocks, timestamp, startTime } = JSON.parse(saved)
         const isToday = new Date(timestamp).toDateString() === new Date().toDateString()
         if (isToday) {
           if (sets) setAllSetsData(sets)
           if (blocks) setCompletedBlocks(blocks)
+          if (startTime) setWorkoutStartTime(startTime)
         } else {
           localStorage.removeItem(storageKey)
         }
@@ -64,15 +66,24 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   useEffect(() => {
     if (!day?.id || !isLoaded) return
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ 
-        sets: allSetsData, 
+      localStorage.setItem(storageKey, JSON.stringify({
+        sets: allSetsData,
         blocks: completedBlocks,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        startTime: workoutStartTime,
       }))
     } catch (e) {
       console.error('Error saving progress:', e)
     }
-  }, [allSetsData, completedBlocks, storageKey, isLoaded])
+  }, [allSetsData, completedBlocks, storageKey, isLoaded, workoutStartTime])
+
+  // Elapsed workout time ticker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWorkoutElapsed(Math.floor((Date.now() - workoutStartTime) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [workoutStartTime])
   // ─────────────────────────────────────────────────────────────────────────
 
   // Timer Tick
@@ -212,20 +223,34 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
       <header className="sticky top-0 z-20 bg-background/88 backdrop-blur-xl border-b border-border/60"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="flex items-center justify-between px-4 h-14">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <Link href="/dashboard/athlete">
-              <Button variant="ghost" size="icon" className="rounded-2xl w-10 h-10 -ml-1">
+              <Button variant="ghost" size="icon" className="rounded-2xl w-10 h-10 -ml-1 shrink-0">
                 <ArrowLeft className="w-4.5 h-4.5" />
               </Button>
             </Link>
-            <div>
-              <h1 className="text-sm font-black tracking-tight leading-none uppercase">{day.name || day.title || 'WOD'}</h1>
-              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
-                {day.workout_blocks?.length ?? 0} bloques · {day.workout_blocks?.reduce((a: number, b: any) => a + (b.workout_movements?.length ?? 0), 0) ?? 0} ejercicios
-              </p>
+            <div className="min-w-0">
+              <h1 className="text-sm font-black tracking-tight leading-none uppercase truncate">{day.name || day.title || 'WOD'}</h1>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-[10px] text-primary font-black tabular-nums">
+                  ⏱ {Math.floor(workoutElapsed / 60).toString().padStart(2, '0')}:{(workoutElapsed % 60).toString().padStart(2, '0')}
+                </span>
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  · {day.workout_blocks?.length ?? 0} bloques
+                </span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 shrink-0">
+            {activeTab === 'workout' && (
+              <Button
+                size="sm"
+                onClick={() => setFinishOpen(true)}
+                className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest mr-1"
+              >
+                Finalizar
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
