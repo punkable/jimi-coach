@@ -9,8 +9,10 @@ async function assertAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  const admin = getSupabaseAdmin()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') throw new Error('Not authorized: admin only')
+  return { user }
 }
 
 export async function registerCoach(formData: FormData) {
@@ -30,41 +32,53 @@ export async function registerCoach(formData: FormData) {
     email,
     password,
     email_confirm: true,
-    user_metadata: { full_name: fullName }
+    user_metadata: { full_name: fullName },
   })
 
-  if (authError) {
-    console.error('Auth Error:', authError)
-    throw new Error(authError.message)
-  }
+  if (authError) throw new Error(authError.message)
 
   const userId = authData.user?.id
-
   if (userId) {
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({
-        role: 'coach',
-        full_name: fullName
-      })
+      .update({ role: 'coach', full_name: fullName })
       .eq('id', userId)
-
-    if (profileError) {
-      console.error('Profile Error:', profileError)
-      throw new Error(profileError.message)
-    }
+    if (profileError) throw new Error(profileError.message)
   }
 
   revalidatePath('/dashboard/coach/staff')
   redirect('/dashboard/coach/staff?success=true')
 }
 
-export async function deleteCoach(coachId: string) {
+/**
+ * Change a user's role between athlete and coach.
+ * Admin role cannot be changed via UI (must be set in DB directly).
+ */
+export async function changeUserRole(userId: string, newRole: 'athlete' | 'coach') {
   await assertAdmin()
 
+  const admin = getSupabaseAdmin()
+
+  // Don't allow changing admin role
+  const { data: target } = await admin.from('profiles').select('role').eq('id', userId).single()
+  if (target?.role === 'admin') throw new Error('No se puede cambiar el rol de un admin')
+
+  const { error } = await admin.from('profiles').update({ role: newRole }).eq('id', userId)
+  if (error) throw new Error('Failed to change role')
+
+  // If demoting coach to athlete, remove their coach_athletes entries (they're no longer a coach)
+  if (newRole === 'athlete') {
+    await admin.from('coach_athletes').delete().eq('coach_id', userId)
+  }
+
+  revalidatePath('/dashboard/coach/staff')
+  revalidatePath('/dashboard/coach/athletes')
+}
+
+export async function deleteCoach(coachId: string) {
+  await assertAdmin()
   const supabaseAdmin = getSupabaseAdmin()
   const { error } = await supabaseAdmin.auth.admin.deleteUser(coachId)
   if (error) throw error
-
   revalidatePath('/dashboard/coach/staff')
 }

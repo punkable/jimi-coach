@@ -9,9 +9,52 @@ async function assertCoachOrAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated')
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  // Use admin client for the role lookup so RLS issues never break authz
+  const admin = getSupabaseAdmin()
+  const { data: profile } = await admin.from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'coach' && profile?.role !== 'admin') throw new Error('Not authorized')
   return { user, role: profile.role as 'coach' | 'admin' }
+}
+
+/**
+ * Assign a coach to an athlete. Admin counts as a coach (can be assigned).
+ * One coach per athlete; passing null removes the assignment.
+ */
+export async function assignCoachToAthlete(athleteId: string, coachId: string | null) {
+  const { role } = await assertCoachOrAdmin()
+  if (role !== 'admin') throw new Error('Solo el admin puede asignar coaches')
+
+  const admin = getSupabaseAdmin()
+
+  // Always remove existing assignment first (UNIQUE constraint on athlete_id)
+  await admin.from('coach_athletes').delete().eq('athlete_id', athleteId)
+
+  if (coachId) {
+    // Verify the coach has role admin or coach
+    const { data: coachProfile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', coachId)
+      .single()
+    if (coachProfile?.role !== 'admin' && coachProfile?.role !== 'coach') {
+      throw new Error('El usuario seleccionado no es admin ni coach')
+    }
+
+    const { error } = await admin.from('coach_athletes').insert({
+      coach_id: coachId,
+      athlete_id: athleteId,
+    })
+    if (error) throw new Error('No se pudo asignar el coach')
+
+    // Also update managed_by on profile for fast lookups
+    await admin.from('profiles').update({ managed_by: coachId }).eq('id', athleteId)
+  } else {
+    await admin.from('profiles').update({ managed_by: null }).eq('id', athleteId)
+  }
+
+  revalidatePath('/dashboard/coach/athletes')
+  revalidatePath(`/dashboard/coach/athletes/${athleteId}`)
+  return { success: true }
 }
 
 export async function createAthlete(formData: FormData) {
