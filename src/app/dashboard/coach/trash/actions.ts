@@ -35,7 +35,7 @@ export async function restoreItem(table: string, id: string) {
   }
 
   revalidatePath('/dashboard/coach/trash')
-  revalidatePath(`/dashboard/coach/${table === 'profiles' ? 'athletes' : table === 'workout_plans' ? 'plans' : table === 'exercises' ? 'library' : 'memberships'}`)
+  revalidatePath(`/dashboard/coach/${table === 'profiles' ? 'athletes' : table === 'workout_plans' ? 'plans' : 'library'}`)
 }
 
 export async function permanentlyDeleteItem(table: string, id: string) {

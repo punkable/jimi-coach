@@ -14,13 +14,11 @@ export default async function TrashPage() {
   const { data: profiles } = await supabase.from('profiles').select('*').not('deleted_at', 'is', null)
   const { data: plans } = await supabase.from('workout_plans').select('*').not('deleted_at', 'is', null)
   const { data: exercises } = await supabase.from('exercises').select('*').not('deleted_at', 'is', null)
-  const { data: memberships } = await supabase.from('memberships').select('*').not('deleted_at', 'is', null)
 
   const deletedItems = [
     ...(profiles || []).map(p => ({ ...p, table: 'profiles', type: 'Alumno', name: p.full_name || p.email })),
     ...(plans || []).map(p => ({ ...p, table: 'workout_plans', type: 'Plan de Entrenamiento', name: p.title })),
     ...(exercises || []).map(e => ({ ...e, table: 'exercises', type: 'Ejercicio', name: e.name })),
-    ...(memberships || []).map(m => ({ ...m, table: 'memberships', type: 'Modalidad/Plan', name: m.name })),
   ].sort((a, b) => new Date(b.deleted_at).getTime() - new Date(a.deleted_at).getTime())
 
   return (

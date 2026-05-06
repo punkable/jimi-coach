@@ -103,26 +103,32 @@ export default async function AthleteDashboard() {
     .order('created_at', { ascending: false })
     .limit(4)
 
+  // Local-date helper: avoids UTC offset moving "today" to wrong day in late-night training
+  const localDateStr = (d: Date | string) => {
+    const date = typeof d === 'string' ? new Date(d) : d
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  }
+
   // ── Streak calculation ───────────────────────────────────────
   let currentStreak = 0
   if (results && results.length > 0) {
-    const uniqueDates = Array.from(new Set(results.map(r => r.completed_at.split('T')[0])))
+    const uniqueDates = Array.from(new Set(results.map(r => localDateStr(r.completed_at))))
     const today = new Date()
-    const todayStr = today.toISOString().split('T')[0]
+    const todayStr = localDateStr(today)
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
+    const yesterdayStr = localDateStr(yesterday)
     if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
       let checkDate = new Date(uniqueDates[0]); currentStreak = 1
       for (let i = 1; i < uniqueDates.length; i++) {
         checkDate.setDate(checkDate.getDate() - 1)
-        if (uniqueDates[i] === checkDate.toISOString().split('T')[0]) currentStreak++
+        if (uniqueDates[i] === localDateStr(checkDate)) currentStreak++
         else break
       }
     }
   }
 
-  const todayStr = new Date().toISOString().split('T')[0]
-  const trainedToday = results?.some(r => r.completed_at.startsWith(todayStr))
+  const todayStr = localDateStr(new Date())
+  const trainedToday = results?.some(r => localDateStr(r.completed_at) === todayStr)
   const calendarDay = new Date().getDay()
   const trainingDayOfWeek = calendarDay === 0 ? 7 : calendarDay
   const todayPlanDay = planDays.find((day: any) => day.day_of_week === trainingDayOfWeek)

@@ -5,28 +5,29 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Users, Library, Calendar, LayoutDashboard,
-  Settings, LogOut, Video, Crown, HelpCircle,
+  Settings, LogOut, Video, HelpCircle,
   Target, Activity, ShieldCheck, ChevronRight, Wrench,
 } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { NotificationsBell } from '@/components/notifications-bell'
 
 const mainNav = [
-  { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard', exact: true },
+  { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard',    exact: true },
   { href: '/dashboard/coach/athletes',   icon: Users,           label: 'Alumnos'   },
   { href: '/dashboard/coach/plans',      icon: Calendar,        label: 'Planes'    },
   { href: '/dashboard/coach/insights',   icon: Target,          label: 'Insights'  },
   { href: '/dashboard/coach/library',    icon: Library,         label: 'Biblioteca'},
-  { href: '/dashboard/coach/memberships',icon: Crown,           label: 'Modalidades'},
   { href: '/dashboard/coach/reviews',    icon: Video,           label: 'Revisiones'},
   { href: '/dashboard/coach/feed',       icon: Activity,        label: 'Box Feed'  },
   { href: '/dashboard/coach/tools',      icon: Wrench,          label: 'Herramientas'},
 ]
 
+// Mobile bottom nav: 5 items max for usability. Tools always visible.
 const bottomNav = [
   { href: '/dashboard/coach',          icon: LayoutDashboard, label: 'Inicio',   exact: true },
   { href: '/dashboard/coach/athletes', icon: Users,           label: 'Alumnos'   },
   { href: '/dashboard/coach/plans',    icon: Calendar,        label: 'Planes'    },
+  { href: '/dashboard/coach/tools',    icon: Wrench,          label: 'Tools'     },
   { href: '/dashboard/coach/feed',     icon: Activity,        label: 'Feed'      },
 ]
 
@@ -34,12 +35,10 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
   const pathname = usePathname()
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-[100dvh] bg-background">
 
       {/* ── Desktop Sidebar ── */}
       <aside className="hidden md:flex flex-col w-64 shrink-0 border-r border-border bg-card">
-
-        {/* Brand */}
         <div className="px-5 pt-6 pb-5">
           <Link href="/dashboard/coach" className="flex items-center gap-2 group">
             <Image src="/images/logofinal.svg" alt="LDRFIT" width={130} height={37} className="brand-logo" />
@@ -50,7 +49,6 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
           </div>
         </div>
 
-        {/* Main nav */}
         <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
           {mainNav.map(({ href, icon: Icon, label, exact }) => {
             const active = exact ? pathname === href : pathname.startsWith(href)
@@ -59,9 +57,7 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
                 key={href}
                 href={href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-semibold transition-all duration-150 group ${
-                  active
-                    ? 'bg-primary/12 text-primary'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                  active ? 'bg-primary/12 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                 }`}
               >
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-all ${
@@ -99,11 +95,10 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
           )}
         </nav>
 
-        {/* Bottom links */}
         <div className="px-3 pb-4 pt-3 border-t border-border space-y-0.5">
           {[
             { href: '/dashboard/coach/settings', icon: Settings,    label: 'Ajustes' },
-            { href: '/dashboard/coach/help',      icon: HelpCircle,  label: 'Ayuda'   },
+            { href: '/dashboard/coach/help',     icon: HelpCircle,  label: 'Ayuda'   },
           ].map(({ href, icon: Icon, label }) => (
             <Link
               key={href}
@@ -129,45 +124,58 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
       {/* ── Main area ── */}
       <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
 
-        {/* Topbar */}
-        <header className="h-14 flex items-center justify-between px-4 md:px-6 border-b border-border bg-card/80 backdrop-blur-xl shrink-0 z-40">
-          {/* Mobile logo */}
-          <div className="md:hidden">
-            <Image src="/images/isotipoblanco.svg" alt="LDRFIT" width={26} height={26} className="brand-logo" />
-          </div>
-          {/* Desktop breadcrumb placeholder */}
-          <div className="hidden md:block" />
-          <div className="flex items-center gap-3">
-            <NotificationsBell />
-            <form action={signout} className="md:hidden">
-              <button type="submit" className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-all">
-                <LogOut className="w-4.5 h-4.5" />
-              </button>
-            </form>
+        {/* Topbar — respects iPhone notch via env(safe-area-inset-top) */}
+        <header
+          className="flex items-center justify-between px-4 md:px-6 border-b border-border bg-card/80 backdrop-blur-xl shrink-0 z-40"
+          style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}
+        >
+          <div className="h-14 flex items-center justify-between w-full">
+            <div className="md:hidden">
+              <Image src="/images/isotipoblanco.svg" alt="LDRFIT" width={26} height={26} className="brand-logo" />
+            </div>
+            <div className="hidden md:block" />
+            <div className="flex items-center gap-3 ml-auto">
+              <NotificationsBell />
+              {isAdmin && (
+                <span className="hidden md:inline-flex text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                  Admin
+                </span>
+              )}
+              <form action={signout} className="md:hidden">
+                <button
+                  type="submit"
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-all"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </form>
+            </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto pb-safe-nav md:pb-0">
+        <main className="flex-1 overflow-y-auto pb-24 md:pb-0">
           {children}
         </main>
       </div>
 
       {/* ── Mobile Bottom Nav ── */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-2xl border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="h-16 flex items-center justify-around px-2">
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-2xl border-t border-border"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="h-16 flex items-center justify-around px-1">
           {bottomNav.map(({ href, icon: Icon, label, exact }) => {
             const active = exact ? pathname === href : pathname.startsWith(href)
             return (
               <Link
                 key={href}
                 href={href}
-                className={`flex flex-col items-center justify-center gap-1 min-w-[60px] py-1 rounded-xl transition-all duration-200 ${
+                className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1 rounded-xl transition-all duration-200 ${
                   active ? 'text-primary' : 'text-muted-foreground'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                  active ? 'bg-primary/15' : 'hover:bg-secondary'
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                  active ? 'bg-primary/15' : ''
                 }`}>
                   <Icon className={`w-5 h-5 transition-all ${active ? 'stroke-[2.5]' : 'stroke-[1.6]'}`} />
                 </div>
@@ -180,16 +188,18 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
           {isAdmin && (
             <Link
               href="/dashboard/coach/staff"
-              className={`flex flex-col items-center justify-center gap-1 min-w-[60px] py-1 rounded-xl transition-all duration-200 ${
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-[56px] py-1 rounded-xl transition-all duration-200 ${
                 pathname.startsWith('/dashboard/coach/staff') ? 'text-primary' : 'text-muted-foreground'
               }`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
-                pathname.startsWith('/dashboard/coach/staff') ? 'bg-primary/15' : 'hover:bg-secondary'
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                pathname.startsWith('/dashboard/coach/staff') ? 'bg-primary/15' : ''
               }`}>
                 <ShieldCheck className="w-5 h-5 stroke-[1.6]" />
               </div>
-              <span className={`text-[9px] font-black uppercase tracking-wider ${pathname.startsWith('/dashboard/coach/staff') ? 'opacity-100' : 'opacity-40'}`}>Staff</span>
+              <span className={`text-[9px] font-black uppercase tracking-wider ${pathname.startsWith('/dashboard/coach/staff') ? 'opacity-100' : 'opacity-40'}`}>
+                Staff
+              </span>
             </Link>
           )}
         </div>

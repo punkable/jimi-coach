@@ -169,7 +169,13 @@ export default function ProfileForm({ profile }: { profile: any }) {
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Nacimiento</label>
-                  <Input name="birthDate" type="date" value={formData.birthDate} onChange={handleChange} className="h-12 bg-background/50 border-white/5 focus-visible:ring-primary rounded-xl font-medium" />
+                  <Input
+                    name="birthDate"
+                    type="date"
+                    value={formData.birthDate}
+                    onChange={handleChange}
+                    className="h-12 w-full block bg-background/50 border-white/5 focus-visible:ring-primary rounded-xl font-medium px-3 appearance-none [&::-webkit-date-and-time-value]:text-left [&::-webkit-calendar-picker-indicator]:opacity-60 [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest ml-1">Talla Polera</label>

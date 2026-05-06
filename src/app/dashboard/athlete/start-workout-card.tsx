@@ -66,19 +66,19 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
       {/* Day Selector Hub */}
       <div className="bg-card/40 backdrop-blur-xl rounded-[28px] p-2 border border-border/10 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
-        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
           {planDays.map((day, idx) => {
             const isSelected = selectedDayIdx === idx
             const dayLabel = dayNames[(day.day_of_week - 1) % 7]
-            
+
             return (
               <button
                 key={day.id}
                 onClick={() => setSelectedDayIdx(idx)}
                 className={cn(
-                  "flex-1 min-w-[72px] py-5 rounded-[22px] flex flex-col items-center gap-1.5 transition-all duration-500 relative group",
-                  isSelected 
-                    ? "bg-primary text-primary-foreground shadow-[0_0_30px_rgba(204,255,0,0.3)] scale-[1.02]" 
+                  "shrink-0 w-[72px] py-5 rounded-[22px] flex flex-col items-center gap-1.5 transition-all duration-300 relative group snap-start",
+                  isSelected
+                    ? "bg-primary text-primary-foreground shadow-[0_0_30px_rgba(204,255,0,0.3)]"
                     : "hover:bg-white/5 text-muted-foreground border border-transparent"
                 )}
               >
