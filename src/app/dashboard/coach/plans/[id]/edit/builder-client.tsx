@@ -12,27 +12,25 @@ import {
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure, toggleWeekStatus, updateBlockDescription } from '../../actions'
-import { 
-  DndContext, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors, 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
   TouchSensor,
-  useDraggable
+  useDraggable,
+  useDroppable,
 } from '@dnd-kit/core'
-import { 
-  arrayMove, 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
-  verticalListSortingStrategy 
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy
 } from '@dnd-kit/sortable'
 import { SortableMovement } from './SortableMovement'
 import { SortableBlock } from './SortableBlock'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
@@ -110,8 +108,6 @@ function LibraryItem({ exercise }: { exercise: Exercise }) {
   )
 }
 
-import { useDroppable } from '@dnd-kit/core'
-
 function DroppableBlock({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
   const { isOver, setNodeRef } = useDroppable({ id })
   return (
@@ -173,7 +169,6 @@ export function BuilderClient({
   const [planMeta, setPlanMeta] = useState({
     title: initialPlan?.title || '',
     description: initialPlan?.description || '',
-    is_community_enabled: initialPlan?.is_community_enabled ?? true
   })
   
   const [activeWeek, setActiveWeek] = useState<string>('1')
@@ -189,15 +184,12 @@ export function BuilderClient({
 
   // Track changes to planMeta
   useEffect(() => {
-    if (planMeta.title !== (initialPlan?.title || '') || 
-        planMeta.description !== (initialPlan?.description || '') ||
-        planMeta.is_community_enabled !== (initialPlan?.is_community_enabled ?? true)) {
+    if (planMeta.title !== (initialPlan?.title || '') ||
+        planMeta.description !== (initialPlan?.description || '')) {
       setHasUnsavedChanges(true)
     }
   }, [planMeta, initialPlan])
 
-  // Immutable state update helper
-  // Immutable state update helper with deep cloning safety
   const updateDays = (updater: Day[] | ((prev: Day[]) => Day[])) => {
     setDays(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
@@ -554,7 +546,7 @@ export function BuilderClient({
       <div className="grid grid-cols-1 xl:grid-cols-[20rem_minmax(0,1fr)] gap-4 items-start overflow-visible">
         
         {/* ── Sidebar: Library ── */}
-        <aside className="w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 h-[360px] xl:h-[calc(100dvh-11rem)] xl:min-h-[460px]">
+        <aside className="w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 h-[320px] xl:sticky xl:top-4 xl:h-[calc(100dvh-2rem)] xl:min-h-[400px]">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
           
           <div className="relative z-10 space-y-4 p-4 border-b border-border/60">
@@ -585,7 +577,7 @@ export function BuilderClient({
                   <h3 className="text-xl font-black tracking-tight uppercase text-foreground">Biblioteca</h3>
                   <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Arrastra o copia etiquetas</p>
                 </div>
-                <Badge variant="outline" className="text-[8px] font-black border-border/70 text-muted-foreground">{library.length} items</Badge>
+                <span className="text-[8px] font-black border border-border/70 text-muted-foreground px-2 py-1 rounded-full">{library.length}</span>
               </div>
             </div>
             
@@ -642,16 +634,6 @@ export function BuilderClient({
                       placeholder="Ej: Programa de Fuerza Pro..."
                       onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
                     />
-                  </div>
-                  <div className="flex items-center gap-3 bg-background/55 p-3 rounded-2xl border border-border/70 self-start lg:self-auto shrink-0">
-                    <Switch 
-                      id="community-mode" 
-                      checked={planMeta.is_community_enabled}
-                      onCheckedChange={(checked) => setPlanMeta({...planMeta, is_community_enabled: checked})}
-                    />
-                    <Label htmlFor="community-mode" className="text-[9px] font-black uppercase tracking-widest cursor-pointer select-none whitespace-nowrap">
-                      Feed comunitario {planMeta.is_community_enabled ? 'ON' : 'OFF'}
-                    </Label>
                   </div>
                 </div>
                 <div className="space-y-1.5">
