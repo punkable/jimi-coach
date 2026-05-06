@@ -181,15 +181,26 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             </Button>
           </div>
           <div className="aspect-video bg-black flex items-center justify-center">
-            {activeVideo?.url ? (
-              <iframe 
-                src={activeVideo.url.replace('watch?v=', 'embed/')} 
-                className="w-full h-full" 
-                allowFullScreen 
-              />
-            ) : (
-              <p className="text-white/40 text-xs">Video no disponible</p>
-            )}
+            {(() => {
+              if (!activeVideo?.url) return <p className="text-white/40 text-xs">Video no disponible</p>
+              const m = activeVideo.url.match(/[?&]v=([^&]+)/) || activeVideo.url.match(/youtu\.be\/([^?&]+)/)
+              const embedId = m?.[1]
+              if (!embedId) {
+                return (
+                  <a href={activeVideo.url} target="_blank" rel="noreferrer" className="text-primary text-xs font-bold hover:underline">
+                    Abrir video en nueva pestaña →
+                  </a>
+                )
+              }
+              return (
+                <iframe
+                  src={`https://www.youtube.com/embed/${embedId}?autoplay=1`}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )
+            })()}
           </div>
           <div className="p-4 bg-secondary/20">
             <Button className="w-full" onClick={() => setActiveVideo(null)}>Cerrar</Button>

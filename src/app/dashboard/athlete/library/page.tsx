@@ -12,7 +12,7 @@ export default async function AthleteLibraryPage() {
 
   const { data: exercises } = await supabase
     .from('exercises')
-    .select('id, name, category, difficulty_level, instructions, video_url, tracking_type')
+    .select('id, name, category, difficulty_level, instructions, description, video_url, tracking_type')
     .eq('is_archived', false)
     .order('name', { ascending: true })
 

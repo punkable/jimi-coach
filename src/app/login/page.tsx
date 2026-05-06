@@ -3,15 +3,15 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowLeft, Zap, Target, Users, TrendingUp, Timer, Video } from 'lucide-react'
+import { ArrowLeft, Timer, Target, Video, TrendingUp } from 'lucide-react'
 import { MultiStepSignup } from './multi-step-signup'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const highlights = [
-  { icon: Timer, text: 'Timers CrossFit claros', color: 'warmup' },
-  { icon: Target, text: 'Cargas y objetivos', color: 'strength' },
-  { icon: Video, text: 'Videos técnicos', color: 'gymnastics' },
-  { icon: TrendingUp, text: 'Progreso y feedback', color: 'metcon' },
+const features = [
+  { icon: Timer,      text: 'Timers CrossFit integrados',  color: 'warmup'     },
+  { icon: Target,     text: 'Cargas y objetivos claros',   color: 'strength'   },
+  { icon: Video,      text: 'Videos técnicos en el WOD',   color: 'gymnastics' },
+  { icon: TrendingUp, text: 'Progreso y feedback directo',  color: 'metcon'     },
 ]
 
 export default async function LoginPage({
@@ -22,111 +22,131 @@ export default async function LoginPage({
   const { error, tab } = await searchParams
 
   return (
-    <div className="min-h-[100dvh] grid lg:grid-cols-[1.05fr_0.95fr] bg-background overflow-hidden">
-      <section className="relative hidden lg:flex flex-col justify-between p-10 xl:p-14 border-r border-border/70 overflow-hidden">
+    <div className="min-h-[100dvh] grid lg:grid-cols-2 bg-background overflow-hidden">
+
+      {/* ── Left panel: Brand ── */}
+      <section className="relative hidden lg:flex flex-col justify-between p-10 xl:p-14 overflow-hidden border-r border-border">
         <Image
           src="/images/hero.png"
-          alt="Entrenamiento CrossFit"
-          fill
-          priority
+          alt="CrossFit training"
+          fill priority
           className="object-cover object-center"
           sizes="50vw"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/86 to-background/35" />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-background/95 via-background/70 to-background/20" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
 
         <div className="relative z-10">
-          <Link href="/" className="inline-flex">
-            <Image src="/images/logofinal.svg" alt="LDRFIT" width={176} height={50} className="brand-logo" />
-          </Link>
+          <Image src="/images/logofinal.svg" alt="LDRFIT" width={160} height={46} className="brand-logo" />
         </div>
 
-        <div className="relative z-10 max-w-xl">
+        <div className="relative z-10 max-w-lg">
           <p className="section-title text-primary mb-4">CrossFit coaching platform</p>
-          <h1 className="text-6xl xl:text-7xl font-black uppercase tracking-tight leading-[0.88]">
-            Entrena con estructura.
+          <h1 className="text-5xl xl:text-6xl font-black uppercase tracking-tight leading-[0.9]">
+            Entrena con<br />estructura.
           </h1>
-          <p className="text-lg text-muted-foreground font-semibold mt-6 max-w-md">
-            Una experiencia simple para que coach y atleta sepan qué hacer, cómo hacerlo y cómo progresar.
+          <p className="text-base text-muted-foreground font-medium mt-5 max-w-sm leading-relaxed">
+            La plataforma que conecta coach y atleta para que sepan qué hacer, cómo hacerlo y cómo progresar.
           </p>
         </div>
 
-        <div className="relative z-10 grid grid-cols-2 gap-3 max-w-xl">
-          {highlights.map(({ icon: Icon, text, color }) => (
-            <AccessChip key={text} icon={Icon} text={text} color={color} />
+        <div className="relative z-10 grid grid-cols-2 gap-2.5 max-w-sm">
+          {features.map(({ icon: Icon, text, color }) => (
+            <FeatureChip key={text} icon={Icon} text={text} color={color} />
           ))}
         </div>
       </section>
 
-      <section className="relative flex flex-col min-h-[100dvh]">
-        <div className="lg:hidden flex items-center justify-between px-5 h-16 border-b border-border/60 bg-background/90 backdrop-blur-xl">
+      {/* ── Right panel: Auth ── */}
+      <section className="flex flex-col min-h-[100dvh]">
+
+        {/* Mobile header */}
+        <div className="lg:hidden flex items-center justify-between px-5 h-14 border-b border-border bg-card/80 backdrop-blur-xl">
           <Link href="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="text-[10px] font-black uppercase tracking-widest">Volver</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">Inicio</span>
           </Link>
-          <Image src="/images/logofinal.svg" alt="LDRFIT" width={120} height={34} className="brand-logo" />
+          <Image src="/images/logofinal.svg" alt="LDRFIT" width={110} height={32} className="brand-logo" />
           <div className="w-14" />
         </div>
 
-        <div className="flex-1 flex items-center justify-center px-5 py-8 md:py-12">
-          <div className="w-full max-w-[430px] ios-panel p-6 md:p-8">
-            <div className="text-center mb-7">
-              <div className="w-18 h-18 rounded-[24px] bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-5">
-                <Image src="/images/happy.png" alt="Rex Happy" width={54} height={54} className="rex-art" />
+        <div className="flex-1 flex items-center justify-center px-5 py-10">
+          <div className="w-full max-w-[400px] space-y-6">
+
+            {/* Card */}
+            <div className="ios-panel p-6 md:p-8">
+              {/* Icon + title */}
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-4">
+                  <Image src="/images/happy.png" alt="LDRFIT" width={48} height={48} className="rex-art" />
+                </div>
+                <p className="section-title text-primary mb-1.5">Acceso LDRFIT</p>
+                <h2 className="text-2xl font-black uppercase tracking-tight">Bienvenido</h2>
+                <p className="text-sm text-muted-foreground mt-1.5">Ingresa a tu panel o crea tu cuenta.</p>
               </div>
-              <p className="section-title text-primary mb-2">Acceso LDRFIT</p>
-              <h2 className="text-3xl font-black uppercase tracking-tight">Bienvenido</h2>
-              <p className="text-sm text-muted-foreground mt-2">Entra a tu panel o crea tu cuenta de atleta.</p>
-            </div>
 
-            <Tabs defaultValue={tab === 'register' ? 'register' : 'login'} className="w-full">
-              <TabsList className="w-full h-13 rounded-2xl bg-secondary p-1 mb-7">
-                <TabsTrigger value="login" className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:text-foreground">
-                  Entrar
-                </TabsTrigger>
-                <TabsTrigger value="register" className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-background data-[state=active]:text-foreground">
-                  Registro
-                </TabsTrigger>
-              </TabsList>
+              {/* Tabs */}
+              <Tabs defaultValue={tab === 'register' ? 'register' : 'login'} className="w-full">
+                <TabsList className="w-full h-11 rounded-2xl bg-secondary p-1 mb-6">
+                  <TabsTrigger
+                    value="login"
+                    className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  >
+                    Entrar
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="register"
+                    className="flex-1 rounded-xl font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  >
+                    Registro
+                  </TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="login">
-                <form action={login} className="space-y-5">
-                  <div className="space-y-2">
-                    <label className="section-title">Email</label>
-                    <Input id="email" name="email" type="email" placeholder="atleta@ejemplo.com" required className="h-13 rounded-2xl bg-secondary/55 border-border/70" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="section-title">Contraseña</label>
-                    <Input id="password" name="password" type="password" required placeholder="••••••••" className="h-13 rounded-2xl bg-secondary/55 border-border/70" />
-                  </div>
-                  {error && (
-                    <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-2xl">
-                      <p className="text-xs font-black uppercase tracking-widest text-destructive text-center">{error}</p>
+                <TabsContent value="login">
+                  <form action={login} className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="section-title">Email</label>
+                      <Input
+                        name="email" type="email" placeholder="atleta@ejemplo.com" required
+                        className="h-12 rounded-xl bg-secondary/60 border-border/80 text-sm"
+                      />
                     </div>
-                  )}
-                  <Button type="submit" className="w-full h-14 text-xs font-black uppercase tracking-[0.18em] rounded-2xl">
-                    Acceder ahora
-                  </Button>
-                </form>
-              </TabsContent>
+                    <div className="space-y-1.5">
+                      <label className="section-title">Contraseña</label>
+                      <Input
+                        name="password" type="password" placeholder="••••••••" required
+                        className="h-12 rounded-xl bg-secondary/60 border-border/80 text-sm"
+                      />
+                    </div>
+                    {error && (
+                      <div className="p-3.5 bg-destructive/10 border border-destructive/20 rounded-xl">
+                        <p className="text-xs font-bold text-destructive text-center">{error}</p>
+                      </div>
+                    )}
+                    <Button type="submit" className="w-full h-12 text-xs font-black uppercase tracking-widest rounded-xl mt-1">
+                      Acceder ahora
+                    </Button>
+                  </form>
+                </TabsContent>
 
-              <TabsContent value="register" className="mt-3">
-                <MultiStepSignup error={error} />
-              </TabsContent>
-            </Tabs>
-
-            <div className="mt-7 flex items-center justify-center">
-              <Link href="/" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors font-semibold">
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Volver a la página principal
-              </Link>
+                <TabsContent value="register">
+                  <MultiStepSignup error={error} />
+                </TabsContent>
+              </Tabs>
             </div>
+
+            <p className="text-center text-[11px] text-muted-foreground">
+              <Link href="/" className="hover:text-foreground transition-colors font-semibold">
+                ← Volver a la página principal
+              </Link>
+            </p>
           </div>
         </div>
 
+        {/* Mobile features */}
         <div className="lg:hidden px-5 pb-6 grid grid-cols-2 gap-2">
-          {highlights.map(({ icon: Icon, text, color }) => (
-            <AccessChip key={text} icon={Icon} text={text} color={color} />
+          {features.map(({ icon: Icon, text, color }) => (
+            <FeatureChip key={text} icon={Icon} text={text} color={color} />
           ))}
         </div>
       </section>
@@ -134,20 +154,19 @@ export default async function LoginPage({
   )
 }
 
-function AccessChip({ icon: Icon, text, color }: { icon: any, text: string, color: string }) {
+function FeatureChip({ icon: Icon, text, color }: { icon: any; text: string; color: string }) {
   const colorMap: Record<string, string> = {
-    warmup: 'text-[var(--warmup)] bg-[var(--warmup)]/10 border-[var(--warmup)]/20',
-    strength: 'text-[var(--strength)] bg-[var(--strength)]/10 border-[var(--strength)]/20',
+    warmup:     'text-[var(--warmup)] bg-[var(--warmup)]/10 border-[var(--warmup)]/20',
+    strength:   'text-[var(--strength)] bg-[var(--strength)]/10 border-[var(--strength)]/20',
     gymnastics: 'text-[var(--gymnastics)] bg-[var(--gymnastics)]/10 border-[var(--gymnastics)]/20',
-    metcon: 'text-[var(--metcon)] bg-[var(--metcon)]/10 border-[var(--metcon)]/20',
+    metcon:     'text-[var(--metcon)] bg-[var(--metcon)]/10 border-[var(--metcon)]/20',
   }
-
   return (
-    <div className="ios-panel p-3 flex items-center gap-3">
-      <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${colorMap[color]}`}>
-        <Icon className="w-4 h-4" />
+    <div className="ios-panel p-3 flex items-center gap-2.5">
+      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${colorMap[color]}`}>
+        <Icon className="w-3.5 h-3.5" />
       </div>
-      <p className="text-[10px] font-black uppercase tracking-tight text-foreground/75 leading-tight">{text}</p>
+      <p className="text-[11px] font-bold text-foreground/70 leading-tight">{text}</p>
     </div>
   )
 }

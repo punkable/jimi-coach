@@ -48,84 +48,99 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ── Light mode ── */
 :root {
-  --background: #f7f8fb;
-  --foreground: #14161a;
+  --background: #f4f6fa;
+  --foreground: #0d0f14;
   --card: #ffffff;
-  --card-foreground: #14161a;
+  --card-foreground: #0d0f14;
   --popover: #ffffff;
-  --popover-foreground: #14161a;
-  --primary: #93d500;
-  --primary-foreground: #000000;
-  --secondary: #eef2f7;
-  --secondary-foreground: #283241;
-  --muted: #edf1f6;
-  --muted-foreground: #697386;
+  --popover-foreground: #0d0f14;
+  --primary: #7ec400;
+  --primary-foreground: #ffffff;
+  --secondary: #eef1f8;
+  --secondary-foreground: #1e2535;
+  --muted: #e9ecf5;
+  --muted-foreground: #6b7490;
   --accent: #00b8d9;
   --accent-foreground: #000000;
-  --destructive: #ff4d5e;
-  --border: #dde4ee;
-  --input: #dde4ee;
-  --ring: #93d500;
-  
-  --strength: #ff7a1a;
-  --metcon: #8f5cff;
+  --destructive: #f03e4e;
+  --border: #e1e6f0;
+  --input: #e1e6f0;
+  --ring: #7ec400;
+
+  --strength: #ff6b1a;
+  --metcon: #7c3aed;
   --gymnastics: #0ea5e9;
-  --warmup: #f6c343;
-  --cooldown: #18c9b9;
-  --coach: #93d500;
+  --warmup: #f59e0b;
+  --cooldown: #14b8a6;
+  --coach: #7ec400;
   --athlete: #3b82f6;
-  --review: #f43f7f;
-  
-  --radius: 1rem; /* Standardizing radius */
-  --sidebar: #fcf6ef;
-  --sidebar-foreground: #1c1c1a;
-  --sidebar-primary: #ccff00;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #f3f4f6;
-  --sidebar-accent-foreground: #1c1c1a;
-  --sidebar-border: #e5e7eb;
-  --sidebar-ring: #ccff00;
+  --review: #e11d6a;
+
+  --radius: 1rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #0d0f14;
+  --sidebar-primary: #7ec400;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f0f4fb;
+  --sidebar-accent-foreground: #0d0f14;
+  --sidebar-border: #e1e6f0;
+  --sidebar-ring: #7ec400;
+
+  /* Chart tokens */
+  --chart-1: #7ec400;
+  --chart-2: #0ea5e9;
+  --chart-3: #7c3aed;
+  --chart-4: #f59e0b;
+  --chart-5: #f03e4e;
 }
 
+/* ── Dark mode ── */
 .dark {
-  --background: #07090d;
-  --foreground: #f8fafc;
-  --card: #10141b;
-  --card-foreground: #f8fafc;
-  --popover: #10141b;
-  --popover-foreground: #f8fafc;
-  --primary: #93d500;
-  --primary-foreground: #000000;
-  --secondary: #171d27;
-  --secondary-foreground: #f8fafc;
+  --background: #080b10;
+  --foreground: #f0f4fc;
+  --card: #0e1319;
+  --card-foreground: #f0f4fc;
+  --popover: #0e1319;
+  --popover-foreground: #f0f4fc;
+  --primary: #9bdb00;
+  --primary-foreground: #0d0f14;
+  --secondary: #141a24;
+  --secondary-foreground: #f0f4fc;
   --muted: #111722;
-  --muted-foreground: #98a3b3;
-  --accent: #26c6da;
+  --muted-foreground: #8a96aa;
+  --accent: #22d3ee;
   --accent-foreground: #000000;
-  --destructive: #ff4d5e;
-  --border: #202938;
-  --input: #202938;
-  --ring: #93d500;
-  
-  /* Semantic Colors Dark - Glow Style */
+  --destructive: #ff4757;
+  --border: #1c2535;
+  --input: #1c2535;
+  --ring: #9bdb00;
+
   --strength: #ff8a3d;
-  --metcon: #a98cff;
+  --metcon: #a78bfa;
   --gymnastics: #38bdf8;
-  --warmup: #ffd166;
+  --warmup: #fbbf24;
   --cooldown: #2dd4bf;
-  --coach: #93d500;
+  --coach: #9bdb00;
   --athlete: #60a5fa;
-  --review: #fb5c9b;
-  
-  --sidebar: #000000;
-  --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ccff00;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #111111;
-  --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #1a1a1a;
-  --sidebar-ring: #ccff00;
+  --review: #f472b6;
+
+  --sidebar: #060810;
+  --sidebar-foreground: #f0f4fc;
+  --sidebar-primary: #9bdb00;
+  --sidebar-primary-foreground: #0d0f14;
+  --sidebar-accent: #0e1319;
+  --sidebar-accent-foreground: #f0f4fc;
+  --sidebar-border: #1c2535;
+  --sidebar-ring: #9bdb00;
+
+  --chart-1: #9bdb00;
+  --chart-2: #38bdf8;
+  --chart-3: #a78bfa;
+  --chart-4: #fbbf24;
+  --chart-5: #ff4757;
 }
 
 .hide-close > button:last-of-type {
@@ -137,17 +152,16 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    background-image: linear-gradient(180deg, rgba(255,255,255,0.04), transparent 320px);
+    @apply bg-background text-foreground antialiased;
   }
   html {
     @apply font-sans;
     -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
   }
   button, [role="button"] {
     cursor: pointer;
   }
-  /* Smooth number input on mobile */
   input[type="number"] {
     -moz-appearance: textfield;
   }
@@ -157,134 +171,164 @@
   }
 }
 
+/* ═══════════════════════════════════════════
+   DESIGN SYSTEM — LDRFIT
+   Inspiration: Hevy + Duolingo + CrossFit energy
+   ═══════════════════════════════════════════ */
+
 @layer utilities {
+
+  /* ── Glass / Surface ── */
   .glass {
-    @apply bg-card/80 backdrop-blur-xl border border-border/60 shadow-[0_18px_55px_rgba(0,0,0,0.18)];
+    @apply bg-card/80 backdrop-blur-xl border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.12)];
   }
-  /* Glassmorphism & Depth */
   .glass-card {
-    @apply bg-card/75 backdrop-blur-xl border border-border/60 shadow-[0_10px_35px_rgba(0,0,0,0.14)];
+    @apply bg-card/75 backdrop-blur-xl border border-border/60 shadow-[0_4px_20px_rgba(0,0,0,0.10)];
   }
-
   .glass-strong {
-    @apply bg-card/95 backdrop-blur-2xl border border-border/70 shadow-2xl;
+    @apply bg-card/95 backdrop-blur-2xl border border-border/80 shadow-xl;
+  }
+  .surface {
+    @apply bg-card border border-border shadow-[0_4px_24px_rgba(0,0,0,0.08)];
   }
 
-  /* Premium Navigation Glow */
-  .nav-glow {
-    @apply relative;
+  /* ── Cards ── */
+  .ios-panel {
+    @apply rounded-3xl bg-card border border-border shadow-[0_2px_16px_rgba(0,0,0,0.08)] transition-shadow hover:shadow-[0_4px_24px_rgba(0,0,0,0.12)];
   }
-  .nav-glow::after {
+  .wod-card {
+    @apply relative overflow-hidden rounded-2xl border border-border/60;
+  }
+  .wod-card::before {
     content: '';
-    @apply absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary rounded-full opacity-0 transition-all duration-300;
-  }
-  .nav-glow.active::after {
-    @apply w-4 opacity-100 shadow-[0_0_8px_rgba(var(--primary),0.8)];
+    @apply absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-r-full;
   }
 
-  /* Premium Button Style */
-  .btn-premium {
-    @apply h-14 text-sm font-black uppercase tracking-[0.1em] rounded-2xl bg-white text-black hover:bg-white/90 shadow-[0_12px_40px_rgba(255,255,255,0.15)] active:scale-95 transition-all border-none flex items-center justify-center gap-2;
+  /* ── Stat / Metric chips ── */
+  .metric-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-wider;
+  }
+  .badge-ldrfit {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-widest bg-primary/15 text-primary border border-primary/25;
   }
 
-  .btn-secondary-premium {
-    @apply h-14 text-sm font-black uppercase tracking-[0.1em] rounded-2xl bg-secondary/80 text-white hover:bg-secondary shadow-lg active:scale-95 transition-all border border-white/10 flex items-center justify-center gap-2;
+  /* ── Typography ── */
+  .section-title {
+    @apply text-[9px] font-black uppercase tracking-[0.28em] text-muted-foreground;
+  }
+  .page-title {
+    @apply text-3xl md:text-4xl font-black tracking-tight uppercase leading-none;
+  }
+  .card-title-lg {
+    @apply text-xl font-black uppercase tracking-tight leading-none;
   }
   .text-premium {
     @apply font-black tracking-tight uppercase;
   }
-  .surface {
-    @apply bg-card border border-border/70 shadow-[0_14px_40px_rgba(0,0,0,0.12)];
+
+  /* ── Buttons ── */
+  .btn-primary {
+    @apply h-13 px-6 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs shadow-[0_4px_20px_rgba(var(--primary),0.3)] hover:brightness-110 active:scale-95 transition-all duration-150 flex items-center gap-2 justify-center;
   }
-  .section-title {
-    @apply text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground;
-  }
-  .ios-panel {
-    @apply rounded-[28px] bg-card border border-border/70 shadow-[0_16px_45px_rgba(0,0,0,0.14)];
-  }
-  .metric-chip {
-    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-widest;
-  }
-  .brand-logo {
-    @apply object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.18)];
-  }
-  .rex-art {
-    @apply object-contain opacity-70 saturate-75 contrast-95;
-  }
-  /* Active nav indicator glow */
-  .nav-active {
-    @apply text-primary relative;
-  }
-  .nav-active::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    border-radius: 9999px;
-    background-color: currentColor;
-  }
-  /* CrossFit card with left accent */
-  .wod-card {
-    @apply relative overflow-hidden rounded-2xl border border-border/50;
-  }
-  .wod-card::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 3px;
-    background: var(--primary);
-  }
-  /* Animated shimmer for skeleton */
-  .shimmer {
-    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.05), transparent);
-    background-size: 200% 100%;
-    animation: shimmer 1.5s infinite;
-  }
-  @keyframes shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
+  .btn-ghost-ldrfit {
+    @apply h-10 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] text-muted-foreground hover:text-foreground hover:bg-secondary transition-all duration-150 flex items-center gap-2;
   }
 
-  /* ── iOS Safe Area Insets ── */
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
+  /* ── Navigation ── */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-200 select-none;
   }
-  .pb-safe-nav {
-    /* nav height + safe area */
-    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  .nav-item-active {
+    @apply bg-primary/15 text-primary border border-primary/20;
   }
-  .mb-safe {
-    margin-bottom: env(safe-area-inset-bottom);
+  .nav-item-inactive {
+    @apply text-muted-foreground hover:text-foreground hover:bg-secondary;
   }
-  .bottom-safe {
-    bottom: env(safe-area-inset-bottom);
+
+  /* ── Progress / Streak / Gamification ── */
+  .streak-fire {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/15 text-orange-400 border border-orange-500/25 text-[10px] font-black uppercase tracking-wider;
   }
-  .h-nav-safe {
-    height: calc(4rem + env(safe-area-inset-bottom));
+  .xp-bar {
+    @apply h-2 rounded-full bg-secondary overflow-hidden;
   }
-  /* Top safe area for iPhone notch/dynamic island */
-  .pt-safe {
-    padding-top: env(safe-area-inset-top);
+  .xp-bar-fill {
+    @apply h-full rounded-full bg-primary transition-all duration-700 ease-out;
+    background: linear-gradient(90deg, var(--primary), color-mix(in srgb, var(--primary) 80%, white));
   }
-  .pt-safe-nav {
-    padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+
+  /* ── Tag / Level chips ── */
+  .level-beginner {
+    @apply bg-emerald-500/15 text-emerald-400 border border-emerald-500/25;
   }
-  .mt-safe {
-    margin-top: env(safe-area-inset-top);
+  .level-intermediate {
+    @apply bg-amber-500/15 text-amber-400 border border-amber-500/25;
   }
-  .top-safe {
-    top: env(safe-area-inset-top);
+  .level-advanced {
+    @apply bg-rose-500/15 text-rose-400 border border-rose-500/25;
   }
-  /* Min height filling entire screen excl. safe zones */
-  .min-h-safe {
-    min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+
+  /* ── Block type colors (CrossFit) ── */
+  .block-warmup   { @apply bg-[var(--warmup)]/10 text-[var(--warmup)] border-[var(--warmup)]/25; }
+  .block-strength { @apply bg-[var(--strength)]/10 text-[var(--strength)] border-[var(--strength)]/25; }
+  .block-gymnastics { @apply bg-[var(--gymnastics)]/10 text-[var(--gymnastics)] border-[var(--gymnastics)]/25; }
+  .block-metcon   { @apply bg-[var(--metcon)]/10 text-[var(--metcon)] border-[var(--metcon)]/25; }
+  .block-cooldown { @apply bg-[var(--cooldown)]/10 text-[var(--cooldown)] border-[var(--cooldown)]/25; }
+
+  /* ── Brand ── */
+  .brand-logo {
+    @apply object-contain drop-shadow-sm;
   }
-  .h-screen-safe {
-    height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  .rex-art {
+    @apply object-contain opacity-85;
   }
+  .ldrfit-glow {
+    text-shadow: 0 0 40px color-mix(in srgb, var(--primary) 60%, transparent);
+  }
+
+  /* ── iOS safe area ── */
+  .pb-safe        { padding-bottom: env(safe-area-inset-bottom); }
+  .pb-safe-nav    { padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+  .mb-safe        { margin-bottom: env(safe-area-inset-bottom); }
+  .bottom-safe    { bottom: env(safe-area-inset-bottom); }
+  .h-nav-safe     { height: calc(5rem + env(safe-area-inset-bottom)); }
+  .pt-safe        { padding-top: env(safe-area-inset-top); }
+  .pt-safe-nav    { padding-top: calc(env(safe-area-inset-top) + 0.5rem); }
+  .mt-safe        { margin-top: env(safe-area-inset-top); }
+  .top-safe       { top: env(safe-area-inset-top); }
+  .min-h-safe     { min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .h-screen-safe  { height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+
+  /* ── Animations ── */
+  .shimmer {
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.06), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+  }
+
+  .fade-up {
+    animation: fadeUp 0.4s ease-out forwards;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .pulse-green {
+    animation: pulseGreen 2s ease-in-out infinite;
+  }
+  @keyframes pulseGreen {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 40%, transparent); }
+    50%       { box-shadow: 0 0 0 8px color-mix(in srgb, var(--primary) 0%, transparent); }
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
 }

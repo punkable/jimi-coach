@@ -1,22 +1,21 @@
 'use server'
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
-// We create an admin client using the service role key to manage users
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+async function assertAdmin() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') throw new Error('Not authorized: admin only')
+}
 
 export async function registerCoach(formData: FormData) {
+  await assertAdmin()
+
   const email = formData.get('email') as string
   const password = formData.get('password') as string
   const fullName = formData.get('fullName') as string
@@ -25,7 +24,8 @@ export async function registerCoach(formData: FormData) {
     throw new Error('Missing fields')
   }
 
-  // 1. Create the user in Auth
+  const supabaseAdmin = getSupabaseAdmin()
+
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -41,11 +41,9 @@ export async function registerCoach(formData: FormData) {
   const userId = authData.user?.id
 
   if (userId) {
-    // 2. Update the profile with the 'coach' role
-    // (The handle_new_user trigger might have already created a profile, so we upsert/update)
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
-      .update({ 
+      .update({
         role: 'coach',
         full_name: fullName
       })
@@ -62,10 +60,11 @@ export async function registerCoach(formData: FormData) {
 }
 
 export async function deleteCoach(coachId: string) {
-  // Logic to delete or deactivate a coach
-  // This would require deleting from auth.users too
+  await assertAdmin()
+
+  const supabaseAdmin = getSupabaseAdmin()
   const { error } = await supabaseAdmin.auth.admin.deleteUser(coachId)
   if (error) throw error
-  
+
   revalidatePath('/dashboard/coach/staff')
 }
