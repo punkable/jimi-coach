@@ -25,17 +25,21 @@ export default async function AthletesPage() {
     .single()
   const isAdmin = meProfile?.role === 'admin'
 
-  // Fetch all athletes
+  // Fetch all athletes (managed_by is the source of truth for current coach)
   const { data: athletes } = await admin
     .from('profiles')
     .select(`
-      id, email, full_name, emoji, is_archived, created_at,
-      assigned_plans!assigned_plans_athlete_id_fkey(created_at, workout_plans(title)),
-      coach_athletes!coach_athletes_athlete_id_fkey(coach_id, profiles:coach_id(id, full_name, email))
+      id, email, full_name, emoji, is_archived, created_at, managed_by,
+      assigned_plans!assigned_plans_athlete_id_fkey(created_at, workout_plans(title))
     `)
     .eq('role', 'athlete')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
+
+  // Also fetch coach_athletes as a secondary signal in case managed_by is stale
+  const { data: coachLinks } = await admin
+    .from('coach_athletes')
+    .select('coach_id, athlete_id')
 
   // Fetch all possible coaches (admin + coach role)
   const { data: coaches } = await admin
@@ -83,9 +87,9 @@ export default async function AthletesPage() {
               const planTitle = latestPlan?.workout_plans?.title
               const isSuspended = athlete.is_archived
 
-              const coachLink = (athlete.coach_athletes as any[] | undefined)?.[0]
-              const currentCoachId = coachLink?.coach_id || null
-              const currentCoach = coachLink?.profiles
+              const linkedCoachId = coachLinks?.find((l: any) => l.athlete_id === athlete.id)?.coach_id || null
+              const currentCoachId = athlete.managed_by || linkedCoachId
+              const currentCoach = coaches?.find((c: any) => c.id === currentCoachId) || null
 
               return (
                 <div

@@ -99,6 +99,21 @@ export function ExerciseEditClient({ exercise }: { exercise: any }) {
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="tracking_type" className="section-title">Tipo de seguimiento</Label>
+          <select
+            id="tracking_type"
+            name="tracking_type"
+            defaultValue={exercise.tracking_type || 'weight_reps'}
+            className="flex h-11 w-full items-center rounded-xl border border-border bg-secondary px-3 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40"
+          >
+            <option value="weight_reps">Peso + Reps (fuerza)</option>
+            <option value="reps_only">Solo Reps (gimnasia / calistenia)</option>
+            <option value="distance_time">Distancia + Tiempo (cardio)</option>
+            <option value="time_only">Solo Tiempo (planchas, isométricos)</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label htmlFor="video_url" className="section-title">URL del video (YouTube/Vimeo)</Label>
             {videoUrl && (

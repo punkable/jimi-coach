@@ -37,19 +37,24 @@ interface StartWorkoutCardProps {
 }
 
 export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWorkoutCardProps) {
+  const weeks = Array.from(new Set(planDays.map((d: any) => d.week_number || 1))).sort((a, b) => a - b)
+  const hasMultipleWeeks = weeks.length > 1
+  const [selectedWeek, setSelectedWeek] = useState<number>(weeks[0] || 1)
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const todayIsoDay = today.getDay() === 0 ? 7 : today.getDay()
 
+  const weekDays = planDays.filter((d: any) => (d.week_number || 1) === selectedWeek)
+
   // Auto-select today's workout day on mount, fallback to first
   useEffect(() => {
-    const idx = planDays.findIndex(d => d.day_of_week === todayIsoDay)
-    if (idx !== -1) setSelectedDayIdx(idx)
-  }, [planDays, todayIsoDay])
+    const idx = weekDays.findIndex(d => d.day_of_week === todayIsoDay)
+    setSelectedDayIdx(idx !== -1 ? idx : 0)
+  }, [selectedWeek, planDays, todayIsoDay]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectedDay = planDays[selectedDayIdx]
+  const selectedDay = weekDays[selectedDayIdx]
 
   // Block / movement helpers
   const selectedBlocks    = selectedDay?.workout_blocks ?? []
@@ -85,7 +90,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
   const selectedDate    = selectedDay ? dayDate(selectedDay.day_of_week) : null
   const isSelectedToday = selectedDay ? isDayToday(selectedDay.day_of_week) : false
   const isSelectedPast  = selectedDay ? isDayPast(selectedDay.day_of_week) : false
-  const hasTodayDay     = planDays.some(d => isDayToday(d.day_of_week))
+  const hasTodayDay     = weekDays.some(d => isDayToday(d.day_of_week))
 
   return (
     <section className="space-y-6">
@@ -99,11 +104,31 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
         <Calendar className="w-5 h-5 text-primary/40" />
       </div>
 
+      {/* Week Selector — only when plan has multiple weeks */}
+      {hasMultipleWeeks && (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+          {weeks.map((w) => (
+            <button
+              key={w}
+              onClick={() => setSelectedWeek(w)}
+              className={cn(
+                'shrink-0 h-9 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border',
+                selectedWeek === w
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card/40 border-border/40 text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Semana {w}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Day Selector */}
       <div className="bg-card/40 backdrop-blur-xl rounded-[28px] p-2 border border-border/10 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
         <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
-          {planDays.map((day, idx) => {
+          {weekDays.map((day, idx) => {
             const isSelected = selectedDayIdx === idx
             const isToday    = isDayToday(day.day_of_week)
             const date       = dayDate(day.day_of_week)

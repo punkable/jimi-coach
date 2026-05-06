@@ -52,6 +52,16 @@ export default function NewExercisePage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="tracking_type">Tipo de seguimiento</Label>
+              <select id="tracking_type" name="tracking_type" defaultValue="weight_reps" className="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50">
+                <option className="bg-background text-foreground" value="weight_reps">Peso + Reps (fuerza)</option>
+                <option className="bg-background text-foreground" value="reps_only">Solo Reps (gimnasia / calistenia)</option>
+                <option className="bg-background text-foreground" value="distance_time">Distancia + Tiempo (cardio)</option>
+                <option className="bg-background text-foreground" value="time_only">Solo Tiempo (planchas, isométricos)</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="video_url">URL del Video (YouTube / Vimeo) - Opcional</Label>
               <Input id="video_url" name="video_url" type="url" placeholder="https://youtube.com/watch?v=..." />
             </div>

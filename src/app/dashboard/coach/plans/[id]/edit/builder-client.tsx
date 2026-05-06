@@ -38,7 +38,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 
 // Types
-type Exercise = { id: string, name: string, category?: string | null, difficulty_level?: string | null, video_url?: string | null }
+type Exercise = { id: string, name: string, category?: string | null, difficulty_level?: string | null, video_url?: string | null, tracking_type?: string | null }
 type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
 type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[], timer_type?: string, timer_config?: any }
 type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }

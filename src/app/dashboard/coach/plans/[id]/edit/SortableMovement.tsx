@@ -29,6 +29,15 @@ export function SortableMovement({
     opacity: isDragging ? 0.9 : 1,
   }
 
+  const tt = mov.exercise?.tracking_type || 'weight_reps'
+  const labels: Record<string, { reps: string; weight: string; repsPh: string; weightPh: string }> = {
+    weight_reps:   { reps: 'Reps',     weight: 'Carga',     repsPh: '10-12', weightPh: '75% RM' },
+    reps_only:     { reps: 'Reps',     weight: 'Tempo',     repsPh: '8',     weightPh: '3-1-1-1' },
+    distance_time: { reps: 'Distancia', weight: 'Tiempo',   repsPh: '500m',  weightPh: '2:00' },
+    time_only:     { reps: 'Tiempo',   weight: 'Notas',     repsPh: '0:30',  weightPh: 'AMRAP' },
+  }
+  const { reps: repsLabel, weight: weightLabel, repsPh, weightPh } = labels[tt] || labels.weight_reps
+
   return (
     <div
       ref={setNodeRef}
@@ -78,19 +87,19 @@ export function SortableMovement({
           />
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">Reps</span>
+          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">{repsLabel}</span>
           <Input
             className="h-9 text-[11px] w-full bg-background/60 border-border/60 focus:border-primary/30 rounded-xl font-bold px-2"
-            placeholder="10-12"
+            placeholder={repsPh}
             value={mov.reps}
             onChange={(e) => updateReps(e.target.value)}
           />
         </div>
         <div className="flex flex-col gap-1 min-w-0">
-          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">Carga</span>
+          <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground/55 ml-1">{weightLabel}</span>
           <Input
             className="h-9 text-[11px] w-full bg-background/60 border-border/60 focus:border-primary/30 rounded-xl font-bold px-2"
-            placeholder="75% RM"
+            placeholder={weightPh}
             value={mov.weight_percentage}
             onChange={(e) => updateWeight(e.target.value)}
           />

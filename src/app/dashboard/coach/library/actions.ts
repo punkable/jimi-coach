@@ -31,6 +31,7 @@ export async function createExercise(formData: FormData) {
     instructions: formData.get('instructions') as string || null,
     description: formData.get('description') as string || null,
     video_url: cleanVideoUrl(formData.get('video_url') as string),
+    tracking_type: (formData.get('tracking_type') as string) || 'weight_reps',
     created_by: user.id,
   }
 
@@ -56,6 +57,7 @@ export async function updateExercise(id: string, formData: FormData) {
     instructions: formData.get('instructions') as string || null,
     description: formData.get('description') as string || null,
     video_url: cleanVideoUrl(formData.get('video_url') as string),
+    tracking_type: (formData.get('tracking_type') as string) || 'weight_reps',
   }
 
   const { error } = await admin.from('exercises').update(updatedExercise).eq('id', id)
