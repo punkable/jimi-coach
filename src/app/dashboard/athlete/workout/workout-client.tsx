@@ -172,8 +172,14 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
   if (!day || !day.workout_blocks || day.workout_blocks.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center h-full mt-20">
-        <h2 className="text-2xl font-bold mb-2">Día de Descanso</h2>
-        <p className="text-muted-foreground mb-8">No tienes ejercicios asignados o tu coach aún está construyendo este plan.</p>
+        <h2 className="text-2xl font-bold mb-2">
+          {viewOnly ? 'Sin entrenamiento programado' : 'Día sin entrenamiento'}
+        </h2>
+        <p className="text-muted-foreground mb-8 max-w-xs">
+          {viewOnly
+            ? 'Este día no tiene ejercicios asignados.'
+            : 'No tienes ejercicios para hoy. Aprovecha para descansar o tu coach aún está construyendo este plan.'}
+        </p>
         <Link href="/dashboard/athlete">
           <Button variant="outline">Volver al Inicio</Button>
         </Link>
@@ -600,21 +606,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Floating Finish Button Area — inline style ensures it clears iOS home indicator */}
-      {activeTab === 'workout' && !viewOnly && (
-        <div
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-16 z-30 pointer-events-none"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', padding: '4rem 1rem max(env(safe-area-inset-bottom), 16px)' }}
-        >
-          <Button
-            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all pointer-events-auto"
-            onClick={() => setFinishOpen(true)}
-          >
-            Finalizar Entrenamiento
-          </Button>
-        </div>
-      )}
 
       {/* Finish Confirmation / Feedback Modal */}
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>

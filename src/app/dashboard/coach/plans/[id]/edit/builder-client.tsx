@@ -626,6 +626,59 @@ export function BuilderClient({
               </Button>
             </div>
 
+            {/* Plan overview: weeks × weekdays grid (at-a-glance) */}
+            {totalWeeks.length > 0 && (
+              <div className="pt-4 border-t border-border/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Vista general del plan</span>
+                  <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary" /> Con ejercicios</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500/60" /> Vacío</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-secondary border border-border/50" /> Sin día</span>
+                  </div>
+                </div>
+                <div className="grid gap-1.5" style={{ gridTemplateColumns: 'minmax(70px, auto) repeat(7, minmax(0, 1fr))' }}>
+                  <div />
+                  {['L','M','X','J','V','S','D'].map((d, i) => (
+                    <div key={i} className="text-[9px] font-black uppercase text-center text-muted-foreground/60">{d}</div>
+                  ))}
+                  {totalWeeks.map(w => (
+                    <div key={w} className="contents">
+                      <button
+                        type="button"
+                        onClick={() => setActiveWeek(w.toString())}
+                        className={cn(
+                          'text-[10px] font-black uppercase tracking-widest text-left transition-colors px-2 py-1.5 rounded-lg',
+                          parseInt(activeWeek) === w ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        Sem {w}
+                      </button>
+                      {[1,2,3,4,5,6,7].map(dow => {
+                        const dayObj = days.find(d => d.week_number === w && d.day_of_week === dow)
+                        const hasBlocks = dayObj && dayObj.workout_blocks.length > 0
+                        const isEmpty = dayObj && !hasBlocks
+                        return (
+                          <button
+                            key={dow}
+                            type="button"
+                            onClick={() => setActiveWeek(w.toString())}
+                            title={dayObj ? `${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][dow-1]} · ${dayObj.workout_blocks.length} bloques` : 'Sin día'}
+                            className={cn(
+                              'h-7 rounded-md transition-all',
+                              hasBlocks && 'bg-primary hover:opacity-90',
+                              isEmpty && 'bg-amber-500/40 hover:bg-amber-500/60',
+                              !dayObj && 'bg-secondary/50 border border-border/50 hover:bg-secondary'
+                            )}
+                          />
+                        )
+                      })}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between w-full pt-4 border-t border-border/60">
               <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full lg:w-auto min-w-0">
                 <TabsList className="bg-background/55 p-1.5 rounded-2xl h-auto min-h-12 border border-border/70 w-full lg:w-auto justify-start overflow-x-auto overflow-y-hidden">

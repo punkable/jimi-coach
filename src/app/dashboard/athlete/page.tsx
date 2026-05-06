@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { AthleteGreeting } from './athlete-greeting'
 import { StartWorkoutCard } from './start-workout-card'
 import { PendingWorkoutBanner } from './pending-workout-banner'
+import { AthleteCalendar } from './athlete-calendar'
 
 const insightIconMap: Record<string, any> = { goal: Target, benchmark: Zap, achievement: Trophy, note: StickyNote }
 const insightColor: Record<string, { bg: string; text: string; border: string }> = {
@@ -240,8 +241,9 @@ export default async function AthleteDashboard() {
 
         {/* Main: Workout card + stats */}
         <div className="lg:col-span-2 space-y-4">
-          <PendingWorkoutBanner />
+          <PendingWorkoutBanner planDays={planDays as any} startDate={activeAssignment?.start_date} />
           <StartWorkoutCard plan={plan} planDays={planDays} trainedToday={!!trainedToday} startDate={activeAssignment?.start_date} />
+          <AthleteCalendar planDays={planDays as any} startDate={activeAssignment?.start_date} results={(results || []) as any} />
 
           {/* Mini stats */}
           <div className="grid grid-cols-3 gap-3">

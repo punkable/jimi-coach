@@ -234,17 +234,42 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
                 </div>
               </div>
 
-              <Link
-                href={`/dashboard/athlete/workout?dayId=${selectedDay.id}${isSelectedToday ? '' : '&mode=view'}`}
-                className="w-full md:w-auto"
+              <Button
+                onClick={(e) => {
+                  // If launching today's workout and there's a different pending session, ask
+                  if (isSelectedToday) {
+                    try {
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i)
+                        if (!key?.startsWith('wod-progress-')) continue
+                        const pendingId = key.replace('wod-progress-', '')
+                        if (pendingId === selectedDay.id) continue
+                        const raw = localStorage.getItem(key)
+                        if (!raw) continue
+                        const { sets, blocks } = JSON.parse(raw)
+                        const hasProgress = (sets && Object.keys(sets).length > 0) || (blocks && Object.keys(blocks).length > 0)
+                        if (!hasProgress) continue
+                        const choice = confirm('Tienes otro entrenamiento sin finalizar. ¿Quieres descartarlo y empezar el de hoy? Cancelar para reanudar el anterior.')
+                        if (choice) {
+                          localStorage.removeItem(key)
+                        } else {
+                          e.preventDefault()
+                          window.location.href = `/dashboard/athlete/workout?dayId=${pendingId}`
+                          return
+                        }
+                        break
+                      }
+                    } catch {}
+                  }
+                  window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}${isSelectedToday ? '' : '&mode=view'}`
+                }}
+                className="h-16 px-10 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none w-full md:w-auto justify-center"
               >
-                <Button className="h-16 px-10 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none w-full md:w-auto justify-center">
-                  {isSelectedToday ? 'Entrenar Ahora' : isSelectedPast ? 'Ver Entrenamiento' : 'Ver Día'}
-                  <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                    <ChevronRight className="w-5 h-5" />
-                  </div>
-                </Button>
-              </Link>
+                {isSelectedToday ? 'Entrenar Ahora' : isSelectedPast ? 'Ver Entrenamiento' : 'Ver Día'}
+                <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
+                  <ChevronRight className="w-5 h-5" />
+                </div>
+              </Button>
             </div>
           </CardContent>
         </Card>
