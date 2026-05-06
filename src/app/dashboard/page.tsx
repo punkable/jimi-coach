@@ -1,19 +1,16 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  // Fetch the user's role from the profiles table
-  const { data: profile } = await supabase
+  // Use admin client for the role lookup so RLS issues can never break routing.
+  const admin = getSupabaseAdmin()
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
     .eq('id', user.id)

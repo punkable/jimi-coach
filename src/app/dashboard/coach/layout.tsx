@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
 import { CoachLayoutClient } from './CoachLayoutClient'
 import { redirect } from 'next/navigation'
 
@@ -6,17 +7,16 @@ export default async function CoachLayout({ children }: { children: React.ReactN
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
-  }
+  if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Use admin client for role lookup so RLS issues never break access.
+  const admin = getSupabaseAdmin()
+  const { data: profile } = await admin
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  // Only admins and coaches can access this layout
   if (profile?.role !== 'admin' && profile?.role !== 'coach') {
     redirect('/dashboard/athlete')
   }
