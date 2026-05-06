@@ -37,25 +37,38 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   const [activeTimer, setActiveTimer] = useState<{ type: TimerType, config: any } | null>(null)
 
   // ── Persist workout progress to localStorage ──────────────────────────────
+  // Storage shape: { sets, blocks, startTime (ISO when first started), updatedAt (ISO last touched) }
+  // - We keep startTime stable across saves so the session timer is real, not "time since last save".
+  // - We auto-clear on resume if updatedAt is from before today (stale).
+  // - Only sessions with meaningful progress (any completed set or block) are kept on save.
   const [isLoaded, setIsLoaded] = useState(false)
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null)
   const storageKey = `wod-progress-${day?.id}`
-  
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
-        const { sets, blocks, timestamp } = JSON.parse(saved)
-        // Only resume if it's from today
-        const isToday = new Date(timestamp).toDateString() === new Date().toDateString()
-        if (isToday) {
+        const parsed = JSON.parse(saved)
+        const { sets, blocks, startTime, updatedAt, timestamp } = parsed
+        const lastTouchIso = updatedAt || timestamp
+        const lastTouchDate = lastTouchIso ? new Date(lastTouchIso) : null
+        const isToday = lastTouchDate && lastTouchDate.toDateString() === new Date().toDateString()
+        // Resume only if the session was last touched today AND the timestamp is sane (within 24h)
+        const ageMs = lastTouchDate ? Date.now() - lastTouchDate.getTime() : Infinity
+        if (isToday && ageMs < 24 * 60 * 60 * 1000) {
           if (sets) setAllSetsData(sets)
           if (blocks) setCompletedBlocks(blocks)
+          // Use stored startTime if valid; otherwise fall back to last touch
+          const startIso = startTime && !isNaN(new Date(startTime).getTime()) ? startTime : lastTouchIso
+          if (startIso) setSessionStartTime(startIso)
         } else {
           localStorage.removeItem(storageKey)
         }
       }
     } catch (e) {
       console.error('Error loading progress:', e)
+      try { localStorage.removeItem(storageKey) } catch {}
     } finally {
       setIsLoaded(true)
     }
@@ -64,15 +77,31 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
   useEffect(() => {
     if (!day?.id || !isLoaded) return
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ 
-        sets: allSetsData, 
+      const setsArr = Object.values(allSetsData).flat()
+      const hasMeaningfulProgress =
+        setsArr.some((s: any) => s.is_completed || s.weight || s.reps || s.distance || s.time_seconds) ||
+        Object.values(completedBlocks).some(Boolean)
+
+      if (!hasMeaningfulProgress) {
+        // Don't pollute localStorage with empty sessions — clears any prior empty save too
+        localStorage.removeItem(storageKey)
+        return
+      }
+
+      const nowIso = new Date().toISOString()
+      const startIso = sessionStartTime || nowIso
+      if (!sessionStartTime) setSessionStartTime(startIso)
+
+      localStorage.setItem(storageKey, JSON.stringify({
+        sets: allSetsData,
         blocks: completedBlocks,
-        timestamp: new Date().toISOString()
+        startTime: startIso,
+        updatedAt: nowIso,
       }))
     } catch (e) {
       console.error('Error saving progress:', e)
     }
-  }, [allSetsData, completedBlocks, storageKey, isLoaded])
+  }, [allSetsData, completedBlocks, storageKey, isLoaded, sessionStartTime])
   // ─────────────────────────────────────────────────────────────────────────
 
   // Timer Tick

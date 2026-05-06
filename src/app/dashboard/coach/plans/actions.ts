@@ -333,6 +333,24 @@ export async function toggleWeekStatus(planId: string, weekNumber: number, isPub
   revalidatePath('/dashboard/athlete/workout')
 }
 
+export async function createExerciseQuick(name: string, category: string): Promise<{ exercise?: { id: string, name: string, category: string | null }, error?: string }> {
+  try {
+    const { user } = await getAuthorizedCoach()
+    const admin = getSupabaseAdmin()
+    const { data, error } = await admin
+      .from('exercises')
+      .insert({ name: name.trim(), category: category || 'General', created_by: user.id })
+      .select('id, name, category')
+      .single()
+    if (error) throw error
+    revalidatePath('/dashboard/coach/library')
+    revalidatePath('/dashboard/athlete/library')
+    return { exercise: data }
+  } catch (err: any) {
+    return { error: err.message || 'Error al crear ejercicio' }
+  }
+}
+
 export async function updateBlockDescription(blockId: string, description: string) {
   try {
     const { user, role } = await getAuthorizedCoach()

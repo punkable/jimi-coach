@@ -11,7 +11,7 @@ import {
   ChevronUp, ChevronDown, Copy
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { savePlanStructure, toggleWeekStatus, updateBlockDescription } from '../../actions'
+import { savePlanStructure, toggleWeekStatus, updateBlockDescription, createExerciseQuick } from '../../actions'
 import {
   DndContext,
   closestCenter,
@@ -177,6 +177,10 @@ export function BuilderClient({
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [editingBlocks, setEditingBlocks] = useState<Record<string, boolean>>({})
+  const [blockPickerOpen, setBlockPickerOpen] = useState<string | null>(null)
+  const [blockPickerSearch, setBlockPickerSearch] = useState('')
+  const [localExercises, setLocalExercises] = useState<Exercise[]>([])
+  const [creatingExercise, setCreatingExercise] = useState(false)
 
   useEffect(() => {
     routineDraftsRef.current = routineDrafts
@@ -459,6 +463,36 @@ export function BuilderClient({
     })
   }
 
+  const openBlockPicker = (blockId: string) => {
+    setBlockPickerOpen(blockId)
+    setBlockPickerSearch('')
+    setCreatingExercise(false)
+  }
+
+  const closeBlockPicker = () => {
+    setBlockPickerOpen(null)
+    setBlockPickerSearch('')
+    setCreatingExercise(false)
+  }
+
+  const handleQuickCreateExercise = async (dIdx: number, bIdx: number) => {
+    const name = blockPickerSearch.trim()
+    if (!name) return
+    setCreatingExercise(true)
+    try {
+      const result = await createExerciseQuick(name, 'General')
+      if (result.exercise) {
+        setLocalExercises(prev => [...prev, result.exercise!])
+        addMovement(dIdx, bIdx, result.exercise!)
+        closeBlockPicker()
+      } else {
+        alert(result.error || 'Error al crear ejercicio')
+      }
+    } finally {
+      setCreatingExercise(false)
+    }
+  }
+
   const removeBlock = (dayId: string, bIdx: number) => {
     updateDays((prev: Day[]) => {
       const n: Day[] = JSON.parse(JSON.stringify(prev))
@@ -495,7 +529,8 @@ export function BuilderClient({
     }
   }
 
-  const filteredLibrary = library.filter(ex => 
+  const allExercises = [...library, ...localExercises]
+  const filteredLibrary = allExercises.filter(ex =>
     ex.name.toLowerCase().includes(libSearch.toLowerCase()) ||
     (ex.category || '').toLowerCase().includes(libSearch.toLowerCase())
   )
@@ -1189,11 +1224,74 @@ export function BuilderClient({
                                 </div>
                               </SortableContext>
                               
-                              {/* Visual Drop Zone for Library Items */}
-                              {block.workout_movements.length === 0 && (
-                                <div className="py-6 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl pointer-events-none bg-background/25">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
+                              {/* Empty state */}
+                              {block.workout_movements.length === 0 && blockPickerOpen !== block.id && (
+                                <div className="py-5 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl bg-background/25 gap-2">
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra o añade ejercicios</p>
+                                  <button
+                                    onClick={() => openBlockPicker(block.id)}
+                                    className="text-[9px] font-black uppercase tracking-widest text-primary/70 hover:text-primary flex items-center gap-1 transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" /> Añadir ejercicio
+                                  </button>
                                 </div>
+                              )}
+
+                              {/* Inline exercise picker */}
+                              {blockPickerOpen === block.id ? (
+                                <div className="mt-2 mx-1 border border-primary/25 rounded-2xl p-3 space-y-2 bg-primary/5">
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                      <Input
+                                        autoFocus
+                                        placeholder="Buscar ejercicio..."
+                                        value={blockPickerSearch}
+                                        onChange={e => setBlockPickerSearch(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Escape') closeBlockPicker() }}
+                                        className="h-8 pl-8 text-xs rounded-xl bg-background/70 border-border/60"
+                                      />
+                                    </div>
+                                    <button onClick={closeBlockPicker} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                  <div className="max-h-52 overflow-y-auto overscroll-contain space-y-0.5 [scrollbar-width:thin]">
+                                    {allExercises
+                                      .filter(ex => !blockPickerSearch || ex.name.toLowerCase().includes(blockPickerSearch.toLowerCase()) || (ex.category || '').toLowerCase().includes(blockPickerSearch.toLowerCase()))
+                                      .map(ex => (
+                                        <button
+                                          key={ex.id}
+                                          onClick={() => { addMovement(globalDIdx, bIdx, ex); closeBlockPicker() }}
+                                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left hover:bg-primary/15 hover:text-primary transition-colors group/ex"
+                                        >
+                                          <Dumbbell className="w-3 h-3 text-muted-foreground group-hover/ex:text-primary shrink-0 transition-colors" />
+                                          <span className="text-xs font-semibold flex-1 truncate">{ex.name}</span>
+                                          {ex.category && <span className="text-[8px] text-muted-foreground/50 uppercase tracking-wider shrink-0">{ex.category}</span>}
+                                        </button>
+                                      ))}
+                                    {blockPickerSearch && allExercises.filter(ex => ex.name.toLowerCase().includes(blockPickerSearch.toLowerCase()) || (ex.category || '').toLowerCase().includes(blockPickerSearch.toLowerCase())).length === 0 && (
+                                      <div className="py-4 text-center space-y-2.5">
+                                        <p className="text-xs text-muted-foreground">No encontrado en la biblioteca</p>
+                                        <button
+                                          onClick={() => handleQuickCreateExercise(globalDIdx, bIdx)}
+                                          disabled={creatingExercise}
+                                          className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 mx-auto disabled:opacity-50"
+                                        >
+                                          {creatingExercise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                          Crear &quot;{blockPickerSearch}&quot;
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : block.workout_movements.length > 0 && (
+                                <button
+                                  onClick={() => openBlockPicker(block.id)}
+                                  className="w-full mt-1 h-7 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                                >
+                                  <Plus className="w-3 h-3" /> Añadir ejercicio
+                                </button>
                               )}
                             </DroppableBlock>
                           </SortableBlock>

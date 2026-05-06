@@ -14,7 +14,7 @@ import { NotificationsBell } from '@/components/notifications-bell'
 const mainNav = [
   { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard', exact: true },
   { href: '/dashboard/coach/athletes',   icon: Users,           label: 'Alumnos'   },
-  { href: '/dashboard/coach/plans',      icon: Calendar,        label: 'Planes'    },
+  { href: '/dashboard/coach/plans',      icon: Calendar,        label: 'Programación' },
   { href: '/dashboard/coach/insights',   icon: Target,          label: 'Insights'  },
   { href: '/dashboard/coach/library',    icon: Library,         label: 'Biblioteca'},
   { href: '/dashboard/coach/memberships',icon: Crown,           label: 'Modalidades'},
@@ -26,7 +26,7 @@ const mainNav = [
 const bottomNav = [
   { href: '/dashboard/coach',          icon: LayoutDashboard, label: 'Inicio',   exact: true },
   { href: '/dashboard/coach/athletes', icon: Users,           label: 'Alumnos'   },
-  { href: '/dashboard/coach/plans',    icon: Calendar,        label: 'Planes'    },
+  { href: '/dashboard/coach/plans',    icon: Calendar,        label: 'Programa'  },
   { href: '/dashboard/coach/feed',     icon: Activity,        label: 'Feed'      },
 ]
 

@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap, Video
+import {
+  PlayCircle, Calendar, ChevronRight, CheckCircle2, Zap, Video, RotateCcw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -18,13 +18,38 @@ interface StartWorkoutCardProps {
 
 export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWorkoutCardProps) {
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
-  
+  const [pendingDayIds, setPendingDayIds] = useState<Set<string>>(new Set())
+
   // Set initial selected day based on day of week or first available
   useEffect(() => {
     const today = new Date().getDay() // 0 = Sun, 1 = Mon...
     const adjustedToday = today === 0 ? 7 : today
     const todayIdx = planDays.findIndex(d => d.day_of_week === adjustedToday)
     if (todayIdx !== -1) setSelectedDayIdx(todayIdx)
+  }, [planDays])
+
+  // Detect pending (in-progress) sessions from localStorage
+  useEffect(() => {
+    const pending = new Set<string>()
+    for (const day of planDays) {
+      try {
+        const saved = localStorage.getItem(`wod-progress-${day.id}`)
+        if (!saved) continue
+        const { updatedAt, sets, blocks } = JSON.parse(saved)
+        if (!updatedAt) continue
+        const lastTouch = new Date(updatedAt)
+        const isToday = lastTouch.toDateString() === new Date().toDateString()
+        const ageMs = Date.now() - lastTouch.getTime()
+        if (!isToday || ageMs >= 24 * 60 * 60 * 1000) continue
+        // Only count sessions with meaningful progress
+        const setsArr = Object.values(sets || {}).flat() as any[]
+        const hasProgress =
+          setsArr.some((s: any) => s.is_completed || s.weight || s.reps || s.distance || s.time_seconds) ||
+          Object.values(blocks || {}).some(Boolean)
+        if (hasProgress) pending.add(day.id)
+      } catch {}
+    }
+    setPendingDayIds(pending)
   }, [planDays])
 
   const selectedDay = planDays[selectedDayIdx]
@@ -151,14 +176,36 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
                 </div>
               </div>
 
-              <Link href={`/dashboard/athlete/workout?dayId=${selectedDay.id}`} className="w-full md:w-auto">
-                <Button className="h-20 px-12 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none">
-                  Entrenar Ahora
-                  <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                    <ChevronRight className="w-5 h-5" />
-                  </div>
-                </Button>
-              </Link>
+              <div className="flex flex-col gap-2 w-full md:w-auto">
+                <Link href={`/dashboard/athlete/workout?dayId=${selectedDay.id}`} className="w-full md:w-auto">
+                  <Button className={cn(
+                    "h-20 w-full px-12 rounded-[24px] text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none",
+                    pendingDayIds.has(selectedDay.id)
+                      ? "bg-amber-500 hover:bg-amber-600 shadow-[0_20px_50px_rgba(245,158,11,0.25)]"
+                      : "bg-primary shadow-[0_20px_50px_rgba(204,255,0,0.25)]"
+                  )}>
+                    {pendingDayIds.has(selectedDay.id) ? (
+                      <><RotateCcw className="w-5 h-5" /> Reanudar</>
+                    ) : (
+                      <>Entrenar Ahora</>
+                    )}
+                    <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
+                      <ChevronRight className="w-5 h-5" />
+                    </div>
+                  </Button>
+                </Link>
+                {pendingDayIds.has(selectedDay.id) && (
+                  <button
+                    onClick={() => {
+                      try { localStorage.removeItem(`wod-progress-${selectedDay.id}`) } catch {}
+                      setPendingDayIds(prev => { const n = new Set(prev); n.delete(selectedDay.id); return n })
+                    }}
+                    className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 transition-colors text-center"
+                  >
+                    Descartar sesión anterior
+                  </button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
