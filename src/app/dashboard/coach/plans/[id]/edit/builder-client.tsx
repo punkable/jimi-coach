@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { 
-  Plus, Trash2, Dumbbell, Save, Loader2, 
+  Plus, Trash2, Dumbbell, Save, Loader2, X,
   Search, Layout, Edit3,
   Hash, Video,
   Eye, EyeOff, CheckCircle2, Timer as TimerIcon
@@ -343,6 +343,19 @@ export function BuilderClient({
     }
   }
 
+  const removeWeek = (weekNum: number) => {
+    const remaining = days.filter(d => d.week_number !== weekNum)
+    // Renumber remaining weeks to keep 1,2,3... sequential
+    const weeks = Array.from(new Set(remaining.map(d => d.week_number || 1))).sort((a, b) => a - b)
+    const renumbered = remaining.map(d => ({
+      ...d,
+      week_number: weeks.indexOf(d.week_number) + 1,
+    }))
+    updateDays(renumbered)
+    const next = weeks.find(w => w !== weekNum) ?? weeks[0]
+    setActiveWeek((next ? (weeks.indexOf(next) + 1) : 1).toString())
+  }
+
   const addDay = (weekNum: number) => {
     const weekDays = days.filter(d => d.week_number === weekNum)
     const nextDayNum = weekDays.length + 1
@@ -619,16 +632,27 @@ export function BuilderClient({
                   {totalWeeks.map(w => {
                     const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
                     return (
-                      <TabsTrigger 
-                        key={w} 
-                        value={w.toString()}
-                        className="rounded-xl font-black uppercase tracking-widest text-[10px] px-4 md:px-6 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
-                      >
-                        Semana {w}
-                        {!isWPublished && (
-                          <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] h-5 px-2 rounded-lg font-black uppercase">Draft</Badge>
+                      <div key={w} className="flex items-center gap-0.5 group/weektab">
+                        <TabsTrigger
+                          value={w.toString()}
+                          className="rounded-xl font-black uppercase tracking-widest text-[10px] px-4 md:px-5 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
+                        >
+                          Semana {w}
+                          {!isWPublished && (
+                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] h-5 px-2 rounded-lg font-black uppercase">Draft</Badge>
+                          )}
+                        </TabsTrigger>
+                        {totalWeeks.length > 1 && (
+                          <button
+                            type="button"
+                            title={`Eliminar Semana ${w}`}
+                            onClick={() => { if (confirm(`¿Eliminar Semana ${w} y todos sus días?`)) removeWeek(w) }}
+                            className="w-5 h-5 rounded-md flex items-center justify-center opacity-0 group-hover/weektab:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
                         )}
-                      </TabsTrigger>
+                      </div>
                     )
                   })}
                 </TabsList>
@@ -674,9 +698,19 @@ export function BuilderClient({
                     {/* Day Header */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
                       <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
-                        <div className="px-4 py-2 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[11px] shrink-0 uppercase tracking-[0.16em] w-fit">
-                          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(day.day_of_week - 1) % 7]}
-                        </div>
+                        <select
+                          value={day.day_of_week}
+                          onChange={(e) => {
+                            const n: Day[] = JSON.parse(JSON.stringify(days))
+                            n[globalDIdx].day_of_week = parseInt(e.target.value)
+                            updateDays(n)
+                          }}
+                          className="h-9 px-3 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[11px] shrink-0 uppercase tracking-[0.12em] focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                          {['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map((name, i) => (
+                            <option key={i + 1} value={i + 1} className="bg-background text-foreground normal-case">{name}</option>
+                          ))}
+                        </select>
                         <div className="flex-1 space-y-1 min-w-0">
                           <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Título visible del entrenamiento</Label>
                           <Input 

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { Users, Activity, Plus, Dumbbell, Calendar, ChevronRight, Video, Target, Flame, TrendingUp, BarChart2 } from 'lucide-react'
+import { getSupabaseAdmin } from '@/lib/supabase/admin'
+import { Users, Plus, Dumbbell, Calendar, ChevronRight, Video, Target, Flame, BarChart2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { DashboardCharts } from './dashboard-charts'
@@ -9,20 +10,22 @@ import { PostFeedForm } from './post-feed-form'
 export default async function CoachDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  // Layout already gates access — use admin client for stats so RLS never breaks the dashboard
+  const admin = getSupabaseAdmin()
 
-  const { data: profile } = await supabase
+  const { data: profile } = await admin
     .from('profiles').select('*').eq('id', user?.id).single()
 
-  const { data: athletes } = await supabase
+  const { data: athletes } = await admin
     .from('profiles').select('id').eq('role', 'athlete').is('deleted_at', null)
 
-  const { count: plansCount } = await supabase
+  const { count: plansCount } = await admin
     .from('workout_plans').select('*', { count: 'exact', head: true }).eq('is_archived', false)
 
-  const { count: exercisesCount } = await supabase
+  const { count: exercisesCount } = await admin
     .from('exercises').select('*', { count: 'exact', head: true })
 
-  const { data: allAthletes } = await supabase
+  const { data: allAthletes } = await admin
     .from('profiles').select('id, created_at').eq('role', 'athlete').is('deleted_at', null).order('created_at', { ascending: true })
 
   const athleteGrowthMap = new Map<string, number>()

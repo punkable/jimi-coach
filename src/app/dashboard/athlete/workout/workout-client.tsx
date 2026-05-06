@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer as TimerIcon, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer as TimerIcon, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video, PlayCircle } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -15,9 +15,10 @@ import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 import { CrossFitTimer, TimerType } from './crossfit-timer'
 
-export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[] }) {
+export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly = false }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[], viewOnly?: boolean }) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
-  const [readinessOpen, setReadinessOpen] = useState(!hasReadiness)
+  // Never show readiness in view-only mode
+  const [readinessOpen, setReadinessOpen] = useState(!hasReadiness && !viewOnly)
   const [sleep, setSleep] = useState('3')
   const [stress, setStress] = useState('3')
   const [soreness, setSoreness] = useState('3')
@@ -232,9 +233,13 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             <div className="min-w-0">
               <h1 className="text-sm font-black tracking-tight leading-none uppercase truncate">{day.name || day.title || 'WOD'}</h1>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="text-[10px] text-primary font-black tabular-nums">
-                  ⏱ {Math.floor(workoutElapsed / 60).toString().padStart(2, '0')}:{(workoutElapsed % 60).toString().padStart(2, '0')}
-                </span>
+                {viewOnly ? (
+                  <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Solo lectura</span>
+                ) : (
+                  <span className="text-[10px] text-primary font-black tabular-nums">
+                    ⏱ {Math.floor(workoutElapsed / 60).toString().padStart(2, '0')}:{(workoutElapsed % 60).toString().padStart(2, '0')}
+                  </span>
+                )}
                 <span className="text-[10px] text-muted-foreground font-medium">
                   · {day.workout_blocks?.length ?? 0} bloques
                 </span>
@@ -242,7 +247,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {activeTab === 'workout' && (
+            {!viewOnly && activeTab === 'workout' && (
               <Button
                 size="sm"
                 onClick={() => setFinishOpen(true)}
@@ -251,28 +256,38 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                 Finalizar
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="rounded-2xl w-10 h-10 text-muted-foreground hover:text-destructive"
-              onClick={() => {
-                if (confirm('¿Quieres reiniciar la sesión? Se borrará el progreso actual de este día.')) {
-                  localStorage.removeItem(storageKey)
-                  window.location.reload()
-                }
-              }}
-              title="Reiniciar Sesión"
-            >
-              <RotateCcw className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={`rounded-2xl w-10 h-10 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
-              onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
-            >
-              {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
-            </Button>
+            {viewOnly ? (
+              <Link href={`/dashboard/athlete/workout?dayId=${day.id}`}>
+                <Button size="sm" className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest mr-1 gap-1.5">
+                  <PlayCircle className="w-3.5 h-3.5" /> Iniciar
+                </Button>
+              </Link>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-2xl w-10 h-10 text-muted-foreground hover:text-destructive"
+                onClick={() => {
+                  if (confirm('¿Quieres reiniciar la sesión? Se borrará el progreso actual de este día.')) {
+                    localStorage.removeItem(storageKey)
+                    window.location.reload()
+                  }
+                }}
+                title="Reiniciar Sesión"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+            )}
+            {!viewOnly && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`rounded-2xl w-10 h-10 transition-colors ${activeTab === 'tools' ? 'bg-primary/20 text-primary' : 'text-muted-foreground'}`}
+                onClick={() => setActiveTab(activeTab === 'tools' ? 'workout' : 'tools')}
+              >
+                {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
+              </Button>
+            )}
           </div>
         </div>
         {/* Progress bar */}
@@ -482,7 +497,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
                                 </div>
                               </div>
 
-                                {hasSets && (
+                                {hasSets && !viewOnly && (
                                   <WorkoutSetsList
                                     movement={mov}
                                     prs={prs}
@@ -587,7 +602,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
       </AnimatePresence>
 
       {/* Floating Finish Button Area — inline style ensures it clears iOS home indicator */}
-      {activeTab === 'workout' && (
+      {activeTab === 'workout' && !viewOnly && (
         <div
           className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-16 z-30 pointer-events-none"
           style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', padding: '4rem 1rem max(env(safe-area-inset-bottom), 16px)' }}

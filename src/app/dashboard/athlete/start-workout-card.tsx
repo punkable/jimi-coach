@@ -12,13 +12,19 @@ import { cn } from '@/lib/utils'
 const DAY_NAMES_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 const DAY_NAMES_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-/** Returns the Monday of the ISO week containing `date` (1=Mon … 7=Sun). */
-function getMondayOfWeek(date: Date): Date {
-  const d = new Date(date)
-  const jsDay  = d.getDay()
-  const isoDay = jsDay === 0 ? 7 : jsDay
-  d.setDate(d.getDate() - (isoDay - 1))
-  d.setHours(0, 0, 0, 0)
+/** Real date for a given plan week + day_of_week, anchored on plan start_date.
+ *  week 1 day 1 (Monday) = start_date.
+ *  If no start_date, falls back to current ISO week. */
+function planDayToDate(weekNum: number, dayOfWeek: number, startDate: Date | null): Date {
+  const anchor = startDate ? new Date(startDate) : (() => {
+    const d = new Date()
+    const iso = d.getDay() === 0 ? 7 : d.getDay()
+    d.setDate(d.getDate() - (iso - 1))
+    return d
+  })()
+  anchor.setHours(0, 0, 0, 0)
+  const d = new Date(anchor)
+  d.setDate(d.getDate() + (weekNum - 1) * 7 + (dayOfWeek - 1))
   return d
 }
 
@@ -34,25 +40,40 @@ interface StartWorkoutCardProps {
   plan: any
   planDays: any[]
   trainedToday: boolean
+  startDate?: string | null
 }
 
-export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWorkoutCardProps) {
+export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate }: StartWorkoutCardProps) {
   const weeks = Array.from(new Set(planDays.map((d: any) => d.week_number || 1))).sort((a, b) => a - b)
   const hasMultipleWeeks = weeks.length > 1
-  const [selectedWeek, setSelectedWeek] = useState<number>(weeks[0] || 1)
-  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const todayIsoDay = today.getDay() === 0 ? 7 : today.getDay()
 
+  // Determine which plan week corresponds to today
+  const parsedStart = startDate ? (() => { const d = new Date(startDate); d.setHours(0,0,0,0); return d })() : null
+  const currentPlanWeek = (() => {
+    if (!parsedStart) return weeks[0] || 1
+    const daysDiff = Math.floor((today.getTime() - parsedStart.getTime()) / 86400000)
+    const weekIdx = Math.max(0, Math.min(Math.floor(daysDiff / 7), weeks.length - 1))
+    return weeks[weekIdx] ?? weeks[0] ?? 1
+  })()
+
+  const [selectedWeek, setSelectedWeek] = useState<number>(currentPlanWeek)
+  const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
+
   const weekDays = planDays.filter((d: any) => (d.week_number || 1) === selectedWeek)
 
-  // Auto-select today's workout day on mount, fallback to first
+  // Auto-select today's workout day on week change, fallback to first
   useEffect(() => {
-    const idx = weekDays.findIndex(d => d.day_of_week === todayIsoDay)
+    const realToday = new Date(); realToday.setHours(0,0,0,0)
+    const idx = weekDays.findIndex(d => {
+      const realDate = planDayToDate(selectedWeek, d.day_of_week, parsedStart)
+      return realDate.toDateString() === realToday.toDateString()
+    })
     setSelectedDayIdx(idx !== -1 ? idx : 0)
-  }, [selectedWeek, planDays, todayIsoDay]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedWeek, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedDay = weekDays[selectedDayIdx]
 
@@ -77,20 +98,16 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
     ? `${videoCount} ${videoCount === 1 ? 'video técnico' : 'videos técnicos'}`
     : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'}`
 
-  // Date helpers: map each plan day to the real calendar date for the current week
-  const weekMonday = getMondayOfWeek(today)
-  const dayDate = (dayOfWeek: number) => {
-    const d = new Date(weekMonday)
-    d.setDate(d.getDate() + (dayOfWeek - 1))
-    return d
-  }
-  const isDayToday = (dow: number) => dow === todayIsoDay
-  const isDayPast  = (dow: number) => dow < todayIsoDay
+  // Date helpers using real plan dates anchored to start_date
+  const dayDate = (weekNum: number, dayOfWeek: number) => planDayToDate(weekNum, dayOfWeek, parsedStart)
+  const isDayToday = (weekNum: number, dow: number) =>
+    dayDate(weekNum, dow).toDateString() === today.toDateString()
+  const isDayPast  = (weekNum: number, dow: number) => dayDate(weekNum, dow) < today
 
-  const selectedDate    = selectedDay ? dayDate(selectedDay.day_of_week) : null
-  const isSelectedToday = selectedDay ? isDayToday(selectedDay.day_of_week) : false
-  const isSelectedPast  = selectedDay ? isDayPast(selectedDay.day_of_week) : false
-  const hasTodayDay     = weekDays.some(d => isDayToday(d.day_of_week))
+  const selectedDate    = selectedDay ? dayDate(selectedWeek, selectedDay.day_of_week) : null
+  const isSelectedToday = selectedDay ? isDayToday(selectedWeek, selectedDay.day_of_week) : false
+  const isSelectedPast  = selectedDay ? isDayPast(selectedWeek, selectedDay.day_of_week) : false
+  const hasTodayDay     = weekDays.some(d => isDayToday(selectedWeek, d.day_of_week))
 
   return (
     <section className="space-y-6">
@@ -130,8 +147,8 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
         <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
           {weekDays.map((day, idx) => {
             const isSelected = selectedDayIdx === idx
-            const isToday    = isDayToday(day.day_of_week)
-            const date       = dayDate(day.day_of_week)
+            const isToday    = isDayToday(selectedWeek, day.day_of_week)
+            const date       = dayDate(selectedWeek, day.day_of_week)
 
             return (
               <button
@@ -217,7 +234,10 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
                 </div>
               </div>
 
-              <Link href={`/dashboard/athlete/workout?dayId=${selectedDay.id}`} className="w-full md:w-auto">
+              <Link
+                href={`/dashboard/athlete/workout?dayId=${selectedDay.id}${isSelectedToday ? '' : '&mode=view'}`}
+                className="w-full md:w-auto"
+              >
                 <Button className="h-16 px-10 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none w-full md:w-auto justify-center">
                   {isSelectedToday ? 'Entrenar Ahora' : isSelectedPast ? 'Ver Entrenamiento' : 'Ver Día'}
                   <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">

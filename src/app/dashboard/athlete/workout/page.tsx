@@ -3,13 +3,14 @@ import { notFound, redirect } from 'next/navigation'
 import { WorkoutClient } from './workout-client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { ArrowLeft, PlayCircle } from 'lucide-react'
+import { ArrowLeft, PlayCircle, Eye } from 'lucide-react'
 import Link from 'next/link'
 
 export const revalidate = 0
 
-export default async function WorkoutPage(props: { searchParams: Promise<{ dayId?: string }> }) {
+export default async function WorkoutPage(props: { searchParams: Promise<{ dayId?: string; mode?: string }> }) {
   const searchParams = await props.searchParams
+  const viewOnly = searchParams.mode === 'view'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -119,7 +120,9 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
       .from('workout_set_results')
       .select('weight, reps, is_completed, workout_movements(exercise_id)')
       .eq('is_completed', true)
+      .eq('athlete_id', user.id)
       .order('weight', { ascending: false })
+      .limit(500)
 
     if (pastSets) {
       pastSets.forEach((s: any) => {
@@ -148,7 +151,13 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
-      <WorkoutClient day={todayData} hasReadiness={!!readiness} prs={prs} allExercises={allExercises ?? []} />
+      <WorkoutClient
+        day={todayData}
+        hasReadiness={!!readiness}
+        prs={prs}
+        allExercises={allExercises ?? []}
+        viewOnly={viewOnly}
+      />
     </div>
   )
 }
