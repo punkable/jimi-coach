@@ -1,10 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Video, PlaySquare, Archive, Edit } from 'lucide-react'
+import { Plus, Video, Archive, Edit } from 'lucide-react'
 import Link from 'next/link'
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
 import { archiveExercise } from './actions'
+import { VideoPopupButton } from './video-popup-button'
 
 export default async function LibraryPage() {
   const supabase = await createClient()
@@ -51,11 +52,7 @@ export default async function LibraryPage() {
                 </CardHeader>
                 <CardContent className="mt-auto pt-4 flex gap-2">
                   {ex.video_url ? (
-                    <a href={ex.video_url} target="_blank" rel="noreferrer" className="flex-1">
-                      <Button variant="default" className="w-full gap-2 rounded-xl font-bold" size="sm">
-                        <PlaySquare className="w-4 h-4" /> Video
-                      </Button>
-                    </a>
+                    <VideoPopupButton videoUrl={ex.video_url} exerciseName={ex.name} />
                   ) : (
                     <Button variant="secondary" className="flex-1 opacity-60 cursor-not-allowed rounded-xl" size="sm" disabled>
                       <Video className="w-4 h-4 mr-2" /> Sin video
