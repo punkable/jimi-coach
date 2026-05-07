@@ -96,7 +96,6 @@ export async function postToFeed(content: string, type: string = 'announcement')
   })
 
   revalidatePath('/dashboard/athlete/feed')
-  revalidatePath('/dashboard/coach/feed')
   revalidatePath('/dashboard/coach')
 }
 

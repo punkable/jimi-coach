@@ -37,7 +37,7 @@ import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 // Types
 type Exercise = { id: string, name: string, category?: string | null, difficulty_level?: string | null, video_url?: string | null, tracking_type?: string | null }
 type Movement = { id: string, exercise_id: string, exercise?: Exercise, sets: number, reps: string, weight_percentage: string, notes: string }
-type Block = { id: string, name: string, type: string, description?: string, workout_movements: Movement[], timer_type?: string, timer_config?: any }
+type Block = { id: string, name: string, type: string, description?: string, description_footer?: string | null, workout_movements: Movement[], timer_type?: string, timer_config?: any }
 type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
@@ -88,6 +88,17 @@ export function BuilderClient({
     return drafts
   })
   const routineDraftsRef = useRef<Record<string, string>>(routineDrafts)
+  // Footer text — free text shown AFTER structured movements
+  const [routineFooters, setRoutineFooters] = useState<Record<string, string>>(() => {
+    const drafts: Record<string, string> = {}
+    daysRef.current.forEach(day => {
+      day.workout_blocks.forEach(block => {
+        drafts[block.id] = block.description_footer || ''
+      })
+    })
+    return drafts
+  })
+  const routineFootersRef = useRef<Record<string, string>>(routineFooters)
   const [planMeta, setPlanMeta] = useState({
     title: initialPlan?.title || '',
     description: initialPlan?.description || '',
@@ -149,6 +160,10 @@ export function BuilderClient({
     routineDraftsRef.current = routineDrafts
   }, [routineDrafts])
 
+  useEffect(() => {
+    routineFootersRef.current = routineFooters
+  }, [routineFooters])
+
   // Track changes to planMeta
   useEffect(() => {
     if (planMeta.title !== (initialPlan?.title || '') ||
@@ -170,22 +185,28 @@ export function BuilderClient({
 
   const rebuildRoutineDrafts = (nextDays: Day[]) => {
     const drafts: Record<string, string> = {}
+    const footers: Record<string, string> = {}
     nextDays.forEach(day => {
       day.workout_blocks.forEach(block => {
         drafts[block.id] = block.description || ''
+        footers[block.id] = block.description_footer || ''
       })
     })
     routineDraftsRef.current = drafts
+    routineFootersRef.current = footers
     setRoutineDrafts(drafts)
+    setRoutineFooters(footers)
   }
 
   const mergeRoutineDraftsIntoDays = (sourceDays: Day[]) => {
     const drafts = routineDraftsRef.current
+    const footers = routineFootersRef.current
     return JSON.parse(JSON.stringify(sourceDays)).map((day: Day) => ({
       ...day,
       workout_blocks: day.workout_blocks.map((block: Block) => ({
         ...block,
-        description: drafts[block.id] ?? block.description ?? ''
+        description: drafts[block.id] ?? block.description ?? '',
+        description_footer: footers[block.id] ?? block.description_footer ?? ''
       }))
     }))
   }
@@ -194,6 +215,13 @@ export function BuilderClient({
     const nextDrafts = { ...routineDraftsRef.current, [blockId]: value }
     routineDraftsRef.current = nextDrafts
     setRoutineDrafts(nextDrafts)
+    setHasUnsavedChanges(true)
+  }
+
+  const updateRoutineFooter = (blockId: string, value: string) => {
+    const nextFooters = { ...routineFootersRef.current, [blockId]: value }
+    routineFootersRef.current = nextFooters
+    setRoutineFooters(nextFooters)
     setHasUnsavedChanges(true)
   }
 
@@ -772,6 +800,7 @@ export function BuilderClient({
                       <div className="space-y-4">
                         {day.workout_blocks.map((block, bIdx) => {
                           const description = routineDrafts[block.id] ?? block.description ?? ''
+                          const footer = routineFooters[block.id] ?? block.description_footer ?? ''
                           const blockSummary = (
                             <div className="space-y-2">
                               <div className="flex flex-wrap items-center gap-2">
@@ -785,7 +814,12 @@ export function BuilderClient({
                                 </span>
                                 {description && (
                                   <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-[var(--gymnastics)]/10 text-[var(--gymnastics)] border border-[var(--gymnastics)]/20">
-                                    Texto libre
+                                    Texto inicial
+                                  </span>
+                                )}
+                                {footer && (
+                                  <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest bg-[var(--gymnastics)]/10 text-[var(--gymnastics)] border border-[var(--gymnastics)]/20">
+                                    Notas finales
                                   </span>
                                 )}
                               </div>
@@ -800,7 +834,12 @@ export function BuilderClient({
                                   {block.workout_movements.length > 3 && ' · ...'}
                                 </p>
                               )}
-                              {!description && block.workout_movements.length === 0 && (
+                              {footer && (
+                                <p className="text-[11px] text-muted-foreground/80 leading-relaxed line-clamp-1 italic">
+                                  ↳ {footer.split('\n')[0]}
+                                </p>
+                              )}
+                              {!description && !footer && block.workout_movements.length === 0 && (
                                 <p className="text-[11px] text-muted-foreground italic">Bloque vacío — click para añadir contenido</p>
                               )}
                             </div>
@@ -1336,6 +1375,28 @@ export function BuilderClient({
                                   <Plus className="w-3 h-3" /> Añadir ejercicio
                                 </button>
                               )}
+
+                              {/* Footer free-text — notes shown AFTER movements */}
+                              <div className="mt-4 pt-4 border-t border-border/40 space-y-2">
+                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                  <Edit3 className="w-3 h-3" /> Notas finales (opcional)
+                                </Label>
+                                <Textarea
+                                  placeholder="Notas o texto libre que aparecerá DESPUÉS de los ejercicios. Ej: estiramientos, descanso, observaciones."
+                                  className="min-h-[80px] bg-background/55 border border-border/60 focus:border-primary/40 text-sm font-medium leading-relaxed resize-y rounded-xl p-3 transition-all"
+                                  value={routineFooters[block.id] ?? ''}
+                                  onChange={(e) => updateRoutineFooter(block.id, e.target.value)}
+                                />
+                                {(routineFooters[block.id] || '').length > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => updateRoutineFooter(block.id, '')}
+                                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+                                  >
+                                    <Trash2 className="w-3 h-3" /> Eliminar notas finales
+                                  </button>
+                                )}
+                              </div>
                             </div>
                           </SortableBlock>
                           )

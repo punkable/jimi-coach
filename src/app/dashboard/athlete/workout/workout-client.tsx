@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer as TimerIcon, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video, PlayCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, Play, Pause, RotateCcw, Calculator, Timer as TimerIcon, X, Send, Dumbbell, PlusCircle, Search, Trophy, AlertCircle, Video, PlayCircle, Edit3 } from 'lucide-react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -383,6 +383,7 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
                 const isCompleted = completedBlocks[block.id]
                 const blockMovCount = block.workout_movements?.length ?? 0
                 const routineText = typeof block.description === 'string' ? block.description.trim() : ''
+                const footerText = typeof block.description_footer === 'string' ? block.description_footer.trim() : ''
                 
                 const typeColors: Record<string, string> = {
                   strength: 'border-l-[var(--strength)]',
@@ -562,6 +563,26 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
                             </div>
                           )
                         })}
+                      </div>
+                    )}
+
+                    {/* Footer free-text — notes after movements */}
+                    {footerText && (
+                      <div className="px-4 py-4 bg-[var(--gymnastics)]/5 border-t border-[var(--gymnastics)]/15">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Edit3 className="w-3.5 h-3.5 text-[var(--gymnastics)]" />
+                          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--gymnastics)]">
+                            Notas finales
+                          </p>
+                        </div>
+                        <div className="rounded-2xl border border-border/60 bg-background/55 p-3">
+                          <SmartRoutineText
+                            text={footerText}
+                            exercises={allExercises || []}
+                            blockExercises={block.workout_movements?.map((m: any) => m.exercises).filter(Boolean) || []}
+                            onVideoClick={(url, name) => setActiveVideo({ url, name })}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

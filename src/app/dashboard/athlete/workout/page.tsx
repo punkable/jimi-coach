@@ -35,7 +35,7 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
   // Fetch all days for this plan
   const { data: days } = await supabase
     .from('workout_days')
-    .select('*, workout_blocks(id, workout_day_id, name, description, type, timer_type, timer_config, order_index, workout_movements(*, exercises(*)))')
+    .select('*, workout_blocks(id, workout_day_id, name, description, description_footer, type, timer_type, timer_config, order_index, workout_movements(*, exercises(*)))')
     .eq('plan_id', activeAssignment.plan_id)
     .eq('is_published', true)
     .order('day_of_week', { ascending: true })

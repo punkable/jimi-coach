@@ -194,9 +194,9 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       // Handle Blocks
       const { data: existingBlocks, error: fetchBlocksErr } = await supabase
         .from('workout_blocks')
-        .select('id, description')
+        .select('id, description, description_footer')
         .eq('workout_day_id', dayId)
-      
+
       if (fetchBlocksErr) throw fetchBlocksErr
 
       const incomingBlockIds = day.workout_blocks.map((b: any) => b.id).filter((id: string) => id.length > 15)
@@ -211,18 +211,24 @@ export async function savePlanStructure(planId: string, days: any[], planMeta?: 
       for (let i = 0; i < day.workout_blocks.length; i++) {
         const block = day.workout_blocks[i]
         const isNewBlock = block.id.length < 15
-        
+
         const existingBlock = existingBlocks?.find((existing: any) => existing.id === block.id)
         const incomingDescription = typeof block.description === 'string' ? block.description : undefined
         const descriptionToPersist =
           incomingDescription !== undefined && incomingDescription.length > 0
             ? incomingDescription
             : existingBlock?.description || ''
+        const incomingFooter = typeof block.description_footer === 'string' ? block.description_footer : undefined
+        const footerToPersist =
+          incomingFooter !== undefined
+            ? (incomingFooter.length > 0 ? incomingFooter : null)
+            : (existingBlock?.description_footer ?? null)
 
         const blockData = {
           workout_day_id: dayId,
           name: block.name || 'Sin nombre',
           description: descriptionToPersist,
+          description_footer: footerToPersist,
           type: block.type || 'strength',
           timer_type: block.timer_type || null,
           timer_config: block.timer_config || {},
