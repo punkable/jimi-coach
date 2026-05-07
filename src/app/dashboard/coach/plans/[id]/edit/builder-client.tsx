@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
-  Plus, Trash2, Dumbbell, Save, Loader2, X,
+  Plus, Trash2, Save, Loader2, X,
   Search, Layout, Edit3,
-  Hash, Video,
+  Video,
   Eye, EyeOff, CheckCircle2, Timer as TimerIcon,
-  ChevronUp, ChevronDown, Copy, PanelLeft, Zap
+  ChevronUp, ChevronDown, Copy, Zap
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure, toggleWeekStatus, updateBlockDescription, createExerciseQuick } from '../../actions'
@@ -20,8 +20,6 @@ import {
   useSensor,
   useSensors,
   TouchSensor,
-  useDraggable,
-  useDroppable,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -43,82 +41,6 @@ type Block = { id: string, name: string, type: string, description?: string, wor
 type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
-
-// Sidebar Exercise Item with Drag & Copy Tag Support
-function LibraryItem({ exercise }: { exercise: Exercise }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `lib-${exercise.id}`,
-    data: { type: 'library-item', exercise }
-  })
-  
-  const [copied, setCopied] = useState(false)
-
-  const handleCopyTag = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const tag = `[${exercise.name}]`
-    navigator.clipboard.writeText(tag)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: 999
-  } : undefined
-
-  return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...listeners} 
-      {...attributes}
-      className={cn(
-        "group relative p-3 mb-2 rounded-2xl bg-card/80 border border-border/70 hover:border-primary/40 cursor-grab active:cursor-grabbing transition-all hover:shadow-[0_12px_32px_rgba(15,23,42,0.16)]",
-        isDragging && "opacity-50 ring-2 ring-primary ring-offset-4 ring-offset-background"
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:bg-primary/20 transition-colors">
-            <Dumbbell className="w-5 h-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase truncate text-foreground tracking-tight">{exercise.name}</p>
-            <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">{exercise.category || 'General'}</p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleCopyTag}
-          className={cn(
-            "h-8 px-2 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all",
-            copied 
-              ? "bg-green-500/20 text-green-500 border border-green-500/30" 
-              : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent"
-          )}
-        >
-          {copied ? <CheckCircle2 className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
-          {copied ? 'Copiado' : 'Etiqueta'}
-        </button>
-      </div>
-      
-      {/* Visual Indicator of Draggable */}
-      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
-    </div>
-  )
-}
-
-function DroppableBlock({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
-  const { isOver, setNodeRef } = useDroppable({ id })
-  return (
-    <div 
-      ref={setNodeRef} 
-      className={`${className} transition-colors duration-200 ${isOver ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''}`}
-    >
-      {children}
-    </div>
-  )
-}
 
 export function BuilderClient({ 
   planId, 
@@ -172,7 +94,6 @@ export function BuilderClient({
   })
   
   const [activeWeek, setActiveWeek] = useState<string>('1')
-  const [libSearch, setLibSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -184,8 +105,6 @@ export function BuilderClient({
   const [pickerSelectedIds, setPickerSelectedIds] = useState<Set<string>>(new Set())
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [createFormData, setCreateFormData] = useState({ tracking_type: 'weight_reps', video_url: '', description: '' })
-
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Block wizard state — null = closed, else stores { dayId, step, blockData }
   const [blockWizard, setBlockWizard] = useState<{
@@ -288,7 +207,7 @@ export function BuilderClient({
     const activeId = String(active.id)
     const overId = String(over.id)
 
-    // 1. Handle Block Reordering
+    // Block reordering within a day
     if (active.data.current?.type === 'block') {
       const activeDIdx = active.data.current.dIdx
       if (activeId !== overId) {
@@ -296,12 +215,7 @@ export function BuilderClient({
           const next = JSON.parse(JSON.stringify(prev))
           const blockIds = next[activeDIdx].workout_blocks.map((b: any) => b.id)
           const oldIndex = blockIds.indexOf(activeId)
-          
-          let newIndex = blockIds.indexOf(overId)
-          if (newIndex === -1 && overId.startsWith('block-')) {
-             newIndex = parseInt(overId.split('-')[2])
-          }
-          
+          const newIndex = blockIds.indexOf(overId)
           if (oldIndex !== -1 && newIndex !== -1) {
             next[activeDIdx].workout_blocks = arrayMove(next[activeDIdx].workout_blocks, oldIndex, newIndex)
           }
@@ -311,30 +225,7 @@ export function BuilderClient({
       return
     }
 
-    // 2. Handle Library Item Drop
-    if (active.data.current?.type === 'library-item') {
-      let overDIdx = -1, overBIdx = -1, overMIdx = -1
-      if (overId.startsWith('block-')) {
-        const parts = overId.split('-')
-        overDIdx = parseInt(parts[1])
-        overBIdx = parseInt(parts[2])
-        overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
-      } else {
-        days.forEach((d, di) => {
-          d.workout_blocks.forEach((b, bi) => {
-            const mi = b.workout_movements.findIndex(m => m.id === overId)
-            if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
-          })
-        })
-      }
-      if (overDIdx !== -1) {
-        const exercise = active.data.current.exercise
-        addMovement(overDIdx, overBIdx, exercise, overMIdx)
-      }
-      return
-    }
-
-    // 3. Handle Movement Sorting/Moving
+    // Movement reordering within its block (no cross-block moves)
     let activeDIdx = -1, activeBIdx = -1, activeMIdx = -1
     days.forEach((d, di) => {
       d.workout_blocks.forEach((b, bi) => {
@@ -344,26 +235,19 @@ export function BuilderClient({
     })
 
     if (activeDIdx !== -1) {
-      let overDIdx = -1, overBIdx = -1, overMIdx = -1
-      if (overId.startsWith('block-')) {
-        const parts = overId.split('-')
-        overDIdx = parseInt(parts[1])
-        overBIdx = parseInt(parts[2])
-        overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
-      } else {
-        days.forEach((d, di) => {
-          d.workout_blocks.forEach((b, bi) => {
-            const mi = b.workout_movements.findIndex(m => m.id === overId)
-            if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
-          })
-        })
-      }
+      let overMIdx = -1
+      const block = days[activeDIdx].workout_blocks[activeBIdx]
+      const mi = block.workout_movements.findIndex(m => m.id === overId)
+      if (mi !== -1) overMIdx = mi
 
-      if (overDIdx !== -1) {
+      if (overMIdx !== -1 && activeMIdx !== overMIdx) {
         updateDays(prev => {
           const next = JSON.parse(JSON.stringify(prev))
-          const [moved] = next[activeDIdx].workout_blocks[activeBIdx].workout_movements.splice(activeMIdx, 1)
-          next[overDIdx].workout_blocks[overBIdx].workout_movements.splice(overMIdx, 0, moved)
+          next[activeDIdx].workout_blocks[activeBIdx].workout_movements = arrayMove(
+            next[activeDIdx].workout_blocks[activeBIdx].workout_movements,
+            activeMIdx,
+            overMIdx
+          )
           return next
         })
       }
@@ -464,10 +348,11 @@ export function BuilderClient({
     return {}
   }
 
-  const confirmBlockWizard = () => {
+  const confirmBlockWizard = (openPickerAfter: boolean = true) => {
     if (!blockWizard) return
     const { dayId, blockType, blockName, timerType } = blockWizard
     const blockTypeLabel = BLOCK_TYPES.find(t => t.id === blockType)?.label || blockType
+    const newBlockId = genId()
     updateDays((prev: Day[]) => {
       const n: Day[] = JSON.parse(JSON.stringify(prev))
       const idx = n.findIndex((d: Day) => d.id === dayId)
@@ -475,7 +360,7 @@ export function BuilderClient({
       const blockCount = n[idx].workout_blocks.length
       const defaultName = blockName.trim() || `${blockTypeLabel} ${String.fromCharCode(65 + blockCount)}`
       n[idx].workout_blocks.push({
-        id: genId(),
+        id: newBlockId,
         name: defaultName,
         type: blockType,
         timer_type: timerType ?? undefined,
@@ -486,6 +371,13 @@ export function BuilderClient({
       return n
     })
     setBlockWizard(null)
+    if (openPickerAfter) {
+      // Smooth scroll + auto-open exercise picker for the newly created block
+      setTimeout(() => {
+        document.getElementById(`day-${dayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        openBlockPicker(newBlockId)
+      }, 100)
+    }
   }
 
   const advanceWizardStep = () => {
@@ -619,9 +511,11 @@ export function BuilderClient({
   }
 
   const allExercises = [...library, ...localExercises]
-  const filteredLibrary = allExercises.filter(ex =>
-    ex.name.toLowerCase().includes(libSearch.toLowerCase()) ||
-    (ex.category || '').toLowerCase().includes(libSearch.toLowerCase())
+  const [tagSearch, setTagSearch] = useState('')
+  const filteredTags = allExercises.filter(ex =>
+    !tagSearch ||
+    ex.name.toLowerCase().includes(tagSearch.toLowerCase()) ||
+    (ex.category || '').toLowerCase().includes(tagSearch.toLowerCase())
   )
 
   const confirmBlockDescription = async (blockId: string, description: string) => {
@@ -667,112 +561,38 @@ export function BuilderClient({
 
   return (
     <>
+    {/* ── Sticky top bar: title + save ── */}
+    <div className="sticky top-0 z-30 -mx-4 md:-mx-6 px-4 md:px-6 py-3 mb-4 bg-background/85 backdrop-blur-xl border-b border-border/60">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70">Programación</p>
+          <p className="text-sm font-black uppercase tracking-tight truncate">{planMeta.title || 'Sin título'}</p>
+        </div>
+        {hasUnsavedChanges && (
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[9px] font-black uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            Cambios sin guardar
+          </span>
+        )}
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className={cn(
+            "h-10 px-4 sm:px-5 gap-2 font-black uppercase tracking-[0.14em] text-[10px] rounded-xl transition-all relative",
+            hasUnsavedChanges
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_8px_20px_rgba(147,213,0,0.20)]'
+              : 'bg-secondary/70 hover:bg-secondary text-muted-foreground border border-border/70'
+          )}
+        >
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving ? 'Guardando' : 'Guardar'}
+        </Button>
+      </div>
+    </div>
+
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 xl:grid-cols-[20rem_minmax(0,1fr)] gap-4 items-start overflow-visible">
-        
-        {/* ── Sidebar: Library (collapsible on mobile) ── */}
-        <aside className={cn(
-          "w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 xl:sticky xl:top-4 xl:h-[calc(100dvh-2rem)] xl:min-h-[400px] transition-all duration-300",
-          sidebarOpen ? "h-[320px]" : "h-12 xl:h-[calc(100dvh-2rem)]"
-        )}>
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-          
-          <div className="relative z-10 space-y-4 p-4 border-b border-border/60">
-            {/* Mobile toggle row */}
-            <div className="flex items-center gap-3 xl:hidden">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(o => !o)}
-                className="flex-1 h-9 px-3 rounded-xl border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all"
-              >
-                <PanelLeft className="w-3.5 h-3.5" />
-                {sidebarOpen ? 'Ocultar biblioteca' : 'Mostrar biblioteca de ejercicios'}
-              </button>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={cn(
-                  "h-9 px-4 gap-2 font-black uppercase tracking-[0.14em] text-[10px] rounded-xl transition-all relative",
-                  hasUnsavedChanges
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_8px_20px_rgba(147,213,0,0.20)]'
-                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground border border-border/70'
-                )}
-              >
-                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                {isSaving ? 'Guardando...' : 'Guardar'}
-                {hasUnsavedChanges && (
-                  <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border-2 border-black"></span>
-                  </div>
-                )}
-              </Button>
-            </div>
-
-            <div className={cn("transition-all duration-300", !sidebarOpen && "hidden xl:block")}>
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className={`w-full gap-3 font-black uppercase tracking-[0.16em] text-[10px] h-12 rounded-2xl transition-all relative hidden xl:flex ${
-                  hasUnsavedChanges
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_16px_34px_rgba(147,213,0,0.20)] ring-2 ring-primary/30 ring-offset-2 ring-offset-background'
-                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground shadow-none border border-border/70'
-                }`}
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
-                {isSaving ? 'Guardando...' : 'Guardar Planificación'}
-                {hasUnsavedChanges && (
-                  <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-black"></span>
-                  </div>
-                )}
-              </Button>
-
-              <div className="space-y-3 mt-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-xl font-black tracking-tight uppercase text-foreground">Biblioteca</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Arrastra o copia etiquetas</p>
-                  </div>
-                  <span className="text-[8px] font-black border border-border/70 text-muted-foreground px-2 py-1 rounded-full">{library.length}</span>
-                </div>
-              </div>
-            </div>
-            
-            <div className={cn("relative group", !sidebarOpen && "hidden xl:block")}>
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input
-                placeholder="Buscar ejercicio..."
-                className="h-11 bg-background/55 border-border/70 rounded-2xl pl-10 text-sm focus:ring-primary/20 transition-all"
-                value={libSearch}
-                onChange={(e) => setLibSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className={cn("flex-1 min-h-0 relative z-10 overflow-y-auto overscroll-contain [scrollbar-width:thin]", !sidebarOpen && "hidden xl:flex xl:flex-col")}>
-            <div className="p-4 space-y-2">
-              {filteredLibrary.map((ex) => (
-                <LibraryItem key={ex.id} exercise={ex} />
-              ))}
-              {filteredLibrary.length === 0 && (
-                <div className="py-12 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mx-auto">
-                    <Search className="w-6 h-6 text-muted-foreground/20" />
-                  </div>
-                  <p className="text-xs text-muted-foreground/40 font-medium italic">No se encontraron resultados</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className={cn("relative z-10 p-3 bg-background/35 border-t border-border/60", !sidebarOpen && "hidden xl:block")}>
-            <p className="text-[9px] text-center text-muted-foreground uppercase font-bold">{filteredLibrary.length} ejercicios disponibles</p>
-          </div>
-        </aside>
-
-        {/* ── Main Workspace ── */}
+      <div className="overflow-visible">
+        {/* ── Main Workspace (full width, no sidebar) ── */}
         <main className="flex flex-col gap-4 overflow-visible min-w-0">
           
           {/* Header & Week Tabs */}
@@ -1058,7 +878,7 @@ export function BuilderClient({
                               })
                             }}
                           >
-                            <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-1 md:p-2">
+                            <div className="min-h-[60px] p-1 md:p-2">
                               {/* Routine Description Area */}
                               <div className="mb-4 space-y-3 rounded-2xl border border-[var(--gymnastics)]/20 bg-[var(--gymnastics)]/5 p-3 md:p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1221,15 +1041,15 @@ export function BuilderClient({
                                             <Input
                                               placeholder="Buscar ejercicio..."
                                               className="h-10 text-xs pl-9 bg-background/55 border-border/70 rounded-xl"
-                                              onChange={(e) => setLibSearch(e.target.value)}
-                                              value={libSearch}
+                                              onChange={(e) => setTagSearch(e.target.value)}
+                                              value={tagSearch}
                                               autoFocus
                                             />
                                           </div>
                                         </div>
                                         <div className="h-72 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
                                           <div className="p-2 space-y-1">
-                                            {filteredLibrary.map(ex => (
+                                            {filteredTags.map(ex => (
                                               <button
                                                 key={ex.id}
                                                 type="button"
@@ -1387,7 +1207,7 @@ export function BuilderClient({
                               {/* Empty state */}
                               {block.workout_movements.length === 0 && blockPickerOpen !== block.id && (
                                 <div className="py-5 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl bg-background/25 gap-2">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra o añade ejercicios</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Bloque sin movimientos estructurados</p>
                                   <button
                                     onClick={() => openBlockPicker(block.id)}
                                     className="text-[9px] font-black uppercase tracking-widest text-primary/70 hover:text-primary flex items-center gap-1 transition-colors"
@@ -1465,7 +1285,7 @@ export function BuilderClient({
                                       <p className="text-[10px] font-black uppercase tracking-widest text-primary">Nuevo ejercicio</p>
                                       <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Tracking</label>
+                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Tipo de registro</label>
                                           <select
                                             value={createFormData.tracking_type}
                                             onChange={e => setCreateFormData(p => ({ ...p, tracking_type: e.target.value }))}
@@ -1534,7 +1354,7 @@ export function BuilderClient({
                                   <Plus className="w-3 h-3" /> Añadir ejercicio
                                 </button>
                               )}
-                            </DroppableBlock>
+                            </div>
                           </SortableBlock>
                         ))}
                       </div>
@@ -1728,10 +1548,10 @@ export function BuilderClient({
                     ← Atrás
                   </button>
                   <button
-                    onClick={confirmBlockWizard}
+                    onClick={() => confirmBlockWizard(true)}
                     className="flex-1 h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
                   >
-                    <Plus className="w-4 h-4" /> Crear bloque
+                    <Plus className="w-4 h-4" /> Crear y añadir ejercicios
                   </button>
                 </div>
               </div>
