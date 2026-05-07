@@ -4,11 +4,11 @@ import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
-  Plus, Trash2, Dumbbell, Save, Loader2, X,
+  Plus, Trash2, Save, Loader2, X,
   Search, Layout, Edit3,
-  Hash, Video,
+  Video,
   Eye, EyeOff, CheckCircle2, Timer as TimerIcon,
-  ChevronUp, ChevronDown, Copy
+  ChevronUp, ChevronDown, Copy, Zap
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure, toggleWeekStatus, updateBlockDescription, createExerciseQuick } from '../../actions'
@@ -20,8 +20,6 @@ import {
   useSensor,
   useSensors,
   TouchSensor,
-  useDraggable,
-  useDroppable,
 } from '@dnd-kit/core'
 import {
   arrayMove,
@@ -43,82 +41,6 @@ type Block = { id: string, name: string, type: string, description?: string, wor
 type Day = { id: string, day_of_week: number, title: string, week_number: number, is_published: boolean, workout_blocks: Block[] }
 
 const genId = () => Math.random().toString(36).substr(2, 9)
-
-// Sidebar Exercise Item with Drag & Copy Tag Support
-function LibraryItem({ exercise }: { exercise: Exercise }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: `lib-${exercise.id}`,
-    data: { type: 'library-item', exercise }
-  })
-  
-  const [copied, setCopied] = useState(false)
-
-  const handleCopyTag = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    const tag = `[${exercise.name}]`
-    navigator.clipboard.writeText(tag)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: 999
-  } : undefined
-
-  return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...listeners} 
-      {...attributes}
-      className={cn(
-        "group relative p-3 mb-2 rounded-2xl bg-card/80 border border-border/70 hover:border-primary/40 cursor-grab active:cursor-grabbing transition-all hover:shadow-[0_12px_32px_rgba(15,23,42,0.16)]",
-        isDragging && "opacity-50 ring-2 ring-primary ring-offset-4 ring-offset-background"
-      )}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0 border border-primary/20 group-hover:bg-primary/20 transition-colors">
-            <Dumbbell className="w-5 h-5 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-black uppercase truncate text-foreground tracking-tight">{exercise.name}</p>
-            <p className="text-[8px] font-black uppercase text-muted-foreground/40 tracking-[0.2em]">{exercise.category || 'General'}</p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleCopyTag}
-          className={cn(
-            "h-8 px-2 rounded-lg text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all",
-            copied 
-              ? "bg-green-500/20 text-green-500 border border-green-500/30" 
-              : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground border border-transparent"
-          )}
-        >
-          {copied ? <CheckCircle2 className="w-3 h-3" /> : <Hash className="w-3 h-3" />}
-          {copied ? 'Copiado' : 'Etiqueta'}
-        </button>
-      </div>
-      
-      {/* Visual Indicator of Draggable */}
-      <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-primary opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
-    </div>
-  )
-}
-
-function DroppableBlock({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
-  const { isOver, setNodeRef } = useDroppable({ id })
-  return (
-    <div 
-      ref={setNodeRef} 
-      className={`${className} transition-colors duration-200 ${isOver ? 'bg-primary/5 ring-2 ring-primary/20 ring-inset' : ''}`}
-    >
-      {children}
-    </div>
-  )
-}
 
 export function BuilderClient({ 
   planId, 
@@ -172,7 +94,6 @@ export function BuilderClient({
   })
   
   const [activeWeek, setActiveWeek] = useState<string>('1')
-  const [libSearch, setLibSearch] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -193,6 +114,22 @@ export function BuilderClient({
     blockName: string
     timerType: string | null
   } | null>(null)
+
+  // Block type category: 'conditioning' shows timer picker in step 2,
+  // 'strength' shows format hint, 'simple' skips step 2
+  const BLOCK_TYPES = [
+    { id: 'warmup',    label: 'Calentamiento', category: 'simple' as const },
+    { id: 'strength',  label: 'Fuerza',        category: 'strength' as const },
+    { id: 'metcon',    label: 'Acondicionamiento', category: 'conditioning' as const },
+    { id: 'core',      label: 'Core',          category: 'strength' as const },
+    { id: 'skills',    label: 'Skills',        category: 'strength' as const },
+    { id: 'tecnica',   label: 'Técnica',       category: 'strength' as const },
+    { id: 'mobility',  label: 'Movilidad',     category: 'simple' as const },
+    { id: 'other',     label: 'Otro',          category: 'simple' as const },
+  ]
+
+  const getBlockCategory = (typeId: string) =>
+    BLOCK_TYPES.find(t => t.id === typeId)?.category ?? 'simple'
 
   useEffect(() => {
     routineDraftsRef.current = routineDrafts
@@ -270,7 +207,7 @@ export function BuilderClient({
     const activeId = String(active.id)
     const overId = String(over.id)
 
-    // 1. Handle Block Reordering
+    // Block reordering within a day
     if (active.data.current?.type === 'block') {
       const activeDIdx = active.data.current.dIdx
       if (activeId !== overId) {
@@ -278,12 +215,7 @@ export function BuilderClient({
           const next = JSON.parse(JSON.stringify(prev))
           const blockIds = next[activeDIdx].workout_blocks.map((b: any) => b.id)
           const oldIndex = blockIds.indexOf(activeId)
-          
-          let newIndex = blockIds.indexOf(overId)
-          if (newIndex === -1 && overId.startsWith('block-')) {
-             newIndex = parseInt(overId.split('-')[2])
-          }
-          
+          const newIndex = blockIds.indexOf(overId)
           if (oldIndex !== -1 && newIndex !== -1) {
             next[activeDIdx].workout_blocks = arrayMove(next[activeDIdx].workout_blocks, oldIndex, newIndex)
           }
@@ -293,30 +225,7 @@ export function BuilderClient({
       return
     }
 
-    // 2. Handle Library Item Drop
-    if (active.data.current?.type === 'library-item') {
-      let overDIdx = -1, overBIdx = -1, overMIdx = -1
-      if (overId.startsWith('block-')) {
-        const parts = overId.split('-')
-        overDIdx = parseInt(parts[1])
-        overBIdx = parseInt(parts[2])
-        overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
-      } else {
-        days.forEach((d, di) => {
-          d.workout_blocks.forEach((b, bi) => {
-            const mi = b.workout_movements.findIndex(m => m.id === overId)
-            if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
-          })
-        })
-      }
-      if (overDIdx !== -1) {
-        const exercise = active.data.current.exercise
-        addMovement(overDIdx, overBIdx, exercise, overMIdx)
-      }
-      return
-    }
-
-    // 3. Handle Movement Sorting/Moving
+    // Movement reordering within its block (no cross-block moves)
     let activeDIdx = -1, activeBIdx = -1, activeMIdx = -1
     days.forEach((d, di) => {
       d.workout_blocks.forEach((b, bi) => {
@@ -326,26 +235,19 @@ export function BuilderClient({
     })
 
     if (activeDIdx !== -1) {
-      let overDIdx = -1, overBIdx = -1, overMIdx = -1
-      if (overId.startsWith('block-')) {
-        const parts = overId.split('-')
-        overDIdx = parseInt(parts[1])
-        overBIdx = parseInt(parts[2])
-        overMIdx = days[overDIdx].workout_blocks[overBIdx].workout_movements.length
-      } else {
-        days.forEach((d, di) => {
-          d.workout_blocks.forEach((b, bi) => {
-            const mi = b.workout_movements.findIndex(m => m.id === overId)
-            if (mi !== -1) { overDIdx = di; overBIdx = bi; overMIdx = mi; }
-          })
-        })
-      }
+      let overMIdx = -1
+      const block = days[activeDIdx].workout_blocks[activeBIdx]
+      const mi = block.workout_movements.findIndex(m => m.id === overId)
+      if (mi !== -1) overMIdx = mi
 
-      if (overDIdx !== -1) {
+      if (overMIdx !== -1 && activeMIdx !== overMIdx) {
         updateDays(prev => {
           const next = JSON.parse(JSON.stringify(prev))
-          const [moved] = next[activeDIdx].workout_blocks[activeBIdx].workout_movements.splice(activeMIdx, 1)
-          next[overDIdx].workout_blocks[overBIdx].workout_movements.splice(overMIdx, 0, moved)
+          next[activeDIdx].workout_blocks[activeBIdx].workout_movements = arrayMove(
+            next[activeDIdx].workout_blocks[activeBIdx].workout_movements,
+            activeMIdx,
+            overMIdx
+          )
           return next
         })
       }
@@ -443,27 +345,57 @@ export function BuilderClient({
     setBlockWizard({ dayId, step: 1, blockType: 'strength', blockName: '', timerType: null })
   }
 
-  const confirmBlockWizard = () => {
+  const defaultTimerConfig = (timerType: string | null) => {
+    if (timerType === 'amrap') return { minutes: 15 }
+    if (timerType === 'emom') return { rounds: 10 }
+    if (timerType === 'tabata') return { rounds: 8, work: 20, rest: 10 }
+    if (timerType === 'intervals') return { intervals: 5, work: 40, rest: 20 }
+    return {}
+  }
+
+  const confirmBlockWizard = (openPickerAfter: boolean = true) => {
     if (!blockWizard) return
     const { dayId, blockType, blockName, timerType } = blockWizard
+    const blockTypeLabel = BLOCK_TYPES.find(t => t.id === blockType)?.label || blockType
+    const newBlockId = genId()
     updateDays((prev: Day[]) => {
       const n: Day[] = JSON.parse(JSON.stringify(prev))
       const idx = n.findIndex((d: Day) => d.id === dayId)
       if (idx === -1) return prev
       const blockCount = n[idx].workout_blocks.length
-      const defaultName = blockName.trim() || `Bloque ${String.fromCharCode(65 + blockCount)}`
+      const defaultName = blockName.trim() || `${blockTypeLabel} ${String.fromCharCode(65 + blockCount)}`
       n[idx].workout_blocks.push({
-        id: genId(),
+        id: newBlockId,
         name: defaultName,
         type: blockType,
         timer_type: timerType ?? undefined,
-        timer_config: timerType === 'amrap' ? { minutes: 15 } : timerType === 'emom' ? { rounds: 10 } : timerType === 'tabata' ? { rounds: 8, work: 20, rest: 10 } : {},
+        timer_config: defaultTimerConfig(timerType),
         description: '',
         workout_movements: [],
       })
       return n
     })
     setBlockWizard(null)
+    if (openPickerAfter) {
+      // Smooth scroll + auto-open exercise picker for the newly created block
+      setTimeout(() => {
+        document.getElementById(`day-${dayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        openBlockPicker(newBlockId)
+      }, 100)
+    }
+  }
+
+  const advanceWizardStep = () => {
+    if (!blockWizard) return
+    const category = getBlockCategory(blockWizard.blockType)
+    if (category === 'simple') {
+      // Skip step 2 — create immediately
+      confirmBlockWizard()
+    } else {
+      // Go to step 2 with sensible default timer
+      const defaultTimer = category === 'conditioning' ? 'for_time' : null
+      setBlockWizard(p => p ? { ...p, step: 2, timerType: defaultTimer } : p)
+    }
   }
 
   // kept for internal programmatic use (duplicate, etc.)
@@ -584,9 +516,11 @@ export function BuilderClient({
   }
 
   const allExercises = [...library, ...localExercises]
-  const filteredLibrary = allExercises.filter(ex =>
-    ex.name.toLowerCase().includes(libSearch.toLowerCase()) ||
-    (ex.category || '').toLowerCase().includes(libSearch.toLowerCase())
+  const [tagSearch, setTagSearch] = useState('')
+  const filteredTags = allExercises.filter(ex =>
+    !tagSearch ||
+    ex.name.toLowerCase().includes(tagSearch.toLowerCase()) ||
+    (ex.category || '').toLowerCase().includes(tagSearch.toLowerCase())
   )
 
   const confirmBlockDescription = async (blockId: string, description: string) => {
@@ -632,78 +566,38 @@ export function BuilderClient({
 
   return (
     <>
+    {/* ── Sticky top bar: title + save ── */}
+    <div className="sticky top-0 z-30 -mx-4 md:-mx-6 px-4 md:px-6 py-3 mb-4 bg-background/85 backdrop-blur-xl border-b border-border/60">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70">Programación</p>
+          <p className="text-sm font-black uppercase tracking-tight truncate">{planMeta.title || 'Sin título'}</p>
+        </div>
+        {hasUnsavedChanges && (
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[9px] font-black uppercase tracking-widest">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            Cambios sin guardar
+          </span>
+        )}
+        <Button
+          onClick={handleSave}
+          disabled={isSaving}
+          className={cn(
+            "h-10 px-4 sm:px-5 gap-2 font-black uppercase tracking-[0.14em] text-[10px] rounded-xl transition-all relative",
+            hasUnsavedChanges
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_8px_20px_rgba(147,213,0,0.20)]'
+              : 'bg-secondary/70 hover:bg-secondary text-muted-foreground border border-border/70'
+          )}
+        >
+          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          {isSaving ? 'Guardando' : 'Guardar'}
+        </Button>
+      </div>
+    </div>
+
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <div className="grid grid-cols-1 xl:grid-cols-[20rem_minmax(0,1fr)] gap-4 items-start overflow-visible">
-        
-        {/* ── Sidebar: Library ── */}
-        <aside className="w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 h-[320px] xl:sticky xl:top-4 xl:h-[calc(100dvh-2rem)] xl:min-h-[400px]">
-          <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-          
-          <div className="relative z-10 space-y-4 p-4 border-b border-border/60">
-            <div>
-              <Button 
-                onClick={handleSave} 
-                disabled={isSaving} 
-                className={`w-full gap-3 font-black uppercase tracking-[0.16em] text-[10px] h-12 rounded-2xl transition-all relative ${
-                  hasUnsavedChanges 
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90 shadow-[0_16px_34px_rgba(147,213,0,0.20)] ring-2 ring-primary/30 ring-offset-2 ring-offset-background' 
-                    : 'bg-secondary/70 hover:bg-secondary text-muted-foreground shadow-none border border-border/70'
-                }`}
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-5 h-5" />}
-                {isSaving ? 'Guardando...' : 'Guardar Planificación'}
-                {hasUnsavedChanges && (
-                  <div className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-black"></span>
-                  </div>
-                )}
-              </Button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-xl font-black tracking-tight uppercase text-foreground">Biblioteca</h3>
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Arrastra o copia etiquetas</p>
-                </div>
-                <span className="text-[8px] font-black border border-border/70 text-muted-foreground px-2 py-1 rounded-full">{library.length}</span>
-              </div>
-            </div>
-            
-            <div className="relative group">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input 
-                placeholder="Buscar ejercicio..." 
-                className="h-11 bg-background/55 border-border/70 rounded-2xl pl-10 text-sm focus:ring-primary/20 transition-all"
-                value={libSearch}
-                onChange={(e) => setLibSearch(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="flex-1 min-h-0 relative z-10 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
-            <div className="p-4 space-y-2">
-              {filteredLibrary.map((ex) => (
-                <LibraryItem key={ex.id} exercise={ex} />
-              ))}
-              {filteredLibrary.length === 0 && (
-                <div className="py-12 text-center space-y-3">
-                  <div className="w-12 h-12 rounded-full bg-secondary/60 flex items-center justify-center mx-auto">
-                    <Search className="w-6 h-6 text-muted-foreground/20" />
-                  </div>
-                  <p className="text-xs text-muted-foreground/40 font-medium italic">No se encontraron resultados</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <div className="relative z-10 p-3 bg-background/35 border-t border-border/60">
-            <p className="text-[9px] text-center text-muted-foreground uppercase font-bold">{filteredLibrary.length} ejercicios disponibles</p>
-          </div>
-        </aside>
-
-        {/* ── Main Workspace ── */}
+      <div className="overflow-visible">
+        {/* ── Main Workspace (full width, no sidebar) ── */}
         <main className="flex flex-col gap-4 overflow-visible min-w-0">
           
           {/* Header & Week Tabs */}
@@ -988,7 +882,7 @@ export function BuilderClient({
                               })
                             }}
                           >
-                            <DroppableBlock id={`block-${globalDIdx}-${bIdx}`} className="min-h-[60px] p-1 md:p-2">
+                            <div className="min-h-[60px] p-1 md:p-2">
                               {/* Routine Description Area */}
                               <div className="mb-4 space-y-3 rounded-2xl border border-[var(--gymnastics)]/20 bg-[var(--gymnastics)]/5 p-3 md:p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1020,7 +914,8 @@ export function BuilderClient({
                                                 { id: 'amrap', label: 'AMRAP' },
                                                 { id: 'for_time', label: 'For Time' },
                                                 { id: 'emom', label: 'EMOM' },
-                                                { id: 'tabata', label: 'Tabata' }
+                                                { id: 'tabata', label: 'Tabata' },
+                                                { id: 'intervals', label: 'Intervalos' }
                                               ].map(t => (
                                                 <Button
                                                   key={t.id || 'none'}
@@ -1103,6 +998,34 @@ export function BuilderClient({
                                                   </div>
                                                 </div>
                                               )}
+                                              {block.timer_type === 'intervals' && (
+                                                <div className="grid grid-cols-2 gap-3">
+                                                  <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Intervalos</Label>
+                                                    <Input type="number" className="h-9 text-xs rounded-xl" value={block.timer_config?.intervals || 5} onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, intervals: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }} />
+                                                  </div>
+                                                  <div className="space-y-1.5">
+                                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Trabajo (seg)</Label>
+                                                    <Input type="number" className="h-9 text-xs rounded-xl" value={block.timer_config?.work || 40} onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, work: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }} />
+                                                  </div>
+                                                  <div className="space-y-1.5 col-span-2">
+                                                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Descanso (seg)</Label>
+                                                    <Input type="number" className="h-9 text-xs rounded-xl" value={block.timer_config?.rest || 20} onChange={e => {
+                                                      const n = JSON.parse(JSON.stringify(days))
+                                                      n[globalDIdx].workout_blocks[bIdx].timer_config = { ...n[globalDIdx].workout_blocks[bIdx].timer_config, rest: parseInt(e.target.value) }
+                                                      updateDays(n)
+                                                    }} />
+                                                  </div>
+                                                </div>
+                                              )}
                                             </div>
                                           )}
                                         </div>
@@ -1122,15 +1045,15 @@ export function BuilderClient({
                                             <Input
                                               placeholder="Buscar ejercicio..."
                                               className="h-10 text-xs pl-9 bg-background/55 border-border/70 rounded-xl"
-                                              onChange={(e) => setLibSearch(e.target.value)}
-                                              value={libSearch}
+                                              onChange={(e) => setTagSearch(e.target.value)}
+                                              value={tagSearch}
                                               autoFocus
                                             />
                                           </div>
                                         </div>
                                         <div className="h-72 overflow-y-auto overscroll-contain [scrollbar-width:thin]">
                                           <div className="p-2 space-y-1">
-                                            {filteredLibrary.map(ex => (
+                                            {filteredTags.map(ex => (
                                               <button
                                                 key={ex.id}
                                                 type="button"
@@ -1288,7 +1211,7 @@ export function BuilderClient({
                               {/* Empty state */}
                               {block.workout_movements.length === 0 && blockPickerOpen !== block.id && (
                                 <div className="py-5 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl bg-background/25 gap-2">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra o añade ejercicios</p>
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Bloque sin movimientos estructurados</p>
                                   <button
                                     onClick={() => openBlockPicker(block.id)}
                                     className="text-[9px] font-black uppercase tracking-widest text-primary/70 hover:text-primary flex items-center gap-1 transition-colors"
@@ -1366,7 +1289,7 @@ export function BuilderClient({
                                       <p className="text-[10px] font-black uppercase tracking-widest text-primary">Nuevo ejercicio</p>
                                       <div className="grid grid-cols-2 gap-2">
                                         <div>
-                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Tracking</label>
+                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Tipo de registro</label>
                                           <select
                                             value={createFormData.tracking_type}
                                             onChange={e => setCreateFormData(p => ({ ...p, tracking_type: e.target.value }))}
@@ -1374,8 +1297,11 @@ export function BuilderClient({
                                           >
                                             <option value="weight_reps">Peso + Reps</option>
                                             <option value="reps_only">Solo Reps</option>
-                                            <option value="distance_time">Distancia/Tiempo</option>
+                                            <option value="distance_time">Distancia / Tiempo</option>
                                             <option value="time_only">Solo Tiempo</option>
+                                            <option value="calories">Calorías</option>
+                                            <option value="rounds">Rondas</option>
+                                            <option value="custom">Personalizado</option>
                                           </select>
                                         </div>
                                         <div>
@@ -1432,7 +1358,7 @@ export function BuilderClient({
                                   <Plus className="w-3 h-3" /> Añadir ejercicio
                                 </button>
                               )}
-                            </DroppableBlock>
+                            </div>
                           </SortableBlock>
                         ))}
                       </div>
@@ -1449,17 +1375,35 @@ export function BuilderClient({
                 )
               })}
               
-              {/* Add Day Button Placeholder */}
-              <Button 
-                variant="ghost" 
-                className="h-[180px] border border-dashed border-border/70 rounded-[28px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all ios-panel"
-                onClick={() => addDay(parseInt(activeWeek))}
-              >
-                <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
-                  <Plus className="w-5 h-5" />
+              {/* Add Day Button / Empty state */}
+              {currentWeekDays.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center gap-6 py-16 px-8 ios-panel border border-dashed border-border/60 rounded-[28px]">
+                  <div className="w-16 h-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                    <Layout className="w-8 h-8 text-primary" />
+                  </div>
+                  <div className="text-center space-y-2 max-w-xs">
+                    <h3 className="text-lg font-black uppercase tracking-tight">Semana vacía</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">Añade el primer día de entrenamiento para empezar a construir la programación.</p>
+                  </div>
+                  <Button
+                    onClick={() => addDay(parseInt(activeWeek))}
+                    className="h-12 px-8 rounded-2xl font-black uppercase tracking-[0.16em] text-[11px] gap-2"
+                  >
+                    <Plus className="w-4 h-4" /> Añadir primer día
+                  </Button>
                 </div>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-primary">Añadir Día {currentWeekDays.length + 1}</span>
-              </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="h-[180px] border border-dashed border-border/70 rounded-[28px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all ios-panel"
+                  onClick={() => addDay(parseInt(activeWeek))}
+                >
+                  <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-primary">Añadir Día {currentWeekDays.length + 1}</span>
+                </Button>
+              )}
             </div>
           </div>
         </main>
@@ -1477,10 +1421,16 @@ export function BuilderClient({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-                  {blockWizard.step === 1 ? 'Paso 1 de 2' : 'Paso 2 de 2'}
+                  {blockWizard.step === 1
+                    ? (getBlockCategory(blockWizard.blockType) === 'simple' ? 'Paso 1 de 1' : 'Paso 1 de 2')
+                    : 'Paso 2 de 2'}
                 </p>
                 <h3 className="text-xl font-black uppercase tracking-tight">
-                  {blockWizard.step === 1 ? 'Tipo de bloque' : 'Formato de trabajo'}
+                  {blockWizard.step === 1 ? 'Nuevo bloque' : (
+                    getBlockCategory(blockWizard.blockType) === 'conditioning'
+                      ? 'Tipo de crono'
+                      : 'Formato de trabajo'
+                  )}
                 </h3>
               </div>
               <button onClick={() => setBlockWizard(null)} className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
@@ -1497,20 +1447,14 @@ export function BuilderClient({
                     placeholder="Ej: WOD principal, Fuerza olímpica..."
                     value={blockWizard.blockName}
                     onChange={e => setBlockWizard(p => p ? { ...p, blockName: e.target.value } : p)}
+                    onKeyDown={e => { if (e.key === 'Enter') advanceWizardStep() }}
                     className="w-full h-11 px-4 rounded-2xl border border-border/70 bg-background/55 text-sm font-bold outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'warmup',     label: 'Calentamiento',  color: 'var(--warmup)' },
-                      { id: 'strength',   label: 'Fuerza',         color: 'var(--strength)' },
-                      { id: 'metcon',     label: 'Acondic. / WOD', color: 'var(--metcon)' },
-                      { id: 'gymnastics', label: 'Skills / Gimn.', color: 'var(--gymnastics)' },
-                      { id: 'wod',        label: 'Core / Técnica', color: 'var(--metcon)' },
-                      { id: 'cooldown',   label: 'Vuelta a calma', color: 'var(--cooldown)' },
-                    ].map(t => (
+                    {BLOCK_TYPES.map(t => (
                       <button
                         key={t.id}
                         onClick={() => setBlockWizard(p => p ? { ...p, blockType: t.id } : p)}
@@ -1527,43 +1471,79 @@ export function BuilderClient({
                   </div>
                 </div>
                 <button
-                  onClick={() => setBlockWizard(p => p ? { ...p, step: 2 } : p)}
+                  onClick={advanceWizardStep}
                   className="w-full h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
                 >
-                  Siguiente →
+                  {getBlockCategory(blockWizard.blockType) === 'simple'
+                    ? <><Plus className="w-4 h-4" /> Crear bloque</>
+                    : 'Siguiente →'}
                 </button>
               </div>
             )}
 
             {blockWizard.step === 2 && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                    {['strength','wod'].includes(blockWizard.blockType) ? 'Formato de trabajo' : 'Cronómetro (opcional)'}
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: null,       label: 'Sin crono / Libre' },
-                      { id: 'for_time', label: 'For Time' },
-                      { id: 'amrap',    label: 'AMRAP' },
-                      { id: 'emom',     label: 'EMOM' },
-                      { id: 'tabata',   label: 'Tabata' },
-                    ].map(t => (
-                      <button
-                        key={t.id ?? 'none'}
-                        onClick={() => setBlockWizard(p => p ? { ...p, timerType: t.id } : p)}
-                        className={cn(
-                          'h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all border',
-                          blockWizard.timerType === t.id
-                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
-                            : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                        )}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
+                {getBlockCategory(blockWizard.blockType) === 'conditioning' ? (
+                  /* Conditioning: pick timer type */
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Formato del WOD</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { id: 'for_time', label: 'For Time' },
+                        { id: 'amrap',    label: 'AMRAP' },
+                        { id: 'emom',     label: 'EMOM' },
+                        { id: 'tabata',   label: 'Tabata' },
+                        { id: 'intervals',label: 'Intervalos' },
+                        { id: null,       label: 'Libre' },
+                      ].map(t => (
+                        <button
+                          key={t.id ?? 'none'}
+                          onClick={() => setBlockWizard(p => p ? { ...p, timerType: t.id } : p)}
+                          className={cn(
+                            'h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-1.5',
+                            blockWizard.timerType === t.id
+                              ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                              : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                          )}
+                        >
+                          {t.id && <Zap className="w-3 h-3" />}
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* Strength/Skills: format hint + optional timer */
+                  <div className="space-y-3">
+                    <div className="p-3 rounded-2xl bg-primary/5 border border-primary/20">
+                      <p className="text-[11px] font-black uppercase tracking-widest text-primary mb-1">Series × Reps × Carga</p>
+                      <p className="text-[10px] text-muted-foreground">Añade movimientos estructurados al bloque. Cada movimiento tendrá sets, reps y % de carga.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cronómetro (opcional)</label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {[
+                          { id: null,       label: 'Sin crono' },
+                          { id: 'emom',     label: 'EMOM' },
+                          { id: 'tabata',   label: 'Tabata' },
+                        ].map(t => (
+                          <button
+                            key={t.id ?? 'none'}
+                            onClick={() => setBlockWizard(p => p ? { ...p, timerType: t.id } : p)}
+                            className={cn(
+                              'h-9 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border',
+                              blockWizard.timerType === t.id
+                                ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                                : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                            )}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={() => setBlockWizard(p => p ? { ...p, step: 1 } : p)}
@@ -1572,10 +1552,10 @@ export function BuilderClient({
                     ← Atrás
                   </button>
                   <button
-                    onClick={confirmBlockWizard}
+                    onClick={() => confirmBlockWizard(true)}
                     className="flex-1 h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
                   >
-                    <Plus className="w-4 h-4" /> Crear bloque
+                    <Plus className="w-4 h-4" /> Crear y añadir ejercicios
                   </button>
                 </div>
               </div>

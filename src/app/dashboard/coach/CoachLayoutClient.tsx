@@ -6,28 +6,25 @@ import { usePathname } from 'next/navigation'
 import {
   Users, Library, Calendar, LayoutDashboard,
   Settings, LogOut, Video,
-  Target, Activity, ShieldCheck, ChevronRight, Wrench,
+  Target, ShieldCheck, ChevronRight, Wrench,
 } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 
 const mainNav = [
-  { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard',    exact: true },
-  { href: '/dashboard/coach/athletes',   icon: Users,           label: 'Alumnos'   },
+  { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard',   exact: true },
+  { href: '/dashboard/coach/athletes',   icon: Users,           label: 'Alumnos'      },
   { href: '/dashboard/coach/plans',      icon: Calendar,        label: 'Programación' },
-  { href: '/dashboard/coach/insights',   icon: Target,          label: 'Insights'  },
-  { href: '/dashboard/coach/library',    icon: Library,         label: 'Biblioteca'},
-  { href: '/dashboard/coach/reviews',    icon: Video,           label: 'Revisiones'},
-  { href: '/dashboard/coach/feed',       icon: Activity,        label: 'Box Feed'  },
-  { href: '/dashboard/coach/tools',      icon: Wrench,          label: 'Herramientas'},
+  { href: '/dashboard/coach/insights',   icon: Target,          label: 'Insights'     },
+  { href: '/dashboard/coach/library',    icon: Library,         label: 'Biblioteca'   },
+  { href: '/dashboard/coach/reviews',    icon: Video,           label: 'Revisiones'   },
+  { href: '/dashboard/coach/tools',      icon: Wrench,          label: 'Herramientas' },
 ]
 
-// Mobile bottom nav: 5 items max for usability. Tools always visible.
 const bottomNav = [
   { href: '/dashboard/coach',          icon: LayoutDashboard, label: 'Inicio',   exact: true },
   { href: '/dashboard/coach/athletes', icon: Users,           label: 'Alumnos'   },
   { href: '/dashboard/coach/plans',    icon: Calendar,        label: 'Programa'  },
   { href: '/dashboard/coach/tools',    icon: Wrench,          label: 'Tools'     },
-  { href: '/dashboard/coach/feed',     icon: Activity,        label: 'Feed'      },
 ]
 
 export function CoachLayoutClient({ children, isAdmin }: { children: React.ReactNode; isAdmin: boolean }) {
