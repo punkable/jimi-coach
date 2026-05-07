@@ -5,29 +5,27 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Users, Library, Calendar, LayoutDashboard,
-  Settings, LogOut, Video, Crown, HelpCircle,
-  Target, Activity, ShieldCheck, ChevronRight, Wrench,
+  Settings, LogOut, Video,
+  Target, ShieldCheck, ChevronRight, Wrench,
 } from 'lucide-react'
 import { signout } from '@/app/login/actions'
 import { NotificationsBell } from '@/components/notifications-bell'
 
 const mainNav = [
-  { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard', exact: true },
-  { href: '/dashboard/coach/athletes',   icon: Users,           label: 'Alumnos'   },
+  { href: '/dashboard/coach',            icon: LayoutDashboard, label: 'Dashboard',   exact: true },
+  { href: '/dashboard/coach/athletes',   icon: Users,           label: 'Alumnos'      },
   { href: '/dashboard/coach/plans',      icon: Calendar,        label: 'Programación' },
-  { href: '/dashboard/coach/insights',   icon: Target,          label: 'Insights'  },
-  { href: '/dashboard/coach/library',    icon: Library,         label: 'Biblioteca'},
-  { href: '/dashboard/coach/memberships',icon: Crown,           label: 'Modalidades'},
-  { href: '/dashboard/coach/reviews',    icon: Video,           label: 'Revisiones'},
-  { href: '/dashboard/coach/feed',       icon: Activity,        label: 'Box Feed'  },
-  { href: '/dashboard/coach/tools',      icon: Wrench,          label: 'Herramientas'},
+  { href: '/dashboard/coach/insights',   icon: Target,          label: 'Insights'     },
+  { href: '/dashboard/coach/library',    icon: Library,         label: 'Biblioteca'   },
+  { href: '/dashboard/coach/reviews',    icon: Video,           label: 'Revisiones'   },
+  { href: '/dashboard/coach/tools',      icon: Wrench,          label: 'Herramientas' },
 ]
 
 const bottomNav = [
   { href: '/dashboard/coach',          icon: LayoutDashboard, label: 'Inicio',   exact: true },
   { href: '/dashboard/coach/athletes', icon: Users,           label: 'Alumnos'   },
   { href: '/dashboard/coach/plans',    icon: Calendar,        label: 'Programa'  },
-  { href: '/dashboard/coach/feed',     icon: Activity,        label: 'Feed'      },
+  { href: '/dashboard/coach/tools',    icon: Wrench,          label: 'Tools'     },
 ]
 
 export function CoachLayoutClient({ children, isAdmin }: { children: React.ReactNode; isAdmin: boolean }) {
@@ -102,8 +100,7 @@ export function CoachLayoutClient({ children, isAdmin }: { children: React.React
         {/* Bottom links */}
         <div className="px-3 pb-4 pt-3 border-t border-border space-y-0.5">
           {[
-            { href: '/dashboard/coach/settings', icon: Settings,    label: 'Ajustes' },
-            { href: '/dashboard/coach/help',      icon: HelpCircle,  label: 'Ayuda'   },
+            { href: '/dashboard/coach/settings', icon: Settings, label: 'Ajustes' },
           ].map(({ href, icon: Icon, label }) => (
             <Link
               key={href}
