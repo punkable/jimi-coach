@@ -1,11 +1,11 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripHorizontal, Trash2 } from 'lucide-react'
+import { GripHorizontal, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
-export function SortableBlock({ id, children, block, onRemove, onRename }: any) {
+export function SortableBlock({ id, children, block, onRemove, onRename, collapsed = false, summary, onToggleCollapse }: any) {
   const {
     attributes,
     listeners,
@@ -55,19 +55,44 @@ export function SortableBlock({ id, children, block, onRemove, onRename }: any) 
               />
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all shrink-0"
-            onClick={onRemove}
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
+          <div className="flex items-center gap-1 shrink-0">
+            {onToggleCollapse && (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="rounded-xl text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
+                onClick={onToggleCollapse}
+                title={collapsed ? 'Expandir' : 'Colapsar'}
+              >
+                {collapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-all"
+              onClick={onRemove}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
-        <div className="p-3 md:p-4 bg-background/35">
-          {children}
-        </div>
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="w-full p-3 md:p-4 bg-background/35 text-left hover:bg-background/55 transition-all"
+          >
+            {summary || (
+              <p className="text-xs text-muted-foreground italic">Click para editar este bloque</p>
+            )}
+          </button>
+        ) : (
+          <div className="p-3 md:p-4 bg-background/35">
+            {children}
+          </div>
+        )}
       </Card>
     </div>
   )
