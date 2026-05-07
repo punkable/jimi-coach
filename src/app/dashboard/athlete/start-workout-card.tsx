@@ -126,57 +126,58 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday }: StartWor
 
       {/* Selected Day Preview Card */}
       {selectedDay && (
-        <Card className="glass-card overflow-hidden relative group border-none rounded-[32px] min-h-[220px]">
+        <Card className="glass-card overflow-hidden relative group border-none rounded-[32px]">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
-          <div className="absolute -bottom-20 -right-20 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-all duration-700 rotate-12 scale-150 group-hover:scale-125">
-            <PlayCircle className="w-80 h-80" />
+          <div className="absolute -bottom-16 -right-16 opacity-[0.03] group-hover:opacity-[0.06] transition-all duration-700 rotate-12">
+            <PlayCircle className="w-56 h-56" />
           </div>
-          
-          <CardContent className="p-10 relative z-10 h-full flex flex-col justify-center">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-10">
-              <div className="space-y-6 text-center md:text-left flex-1">
-                <div className="flex flex-col md:flex-row items-center gap-6">
-                  <div className="w-16 h-16 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] font-black text-2xl relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
-                    <span className="relative">{selectedDay.day_of_week}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-3xl font-black uppercase tracking-tight text-white mb-1">
-                      {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(selectedDay.day_of_week - 1) % 7]}
-                    </h3>
-                    <div className="flex items-center justify-center md:justify-start gap-3">
-                      <span className="text-primary font-black uppercase tracking-[0.2em] text-[11px]">
-                        {focusLabel}
-                      </span>
-                      <div className="h-1 w-1 rounded-full bg-white/20" />
-                      <span className="text-white/40 font-bold uppercase tracking-widest text-[9px]">
-                        {trainedToday ? 'Completado hoy' : 'Pendiente por registrar'}
-                      </span>
-                    </div>
-                  </div>
+
+          <CardContent className="p-5 md:p-8 relative z-10">
+            <div className="flex flex-col gap-5">
+              {/* Top row: day badge + title + status */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_8px_24px_rgba(204,255,0,0.35)] font-black text-xl shrink-0 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
+                  <span className="relative">{selectedDay.day_of_week}</span>
                 </div>
-                
-                <div className="flex items-center justify-center md:justify-start gap-3">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
-                    <Zap className="w-4 h-4 text-primary fill-primary/20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      {timerLabel}
+                <div className="min-w-0">
+                  <h3 className="text-xl font-black uppercase tracking-tight text-white leading-none">
+                    {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'][(selectedDay.day_of_week - 1) % 7]}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-primary font-black uppercase tracking-[0.15em] text-[10px] truncate max-w-[140px]">
+                      {focusLabel}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
-                    {trainedToday ? (
-                      <CheckCircle2 className="w-4 h-4 text-[var(--strength)]" />
-                    ) : (
-                      <Video className="w-4 h-4 text-[var(--strength)]" />
-                    )}
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      {trainedToday ? 'Resultado guardado' : mediaLabel}
+                    <div className="h-1 w-1 rounded-full bg-white/20 shrink-0" />
+                    <span className="text-white/40 font-bold uppercase tracking-widest text-[9px] shrink-0">
+                      {trainedToday ? 'Completado hoy' : 'Pendiente'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 w-full md:w-auto">
+              {/* Chips row */}
+              <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                  <Zap className="w-3.5 h-3.5 text-primary fill-primary/20 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.08em] text-white/80 whitespace-nowrap">
+                    {timerLabel}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                  {trainedToday ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--strength)] shrink-0" />
+                  ) : (
+                    <Video className="w-3.5 h-3.5 text-[var(--strength)] shrink-0" />
+                  )}
+                  <span className="text-[10px] font-black uppercase tracking-[0.08em] text-white/80 whitespace-nowrap">
+                    {trainedToday ? 'Resultado guardado' : mediaLabel}
+                  </span>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="flex flex-col gap-2">
                 <Link href={`/dashboard/athlete/workout?dayId=${selectedDay.id}`} className="w-full md:w-auto">
                   <Button className={cn(
                     "h-20 w-full px-12 rounded-[24px] text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none",

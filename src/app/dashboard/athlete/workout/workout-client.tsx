@@ -277,6 +277,17 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
             >
               {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
             </Button>
+            {/* Finalizar — siempre visible en el header */}
+            {activeTab === 'workout' && (
+              <Button
+                size="sm"
+                className="ml-1 h-9 px-3 rounded-xl font-black uppercase tracking-widest text-[10px] gap-1.5"
+                onClick={() => setFinishOpen(true)}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Finalizar</span>
+              </Button>
+            )}
           </div>
         </div>
         {/* Progress bar */}
@@ -295,8 +306,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         })()}
       </header>
 
-      {/* Main Content Area — pb-36 leaves room for finish button + home indicator */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5" style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'tools' ? (
             <motion.div 
@@ -590,20 +601,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises }: { day: a
         )}
       </AnimatePresence>
 
-      {/* Floating Finish Button Area — inline style ensures it clears iOS home indicator */}
-      {activeTab === 'workout' && (
-        <div
-          className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background via-background/90 to-transparent pt-16 z-30 pointer-events-none"
-          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 16px)', padding: '4rem 1rem max(env(safe-area-inset-bottom), 16px)' }}
-        >
-          <Button
-            className="w-full h-14 text-base font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all pointer-events-auto"
-            onClick={() => setFinishOpen(true)}
-          >
-            Finalizar Entrenamiento
-          </Button>
-        </div>
-      )}
+      {/* Home-indicator spacer for iOS */}
+      <div className="shrink-0" style={{ height: 'env(safe-area-inset-bottom)' }} />
 
       {/* Finish Confirmation / Feedback Modal */}
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
