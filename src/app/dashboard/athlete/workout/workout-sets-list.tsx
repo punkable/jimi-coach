@@ -16,7 +16,7 @@ export type WorkoutSet = {
   is_completed: boolean
 }
 
-type TrackingType = 'weight_reps' | 'reps_only' | 'distance_time' | 'time_only'
+type TrackingType = 'weight_reps' | 'reps_only' | 'distance_time' | 'time_only' | 'calories' | 'rounds' | 'custom'
 
 function hasRequiredData(set: WorkoutSet, trackingType: TrackingType): boolean {
   switch (trackingType) {
@@ -24,6 +24,9 @@ function hasRequiredData(set: WorkoutSet, trackingType: TrackingType): boolean {
     case 'reps_only': return !!set.reps
     case 'distance_time': return !!(set.distance || set.time_seconds)
     case 'time_only': return !!set.time_seconds
+    case 'calories': return !!set.reps  // reps field reused for calorie count
+    case 'rounds': return !!set.reps     // reps field reused for rounds
+    case 'custom': return true
     default: return true
   }
 }
@@ -122,6 +125,39 @@ function SetRow({
             placeholder="seg"
             value={set.time_seconds ?? ''}
             onChange={e => onUpdate(set.id, 'time_seconds', e.target.value === '' ? null : parseInt(e.target.value))}
+            disabled={set.is_completed}
+            className="h-9 text-center text-sm bg-transparent border-border/40 focus-visible:ring-primary"
+          />
+        )}
+        {trackingType === 'calories' && (
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="cal"
+            value={set.reps ?? ''}
+            onChange={e => onUpdate(set.id, 'reps', e.target.value === '' ? null : parseInt(e.target.value))}
+            disabled={set.is_completed}
+            className="h-9 text-center text-sm bg-transparent border-border/40 focus-visible:ring-primary"
+          />
+        )}
+        {trackingType === 'rounds' && (
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="rondas"
+            value={set.reps ?? ''}
+            onChange={e => onUpdate(set.id, 'reps', e.target.value === '' ? null : parseInt(e.target.value))}
+            disabled={set.is_completed}
+            className="h-9 text-center text-sm bg-transparent border-border/40 focus-visible:ring-primary"
+          />
+        )}
+        {trackingType === 'custom' && (
+          <Input
+            type="number"
+            inputMode="numeric"
+            placeholder="valor"
+            value={set.reps ?? ''}
+            onChange={e => onUpdate(set.id, 'reps', e.target.value === '' ? null : parseInt(e.target.value))}
             disabled={set.is_completed}
             className="h-9 text-center text-sm bg-transparent border-border/40 focus-visible:ring-primary"
           />
@@ -274,6 +310,9 @@ export function WorkoutSetsList({
     reps_only: 'Repeticiones',
     distance_time: 'Distancia · Tiempo',
     time_only: 'Tiempo (seg)',
+    calories: 'Calorías',
+    rounds: 'Rondas',
+    custom: 'Valor',
   }
 
   return (
