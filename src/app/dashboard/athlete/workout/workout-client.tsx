@@ -38,8 +38,12 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
   const [activeTimer, setActiveTimer] = useState<{ type: TimerType, config: any } | null>(null)
 
   // ── Persist workout progress to localStorage ──────────────────────────────
+  // Storage shape: { sets, blocks, startTime (ISO when first started), updatedAt (ISO last touched) }
+  // - We keep startTime stable across saves so the session timer is real, not "time since last save".
+  // - We auto-clear on resume if updatedAt is from before today (stale).
+  // - Only sessions with meaningful progress (any completed set or block) are kept on save.
   const [isLoaded, setIsLoaded] = useState(false)
-  const [workoutStartTime, setWorkoutStartTime] = useState<number>(Date.now())
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null)
   const [workoutElapsed, setWorkoutElapsed] = useState(0)
   const storageKey = `wod-progress-${day?.id}`
 
@@ -47,18 +51,27 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
     try {
       const saved = localStorage.getItem(storageKey)
       if (saved) {
-        const { sets, blocks, timestamp, startTime } = JSON.parse(saved)
-        const isToday = new Date(timestamp).toDateString() === new Date().toDateString()
-        if (isToday) {
+        const parsed = JSON.parse(saved)
+        const { sets, blocks, startTime, updatedAt, timestamp } = parsed
+        const lastTouchIso = updatedAt || timestamp
+        const lastTouchDate = lastTouchIso ? new Date(lastTouchIso) : null
+        const isToday = lastTouchDate && lastTouchDate.toDateString() === new Date().toDateString()
+        const ageMs = lastTouchDate ? Date.now() - lastTouchDate.getTime() : Infinity
+        if (isToday && ageMs < 24 * 60 * 60 * 1000) {
           if (sets) setAllSetsData(sets)
           if (blocks) setCompletedBlocks(blocks)
-          if (startTime) setWorkoutStartTime(startTime)
+          const startIso = startTime && !isNaN(new Date(startTime).getTime()) ? startTime : lastTouchIso
+          if (startIso) {
+            setSessionStartTime(startIso)
+            setWorkoutElapsed(Math.floor((Date.now() - new Date(startIso).getTime()) / 1000))
+          }
         } else {
           localStorage.removeItem(storageKey)
         }
       }
     } catch (e) {
       console.error('Error loading progress:', e)
+      try { localStorage.removeItem(storageKey) } catch {}
     } finally {
       setIsLoaded(true)
     }
@@ -67,24 +80,39 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
   useEffect(() => {
     if (!day?.id || !isLoaded) return
     try {
+      const setsArr = Object.values(allSetsData).flat()
+      const hasMeaningfulProgress =
+        setsArr.some((s: any) => s.is_completed || s.weight || s.reps || s.distance || s.time_seconds) ||
+        Object.values(completedBlocks).some(Boolean)
+
+      if (!hasMeaningfulProgress) {
+        localStorage.removeItem(storageKey)
+        return
+      }
+
+      const nowIso = new Date().toISOString()
+      const startIso = sessionStartTime || nowIso
+      if (!sessionStartTime) setSessionStartTime(startIso)
+
       localStorage.setItem(storageKey, JSON.stringify({
         sets: allSetsData,
         blocks: completedBlocks,
-        timestamp: new Date().toISOString(),
-        startTime: workoutStartTime,
+        startTime: startIso,
+        updatedAt: nowIso,
       }))
     } catch (e) {
       console.error('Error saving progress:', e)
     }
-  }, [allSetsData, completedBlocks, storageKey, isLoaded, workoutStartTime])
+  }, [allSetsData, completedBlocks, storageKey, isLoaded, sessionStartTime])
 
-  // Elapsed workout time ticker
+  // Elapsed ticker — derived from stable sessionStartTime so it doesn't reset on saves
   useEffect(() => {
     const interval = setInterval(() => {
-      setWorkoutElapsed(Math.floor((Date.now() - workoutStartTime) / 1000))
+      const startMs = sessionStartTime ? new Date(sessionStartTime).getTime() : Date.now()
+      setWorkoutElapsed(Math.floor((Date.now() - startMs) / 1000))
     }, 1000)
     return () => clearInterval(interval)
-  }, [workoutStartTime])
+  }, [sessionStartTime])
   // ─────────────────────────────────────────────────────────────────────────
 
   // Timer Tick
@@ -253,15 +281,6 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {!viewOnly && activeTab === 'workout' && (
-              <Button
-                size="sm"
-                onClick={() => setFinishOpen(true)}
-                className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest mr-1"
-              >
-                Finalizar
-              </Button>
-            )}
             {viewOnly ? (
               <Link href={`/dashboard/athlete/workout?dayId=${day.id}`}>
                 <Button size="sm" className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest mr-1 gap-1.5">
@@ -294,6 +313,16 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
                 {activeTab === 'tools' ? <X className="w-4 h-4" /> : <TimerIcon className="w-4 h-4" />}
               </Button>
             )}
+            {!viewOnly && activeTab === 'workout' && (
+              <Button
+                size="sm"
+                className="ml-1 h-9 px-3 rounded-xl font-black uppercase tracking-widest text-[10px] gap-1.5"
+                onClick={() => setFinishOpen(true)}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Finalizar</span>
+              </Button>
+            )}
           </div>
         </div>
         {/* Progress bar */}
@@ -312,8 +341,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
         })()}
       </header>
 
-      {/* Main Content Area — pb-36 leaves room for finish button + home indicator */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5" style={{ paddingBottom: 'calc(12rem + env(safe-area-inset-bottom))' }}>
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>
         <AnimatePresence mode="wait">
           {activeTab === 'tools' ? (
             <motion.div 
@@ -606,6 +635,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Home-indicator spacer for iOS */}
+      <div className="shrink-0" style={{ height: 'env(safe-area-inset-bottom)' }} />
 
       {/* Finish Confirmation / Feedback Modal */}
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>

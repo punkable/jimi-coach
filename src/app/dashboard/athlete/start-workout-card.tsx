@@ -5,16 +5,14 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  PlayCircle, ChevronRight, CheckCircle2, Zap, Video, Calendar, AlertCircle,
+  PlayCircle, ChevronRight, CheckCircle2, Zap, Video, Calendar, AlertCircle, RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const DAY_NAMES_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 const DAY_NAMES_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
-/** Real date for a given plan week + day_of_week, anchored on plan start_date.
- *  week 1 day 1 (Monday) = start_date.
- *  If no start_date, falls back to current ISO week. */
+/** Real date for a given plan week + day_of_week, anchored on plan start_date. */
 function planDayToDate(weekNum: number, dayOfWeek: number, startDate: Date | null): Date {
   const anchor = startDate ? new Date(startDate) : (() => {
     const d = new Date()
@@ -32,10 +30,6 @@ function fmtDate(date: Date): string {
   return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 }
 
-function localDateStr(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
 interface StartWorkoutCardProps {
   plan: any
   planDays: any[]
@@ -49,9 +43,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const todayIsoDay = today.getDay() === 0 ? 7 : today.getDay()
 
-  // Determine which plan week corresponds to today
   const parsedStart = startDate ? (() => { const d = new Date(startDate); d.setHours(0,0,0,0); return d })() : null
   const currentPlanWeek = (() => {
     if (!parsedStart) return weeks[0] || 1
@@ -62,10 +54,11 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
 
   const [selectedWeek, setSelectedWeek] = useState<number>(currentPlanWeek)
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
+  const [pendingDayIds, setPendingDayIds] = useState<Set<string>>(new Set())
 
   const weekDays = planDays.filter((d: any) => (d.week_number || 1) === selectedWeek)
 
-  // Auto-select today's workout day on week change, fallback to first
+  // Auto-select today's workout day on week change
   useEffect(() => {
     const realToday = new Date(); realToday.setHours(0,0,0,0)
     const idx = weekDays.findIndex(d => {
@@ -75,14 +68,36 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
     setSelectedDayIdx(idx !== -1 ? idx : 0)
   }, [selectedWeek, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectedDay = weekDays[selectedDayIdx]
+  // Detect pending (in-progress) sessions from localStorage
+  useEffect(() => {
+    const pending = new Set<string>()
+    for (const day of planDays) {
+      try {
+        const saved = localStorage.getItem(`wod-progress-${day.id}`)
+        if (!saved) continue
+        const { updatedAt, sets, blocks } = JSON.parse(saved)
+        if (!updatedAt) continue
+        const lastTouch = new Date(updatedAt)
+        const isToday = lastTouch.toDateString() === new Date().toDateString()
+        const ageMs = Date.now() - lastTouch.getTime()
+        if (!isToday || ageMs >= 24 * 60 * 60 * 1000) continue
+        const setsArr = Object.values(sets || {}).flat() as any[]
+        const hasProgress =
+          setsArr.some((s: any) => s.is_completed || s.weight || s.reps || s.distance || s.time_seconds) ||
+          Object.values(blocks || {}).some(Boolean)
+        if (hasProgress) pending.add(day.id)
+      } catch {}
+    }
+    setPendingDayIds(pending)
+  }, [planDays])
 
-  // Block / movement helpers
+  const selectedDay = weekDays[selectedDayIdx]
   const selectedBlocks    = selectedDay?.workout_blocks ?? []
   const selectedMovements = selectedBlocks.flatMap((b: any) => b.workout_movements ?? [])
   const videoCount        = selectedMovements.filter((m: any) => m.exercises?.video_url || m.exercise?.video_url).length
   const mainTimer         = selectedBlocks.find((b: any) => b.timer_type && b.timer_type !== 'none')?.timer_type
   const blockTypes        = Array.from(new Set<string>(selectedBlocks.map((b: any) => b.type).filter(Boolean)))
+
   const blockTypeLabels: Record<string, string> = {
     warmup: 'Calentamiento', strength: 'Fuerza', metcon: 'Metcon',
     gymnastics: 'Gimnasia', cooldown: 'Vuelta a calma', wod: 'WOD',
@@ -98,7 +113,6 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
     ? `${videoCount} ${videoCount === 1 ? 'video técnico' : 'videos técnicos'}`
     : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'}`
 
-  // Date helpers using real plan dates anchored to start_date
   const dayDate = (weekNum: number, dayOfWeek: number) => planDayToDate(weekNum, dayOfWeek, parsedStart)
   const isDayToday = (weekNum: number, dow: number) =>
     dayDate(weekNum, dow).toDateString() === today.toDateString()
@@ -107,7 +121,8 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
   const selectedDate    = selectedDay ? dayDate(selectedWeek, selectedDay.day_of_week) : null
   const isSelectedToday = selectedDay ? isDayToday(selectedWeek, selectedDay.day_of_week) : false
   const isSelectedPast  = selectedDay ? isDayPast(selectedWeek, selectedDay.day_of_week) : false
-  const hasTodayDay     = weekDays.some(d => isDayToday(selectedWeek, d.day_of_week))
+
+  const isPending = selectedDay ? pendingDayIds.has(selectedDay.id) : false
 
   return (
     <section className="space-y-6">
@@ -121,7 +136,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
         <Calendar className="w-5 h-5 text-primary/40" />
       </div>
 
-      {/* Week Selector — only when plan has multiple weeks */}
+      {/* Week Selector */}
       {hasMultipleWeeks && (
         <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
           {weeks.map((w) => (
@@ -149,6 +164,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
             const isSelected = selectedDayIdx === idx
             const isToday    = isDayToday(selectedWeek, day.day_of_week)
             const date       = dayDate(selectedWeek, day.day_of_week)
+            const hasPending = pendingDayIds.has(day.id)
 
             return (
               <button
@@ -173,7 +189,8 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
                   {DAY_NAMES_SHORT[(day.day_of_week - 1) % 7]}
                 </span>
                 <span className="text-xl font-black leading-none tracking-tighter">{date.getDate()}</span>
-                {isToday && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                {hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
+                {isToday && !isSelected && !hasPending && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                 {isSelected && <div className="absolute -bottom-1 w-6 h-1 bg-white/40 rounded-full" />}
               </button>
             )
@@ -183,93 +200,116 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
 
       {/* Selected Day Preview */}
       {selectedDay && (
-        <Card className="glass-card overflow-hidden relative group border-none rounded-[32px] min-h-[220px]">
+        <Card className="glass-card overflow-hidden relative group border-none rounded-[32px]">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
-          <div className="absolute -bottom-20 -right-20 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-all duration-700 rotate-12 scale-150 group-hover:scale-125">
-            <PlayCircle className="w-80 h-80" />
+          <div className="absolute -bottom-16 -right-16 opacity-[0.03] group-hover:opacity-[0.06] transition-all duration-700 rotate-12">
+            <PlayCircle className="w-56 h-56" />
           </div>
 
-          <CardContent className="p-8 relative z-10 h-full flex flex-col justify-center">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-              <div className="space-y-5 text-center md:text-left flex-1">
-                <div className="flex flex-col md:flex-row items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_10px_30px_rgba(204,255,0,0.4)] font-black text-xl relative overflow-hidden shrink-0">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
-                    <span className="relative">{selectedDate?.getDate()}</span>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight text-white mb-0.5">
-                      {DAY_NAMES_FULL[(selectedDay.day_of_week - 1) % 7]}
-                      {selectedDate && (
-                        <span className="ml-2 text-base font-bold text-white/50">{fmtDate(selectedDate)}</span>
-                      )}
-                    </h3>
-                    <div className="flex items-center justify-center md:justify-start gap-3">
-                      <span className="text-primary font-black uppercase tracking-[0.2em] text-[11px]">{focusLabel}</span>
-                      <div className="h-1 w-1 rounded-full bg-white/20" />
-                      <span className="text-white/40 font-bold uppercase tracking-widest text-[9px]">
-                        {isSelectedToday
-                          ? (trainedToday ? 'Completado hoy' : 'Pendiente')
-                          : isSelectedPast ? 'Día pasado' : 'Próximo'}
-                      </span>
-                    </div>
-                  </div>
+          <CardContent className="p-5 md:p-8 relative z-10">
+            <div className="flex flex-col gap-5">
+              {/* Top row: day badge + title + status */}
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center shadow-[0_8px_24px_rgba(204,255,0,0.35)] font-black text-xl shrink-0 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent" />
+                  <span className="relative">{selectedDate?.getDate()}</span>
                 </div>
-
-                <div className="flex items-center justify-center md:justify-start gap-3">
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
-                    <Zap className="w-4 h-4 text-primary fill-primary/20" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">{timerLabel}</span>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/5 backdrop-blur-md">
-                    {isSelectedToday && trainedToday ? (
-                      <CheckCircle2 className="w-4 h-4 text-[var(--strength)]" />
-                    ) : (
-                      <Video className="w-4 h-4 text-[var(--strength)]" />
+                <div className="min-w-0">
+                  <h3 className="text-xl font-black uppercase tracking-tight text-white leading-none">
+                    {DAY_NAMES_FULL[(selectedDay.day_of_week - 1) % 7]}
+                    {selectedDate && (
+                      <span className="ml-2 text-sm font-bold text-white/40">{fmtDate(selectedDate)}</span>
                     )}
-                    <span className="text-[10px] font-black uppercase tracking-[0.1em] text-white/80">
-                      {isSelectedToday && trainedToday ? 'Resultado guardado' : mediaLabel}
+                  </h3>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-primary font-black uppercase tracking-[0.15em] text-[10px] truncate max-w-[140px]">
+                      {focusLabel}
+                    </span>
+                    <div className="h-1 w-1 rounded-full bg-white/20 shrink-0" />
+                    <span className="text-white/40 font-bold uppercase tracking-widest text-[9px] shrink-0">
+                      {isSelectedToday
+                        ? (trainedToday ? 'Completado hoy' : isPending ? 'En progreso' : 'Pendiente')
+                        : isSelectedPast ? 'Día pasado' : 'Próximo'}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <Button
-                onClick={(e) => {
-                  // If launching today's workout and there's a different pending session, ask
-                  if (isSelectedToday) {
-                    try {
-                      for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i)
-                        if (!key?.startsWith('wod-progress-')) continue
-                        const pendingId = key.replace('wod-progress-', '')
-                        if (pendingId === selectedDay.id) continue
-                        const raw = localStorage.getItem(key)
-                        if (!raw) continue
-                        const { sets, blocks } = JSON.parse(raw)
-                        const hasProgress = (sets && Object.keys(sets).length > 0) || (blocks && Object.keys(blocks).length > 0)
-                        if (!hasProgress) continue
-                        const choice = confirm('Tienes otro entrenamiento sin finalizar. ¿Quieres descartarlo y empezar el de hoy? Cancelar para reanudar el anterior.')
-                        if (choice) {
-                          localStorage.removeItem(key)
-                        } else {
-                          e.preventDefault()
-                          window.location.href = `/dashboard/athlete/workout?dayId=${pendingId}`
-                          return
-                        }
-                        break
-                      }
-                    } catch {}
-                  }
-                  window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}${isSelectedToday ? '' : '&mode=view'}`
-                }}
-                className="h-16 px-10 rounded-[24px] bg-primary text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all shadow-[0_20px_50px_rgba(204,255,0,0.25)] font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none w-full md:w-auto justify-center"
-              >
-                {isSelectedToday ? 'Entrenar Ahora' : isSelectedPast ? 'Ver Entrenamiento' : 'Ver Día'}
-                <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
-                  <ChevronRight className="w-5 h-5" />
+              {/* Chips */}
+              <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                  <Zap className="w-3.5 h-3.5 text-primary fill-primary/20 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.08em] text-white/80 whitespace-nowrap">{timerLabel}</span>
                 </div>
-              </Button>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/5">
+                  {isSelectedToday && trainedToday ? (
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[var(--strength)] shrink-0" />
+                  ) : (
+                    <Video className="w-3.5 h-3.5 text-[var(--strength)] shrink-0" />
+                  )}
+                  <span className="text-[10px] font-black uppercase tracking-[0.08em] text-white/80 whitespace-nowrap">
+                    {isSelectedToday && trainedToday ? 'Resultado guardado' : mediaLabel}
+                  </span>
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div className="flex flex-col gap-2">
+                <Button
+                  onClick={(e) => {
+                    if (isSelectedToday) {
+                      try {
+                        for (let i = 0; i < localStorage.length; i++) {
+                          const key = localStorage.key(i)
+                          if (!key?.startsWith('wod-progress-')) continue
+                          const pendingId = key.replace('wod-progress-', '')
+                          if (pendingId === selectedDay.id) continue
+                          const raw = localStorage.getItem(key)
+                          if (!raw) continue
+                          const { sets, blocks } = JSON.parse(raw)
+                          const hasProgress = (sets && Object.keys(sets).length > 0) || (blocks && Object.keys(blocks).length > 0)
+                          if (!hasProgress) continue
+                          const choice = confirm('Tienes otro entrenamiento sin finalizar. ¿Quieres descartarlo y empezar el de hoy?')
+                          if (choice) localStorage.removeItem(key)
+                          else { e.preventDefault(); window.location.href = `/dashboard/athlete/workout?dayId=${pendingId}`; return }
+                          break
+                        }
+                      } catch {}
+                    }
+                    window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}${isSelectedToday ? '' : '&mode=view'}`
+                  }}
+                  className={cn(
+                    "h-16 w-full px-10 rounded-[24px] text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none justify-center",
+                    isPending
+                      ? "bg-amber-500 hover:bg-amber-600 shadow-[0_20px_50px_rgba(245,158,11,0.25)]"
+                      : "bg-primary shadow-[0_20px_50px_rgba(204,255,0,0.25)]"
+                  )}
+                >
+                  {isPending ? (
+                    <><RotateCcw className="w-5 h-5" /> Reanudar</>
+                  ) : isSelectedToday ? (
+                    <>Entrenar Ahora</>
+                  ) : isSelectedPast ? (
+                    <>Ver Entrenamiento</>
+                  ) : (
+                    <>Ver Día</>
+                  )}
+                  <div className="w-8 h-8 rounded-full bg-black/10 flex items-center justify-center group-hover/btn:translate-x-1 transition-transform">
+                    <ChevronRight className="w-5 h-5" />
+                  </div>
+                </Button>
+                {isPending && (
+                  <button
+                    onClick={() => {
+                      try { localStorage.removeItem(`wod-progress-${selectedDay.id}`) } catch {}
+                      setPendingDayIds(prev => { const n = new Set(prev); n.delete(selectedDay.id); return n })
+                    }}
+                    className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-white/60 transition-colors text-center"
+                  >
+                    Descartar sesión anterior
+                  </button>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -279,16 +319,6 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
         <div className="py-12 text-center border-2 border-dashed border-border/20 rounded-[32px]">
           <AlertCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en este plan</p>
-        </div>
-      )}
-
-      {/* Today has no workout — show clear message */}
-      {!hasTodayDay && planDays.length > 0 && (
-        <div className="ios-panel p-4 flex items-center gap-3">
-          <Calendar className="w-5 h-5 text-muted-foreground/40 shrink-0" />
-          <p className="text-sm text-muted-foreground font-semibold">
-            Hoy no hay entrenamiento programado. Selecciona otro día arriba.
-          </p>
         </div>
       )}
     </section>

@@ -340,6 +340,35 @@ export async function toggleWeekStatus(planId: string, weekNumber: number, isPub
   revalidatePath('/dashboard/athlete/workout')
 }
 
+export async function createExerciseQuick(
+  name: string,
+  category: string,
+  opts?: { tracking_type?: string; video_url?: string; description?: string }
+): Promise<{ exercise?: { id: string, name: string, category: string | null, tracking_type: string | null, video_url: string | null }, error?: string }> {
+  try {
+    const { user } = await getAuthorizedCoach()
+    const admin = getSupabaseAdmin()
+    const { data, error } = await admin
+      .from('exercises')
+      .insert({
+        name: name.trim(),
+        category: category || 'General',
+        tracking_type: opts?.tracking_type || 'weight_reps',
+        video_url: opts?.video_url?.trim() || null,
+        description: opts?.description?.trim() || null,
+        created_by: user.id,
+      })
+      .select('id, name, category, tracking_type, video_url')
+      .single()
+    if (error) throw error
+    revalidatePath('/dashboard/coach/library')
+    revalidatePath('/dashboard/athlete/library')
+    return { exercise: data }
+  } catch (err: any) {
+    return { error: err.message || 'Error al crear ejercicio' }
+  }
+}
+
 export async function updateBlockDescription(blockId: string, description: string) {
   try {
     const { user, role } = await getAuthorizedCoach()

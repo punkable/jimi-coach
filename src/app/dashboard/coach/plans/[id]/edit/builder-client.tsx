@@ -3,35 +3,34 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { 
+import {
   Plus, Trash2, Dumbbell, Save, Loader2, X,
   Search, Layout, Edit3,
   Hash, Video,
-  Eye, EyeOff, CheckCircle2, Timer as TimerIcon
+  Eye, EyeOff, CheckCircle2, Timer as TimerIcon,
+  ChevronUp, ChevronDown, Copy
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { savePlanStructure, toggleWeekStatus, updateBlockDescription } from '../../actions'
-import { 
-  DndContext, 
-  closestCenter, 
-  KeyboardSensor, 
-  PointerSensor, 
-  useSensor, 
-  useSensors, 
+import { savePlanStructure, toggleWeekStatus, updateBlockDescription, createExerciseQuick } from '../../actions'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
   TouchSensor,
-  useDraggable
+  useDraggable,
+  useDroppable,
 } from '@dnd-kit/core'
-import { 
-  arrayMove, 
-  SortableContext, 
-  sortableKeyboardCoordinates, 
-  verticalListSortingStrategy 
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy
 } from '@dnd-kit/sortable'
 import { SortableMovement } from './SortableMovement'
 import { SortableBlock } from './SortableBlock'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Textarea } from '@/components/ui/textarea'
@@ -109,8 +108,6 @@ function LibraryItem({ exercise }: { exercise: Exercise }) {
   )
 }
 
-import { useDroppable } from '@dnd-kit/core'
-
 function DroppableBlock({ id, children, className }: { id: string, children: React.ReactNode, className?: string }) {
   const { isOver, setNodeRef } = useDroppable({ id })
   return (
@@ -172,7 +169,6 @@ export function BuilderClient({
   const [planMeta, setPlanMeta] = useState({
     title: initialPlan?.title || '',
     description: initialPlan?.description || '',
-    is_community_enabled: initialPlan?.is_community_enabled ?? true
   })
   
   const [activeWeek, setActiveWeek] = useState<string>('1')
@@ -181,6 +177,22 @@ export function BuilderClient({
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [editingBlocks, setEditingBlocks] = useState<Record<string, boolean>>({})
+  const [blockPickerOpen, setBlockPickerOpen] = useState<string | null>(null)
+  const [blockPickerSearch, setBlockPickerSearch] = useState('')
+  const [localExercises, setLocalExercises] = useState<Exercise[]>([])
+  const [creatingExercise, setCreatingExercise] = useState(false)
+  const [pickerSelectedIds, setPickerSelectedIds] = useState<Set<string>>(new Set())
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createFormData, setCreateFormData] = useState({ tracking_type: 'weight_reps', video_url: '', description: '' })
+
+  // Block wizard state — null = closed, else stores { dayId, step, blockData }
+  const [blockWizard, setBlockWizard] = useState<{
+    dayId: string
+    step: 1 | 2
+    blockType: string
+    blockName: string
+    timerType: string | null
+  } | null>(null)
 
   useEffect(() => {
     routineDraftsRef.current = routineDrafts
@@ -188,15 +200,12 @@ export function BuilderClient({
 
   // Track changes to planMeta
   useEffect(() => {
-    if (planMeta.title !== (initialPlan?.title || '') || 
-        planMeta.description !== (initialPlan?.description || '') ||
-        planMeta.is_community_enabled !== (initialPlan?.is_community_enabled ?? true)) {
+    if (planMeta.title !== (initialPlan?.title || '') ||
+        planMeta.description !== (initialPlan?.description || '')) {
       setHasUnsavedChanges(true)
     }
   }, [planMeta, initialPlan])
 
-  // Immutable state update helper
-  // Immutable state update helper with deep cloning safety
   const updateDays = (updater: Day[] | ((prev: Day[]) => Day[])) => {
     setDays(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater
@@ -372,34 +381,93 @@ export function BuilderClient({
 
   const addWeek = () => {
     const nextWeek = Math.max(0, ...days.map(d => d.week_number || 1)) + 1
-    updateDays([...days, { 
-      id: genId(), 
-      week_number: nextWeek, 
-      day_of_week: 1, 
-      title: 'Entrenamiento 1', 
+    updateDays([...days, {
+      id: genId(),
+      week_number: nextWeek,
+      day_of_week: 1,
+      title: 'Entrenamiento 1',
       is_published: true,
-      workout_blocks: [] 
+      workout_blocks: []
     }])
     setActiveWeek(nextWeek.toString())
   }
 
-  const addBlock = (dayId: string) => {
+  const moveWeek = (weekNum: number, direction: 'up' | 'down') => {
+    const sortedWeeks = Array.from(new Set(days.map(d => d.week_number || 1))).sort((a, b) => a - b)
+    const idx = sortedWeeks.indexOf(weekNum)
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (swapIdx < 0 || swapIdx >= sortedWeeks.length) return
+    const newOrder = [...sortedWeeks]
+    ;[newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]]
+    const mapping: Record<number, number> = {}
+    newOrder.forEach((originalWeek, newIdx) => { mapping[originalWeek] = newIdx + 1 })
+    updateDays(prev => prev.map(d => ({ ...d, week_number: mapping[d.week_number] ?? d.week_number })))
+    setActiveWeek((swapIdx + 1).toString())
+  }
+
+  const duplicateWeek = (weekNum: number) => {
+    const newWeekNum = Math.max(0, ...days.map(d => d.week_number || 1)) + 1
+    const weekDays = days.filter(d => d.week_number === weekNum)
+    const newDays = weekDays.map(d => ({
+      ...JSON.parse(JSON.stringify(d)),
+      id: genId(),
+      week_number: newWeekNum,
+      is_published: true,
+      workout_blocks: d.workout_blocks.map((b: Block) => ({
+        ...JSON.parse(JSON.stringify(b)),
+        id: genId(),
+        workout_movements: b.workout_movements.map((m: Movement) => ({ ...JSON.parse(JSON.stringify(m)), id: genId() }))
+      }))
+    }))
+    updateDays([...days, ...newDays])
+    setActiveWeek(newWeekNum.toString())
+  }
+
+  const duplicateDay = (dayId: string) => {
+    const day = days.find(d => d.id === dayId)
+    if (!day) return
+    const newDay = {
+      ...JSON.parse(JSON.stringify(day)),
+      id: genId(),
+      title: `${day.title} (copia)`,
+      workout_blocks: day.workout_blocks.map((b: Block) => ({
+        ...JSON.parse(JSON.stringify(b)),
+        id: genId(),
+        workout_movements: b.workout_movements.map((m: Movement) => ({ ...JSON.parse(JSON.stringify(m)), id: genId() }))
+      }))
+    }
+    updateDays([...days, newDay])
+  }
+
+  const openBlockWizard = (dayId: string) => {
+    setBlockWizard({ dayId, step: 1, blockType: 'strength', blockName: '', timerType: null })
+  }
+
+  const confirmBlockWizard = () => {
+    if (!blockWizard) return
+    const { dayId, blockType, blockName, timerType } = blockWizard
     updateDays((prev: Day[]) => {
       const n: Day[] = JSON.parse(JSON.stringify(prev))
       const idx = n.findIndex((d: Day) => d.id === dayId)
       if (idx === -1) return prev
       const blockCount = n[idx].workout_blocks.length
-      const blockLetter = String.fromCharCode(65 + blockCount)
-      n[idx].workout_blocks.push({ 
-        id: genId(), 
-        name: `Bloque ${blockLetter}`, 
-        type: 'strength', 
+      const defaultName = blockName.trim() || `Bloque ${String.fromCharCode(65 + blockCount)}`
+      n[idx].workout_blocks.push({
+        id: genId(),
+        name: defaultName,
+        type: blockType,
+        timer_type: timerType ?? undefined,
+        timer_config: timerType === 'amrap' ? { minutes: 15 } : timerType === 'emom' ? { rounds: 10 } : timerType === 'tabata' ? { rounds: 8, work: 20, rest: 10 } : {},
         description: '',
-        workout_movements: [] 
+        workout_movements: [],
       })
       return n
     })
+    setBlockWizard(null)
   }
+
+  // kept for internal programmatic use (duplicate, etc.)
+  const addBlock = (dayId: string) => openBlockWizard(dayId)
 
   const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number, sets: number = 3) => {
     updateDays((prev: Day[]) => {
@@ -422,6 +490,61 @@ export function BuilderClient({
       }
       return n
     })
+  }
+
+  const openBlockPicker = (blockId: string) => {
+    setBlockPickerOpen(blockId)
+    setBlockPickerSearch('')
+    setCreatingExercise(false)
+    setPickerSelectedIds(new Set())
+    setShowCreateForm(false)
+    setCreateFormData({ tracking_type: 'weight_reps', video_url: '', description: '' })
+  }
+
+  const closeBlockPicker = () => {
+    setBlockPickerOpen(null)
+    setBlockPickerSearch('')
+    setCreatingExercise(false)
+    setPickerSelectedIds(new Set())
+    setShowCreateForm(false)
+  }
+
+  const togglePickerSelection = (id: string) => {
+    setPickerSelectedIds(prev => {
+      const n = new Set(prev)
+      if (n.has(id)) n.delete(id); else n.add(id)
+      return n
+    })
+  }
+
+  const addSelectedExercises = (dIdx: number, bIdx: number) => {
+    pickerSelectedIds.forEach(id => {
+      const ex = allExercises.find(e => e.id === id)
+      if (ex) addMovement(dIdx, bIdx, ex)
+    })
+    closeBlockPicker()
+  }
+
+  const handleQuickCreateExercise = async (dIdx: number, bIdx: number) => {
+    const name = blockPickerSearch.trim()
+    if (!name) return
+    setCreatingExercise(true)
+    try {
+      const result = await createExerciseQuick(name, 'General', {
+        tracking_type: createFormData.tracking_type,
+        video_url: createFormData.video_url || undefined,
+        description: createFormData.description || undefined,
+      })
+      if (result.exercise) {
+        setLocalExercises(prev => [...prev, result.exercise!])
+        addMovement(dIdx, bIdx, result.exercise!)
+        closeBlockPicker()
+      } else {
+        alert(result.error || 'Error al crear ejercicio')
+      }
+    } finally {
+      setCreatingExercise(false)
+    }
   }
 
   const removeBlock = (dayId: string, bIdx: number) => {
@@ -460,7 +583,8 @@ export function BuilderClient({
     }
   }
 
-  const filteredLibrary = library.filter(ex => 
+  const allExercises = [...library, ...localExercises]
+  const filteredLibrary = allExercises.filter(ex =>
     ex.name.toLowerCase().includes(libSearch.toLowerCase()) ||
     (ex.category || '').toLowerCase().includes(libSearch.toLowerCase())
   )
@@ -507,11 +631,12 @@ export function BuilderClient({
   }
 
   return (
+    <>
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="grid grid-cols-1 xl:grid-cols-[20rem_minmax(0,1fr)] gap-4 items-start overflow-visible">
         
         {/* ── Sidebar: Library ── */}
-        <aside className="w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 h-[360px] xl:h-[calc(100dvh-11rem)] xl:min-h-[460px]">
+        <aside className="w-full xl:w-80 xl:max-w-80 flex flex-col ios-panel shrink-0 overflow-hidden relative z-20 h-[320px] xl:sticky xl:top-4 xl:h-[calc(100dvh-2rem)] xl:min-h-[400px]">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
           
           <div className="relative z-10 space-y-4 p-4 border-b border-border/60">
@@ -542,7 +667,7 @@ export function BuilderClient({
                   <h3 className="text-xl font-black tracking-tight uppercase text-foreground">Biblioteca</h3>
                   <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mt-1">Arrastra o copia etiquetas</p>
                 </div>
-                <Badge variant="outline" className="text-[8px] font-black border-border/70 text-muted-foreground">{library.length} items</Badge>
+                <span className="text-[8px] font-black border border-border/70 text-muted-foreground px-2 py-1 rounded-full">{library.length}</span>
               </div>
             </div>
             
@@ -600,16 +725,6 @@ export function BuilderClient({
                       onChange={(e) => setPlanMeta({...planMeta, title: e.target.value})}
                     />
                   </div>
-                  <div className="flex items-center gap-3 bg-background/55 p-3 rounded-2xl border border-border/70 self-start lg:self-auto shrink-0">
-                    <Switch 
-                      id="community-mode" 
-                      checked={planMeta.is_community_enabled}
-                      onCheckedChange={(checked) => setPlanMeta({...planMeta, is_community_enabled: checked})}
-                    />
-                    <Label htmlFor="community-mode" className="text-[9px] font-black uppercase tracking-widest cursor-pointer select-none whitespace-nowrap">
-                      Feed comunitario {planMeta.is_community_enabled ? 'ON' : 'OFF'}
-                    </Label>
-                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">Descripción y Objetivos</Label>
@@ -621,26 +736,22 @@ export function BuilderClient({
                   />
                 </div>
               </div>
-              <Button onClick={addWeek} className="gap-2 font-black uppercase tracking-widest text-[10px] h-11 rounded-2xl px-5 shrink-0">
-                <Plus className="w-4 h-4" /> Nueva Semana
-              </Button>
             </div>
 
-            {/* Plan overview: weeks × weekdays grid (at-a-glance) */}
+            {/* Plan overview: weeks × weekdays grid */}
             {totalWeeks.length > 0 && (
               <div className="pt-4 border-t border-border/60 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Vista general del plan</span>
                   <div className="flex items-center gap-3 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary" /> Con ejercicios</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500/60" /> Vacío</span>
-                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-secondary border border-border/50" /> Sin día</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-primary inline-block" /> Con ejercicios</span>
+                    <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-amber-500/60 inline-block" /> Vacío</span>
                   </div>
                 </div>
-                <div className="grid gap-1.5" style={{ gridTemplateColumns: 'minmax(70px, auto) repeat(7, minmax(0, 1fr))' }}>
+                <div className="grid gap-1" style={{ gridTemplateColumns: 'minmax(60px, auto) repeat(7, minmax(0, 1fr))' }}>
                   <div />
-                  {['L','M','X','J','V','S','D'].map((d, i) => (
-                    <div key={i} className="text-[9px] font-black uppercase text-center text-muted-foreground/60">{d}</div>
+                  {['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map((d, i) => (
+                    <div key={i} className="text-[9px] font-black uppercase text-center text-muted-foreground/50">{d}</div>
                   ))}
                   {totalWeeks.map(w => (
                     <div key={w} className="contents">
@@ -648,11 +759,11 @@ export function BuilderClient({
                         type="button"
                         onClick={() => setActiveWeek(w.toString())}
                         className={cn(
-                          'text-[10px] font-black uppercase tracking-widest text-left transition-colors px-2 py-1.5 rounded-lg',
-                          parseInt(activeWeek) === w ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:text-foreground'
+                          'text-[10px] font-black uppercase tracking-widest text-left transition-colors px-1 py-1 rounded-lg',
+                          parseInt(activeWeek) === w ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                         )}
                       >
-                        Sem {w}
+                        S{w}
                       </button>
                       {[1,2,3,4,5,6,7].map(dow => {
                         const dayObj = days.find(d => d.week_number === w && d.day_of_week === dow)
@@ -662,13 +773,20 @@ export function BuilderClient({
                           <button
                             key={dow}
                             type="button"
-                            onClick={() => setActiveWeek(w.toString())}
-                            title={dayObj ? `${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'][dow-1]} · ${dayObj.workout_blocks.length} bloques` : 'Sin día'}
+                            onClick={() => {
+                              setActiveWeek(w.toString())
+                              if (dayObj) {
+                                setTimeout(() => {
+                                  document.getElementById(`day-${dayObj.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                                }, 50)
+                              }
+                            }}
+                            title={dayObj ? `${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][dow-1]} · ${dayObj.workout_blocks.length} bloques` : 'Sin día'}
                             className={cn(
-                              'h-7 rounded-md transition-all',
-                              hasBlocks && 'bg-primary hover:opacity-90',
+                              'h-6 rounded transition-all',
+                              hasBlocks && 'bg-primary hover:opacity-80',
                               isEmpty && 'bg-amber-500/40 hover:bg-amber-500/60',
-                              !dayObj && 'bg-secondary/50 border border-border/50 hover:bg-secondary'
+                              !dayObj && 'bg-secondary/40 border border-border/30 hover:bg-secondary'
                             )}
                           />
                         )
@@ -679,62 +797,99 @@ export function BuilderClient({
               </div>
             )}
 
-            <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center justify-between w-full pt-4 border-t border-border/60">
-              <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full lg:w-auto min-w-0">
-                <TabsList className="bg-background/55 p-1.5 rounded-2xl h-auto min-h-12 border border-border/70 w-full lg:w-auto justify-start overflow-x-auto overflow-y-hidden">
-                  {totalWeeks.map(w => {
-                    const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
-                    return (
-                      <div key={w} className="flex items-center gap-0.5 group/weektab">
-                        <TabsTrigger
-                          value={w.toString()}
-                          className="rounded-xl font-black uppercase tracking-widest text-[10px] px-4 md:px-5 h-9 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
-                        >
-                          Semana {w}
-                          {!isWPublished && (
-                            <Badge variant="secondary" className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] h-5 px-2 rounded-lg font-black uppercase">Draft</Badge>
-                          )}
-                        </TabsTrigger>
-                        {totalWeeks.length > 1 && (
-                          <button
-                            type="button"
-                            title={`Eliminar Semana ${w}`}
-                            onClick={() => { if (confirm(`¿Eliminar Semana ${w} y todos sus días?`)) removeWeek(w) }}
-                            className="w-5 h-5 rounded-md flex items-center justify-center opacity-0 group-hover/weektab:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
+            {/* Week tabs + management row */}
+            <div className="flex flex-col gap-3 w-full pt-4 border-t border-border/60">
+              <div className="flex flex-wrap gap-2 items-center">
+                {totalWeeks.map(w => {
+                  const isWPublished = days.filter(d => d.week_number === w).every(d => d.is_published)
+                  const isActive = parseInt(activeWeek) === w
+                  return (
+                    <div key={w} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setActiveWeek(w.toString())}
+                        className={cn(
+                          'h-9 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center gap-2 whitespace-nowrap transition-all border',
+                          isActive
+                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                            : 'bg-background/55 text-muted-foreground border-border/70 hover:border-primary/40 hover:text-foreground'
                         )}
-                      </div>
-                    )
-                  })}
-                </TabsList>
-              </Tabs>
+                      >
+                        Semana {w}
+                        {!isWPublished && (
+                          <span className="bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[8px] h-4 px-1.5 rounded font-black uppercase leading-none flex items-center">Oculta</span>
+                        )}
+                      </button>
+                      {totalWeeks.length > 1 && (
+                        <button
+                          type="button"
+                          title={`Eliminar Semana ${w}`}
+                          onClick={() => { if (confirm(`¿Eliminar Semana ${w} y todos sus días? Esta acción no se puede deshacer.`)) removeWeek(w) }}
+                          className="w-6 h-6 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all border border-border/50 hover:border-destructive/30 shrink-0"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )
+                })}
+                <button
+                  type="button"
+                  onClick={addWeek}
+                  className="h-9 px-3 rounded-xl border border-dashed border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Semana
+                </button>
+              </div>
 
-              <div className="w-full lg:w-auto flex flex-col sm:flex-row sm:items-center gap-3 bg-background/45 p-3 rounded-2xl border border-border/70">
-                <div className="flex flex-col sm:items-end px-1 sm:px-3">
-                  <span className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">Visibilidad semana {activeWeek}</span>
+              {/* Active week controls */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mr-1">Sem {activeWeek}:</span>
+                <button
+                  type="button"
+                  title="Mover semana hacia arriba"
+                  disabled={parseInt(activeWeek) === totalWeeks[0]}
+                  onClick={() => moveWeek(parseInt(activeWeek), 'up')}
+                  className="h-7 px-2.5 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  <ChevronUp className="w-3 h-3" /> Subir
+                </button>
+                <button
+                  type="button"
+                  title="Mover semana hacia abajo"
+                  disabled={parseInt(activeWeek) === totalWeeks[totalWeeks.length - 1]}
+                  onClick={() => moveWeek(parseInt(activeWeek), 'down')}
+                  className="h-7 px-2.5 rounded-lg border border-border/60 text-muted-foreground hover:text-foreground hover:bg-secondary disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  <ChevronDown className="w-3 h-3" /> Bajar
+                </button>
+                <button
+                  type="button"
+                  title="Duplicar esta semana"
+                  onClick={() => duplicateWeek(parseInt(activeWeek))}
+                  className="h-7 px-2.5 rounded-lg border border-border/60 text-muted-foreground hover:text-primary hover:border-primary/40 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-all"
+                >
+                  <Copy className="w-3 h-3" /> Duplicar
+                </button>
+                <div className="ml-auto flex items-center gap-2">
                   <span className={cn(
-                    "text-[11px] font-black uppercase tracking-widest mt-0.5",
+                    "text-[10px] font-black uppercase tracking-widest",
                     isWeekPublished ? "text-primary" : "text-amber-500"
                   )}>
-                    {isWeekPublished ? 'Pública para Atletas' : 'Borrador Privado'}
+                    {isWeekPublished ? 'Visible para atletas' : 'Oculta para atletas'}
                   </span>
+                  <Button
+                    onClick={handleToggleWeekPublish}
+                    variant={isWeekPublished ? "outline" : "default"}
+                    size="sm"
+                    className={cn(
+                      "h-7 rounded-xl px-3 font-black uppercase tracking-widest text-[9px] gap-2 transition-all",
+                      isWeekPublished ? "border-border/70 hover:bg-secondary" : "bg-amber-500 hover:bg-amber-600 text-white"
+                    )}
+                  >
+                    {isWeekPublished ? <><EyeOff className="w-3 h-3" /> Ocultar</> : <><Eye className="w-3 h-3" /> Publicar</>}
+                  </Button>
                 </div>
-                <Button 
-                  onClick={handleToggleWeekPublish}
-                  variant={isWeekPublished ? "outline" : "default"}
-                  className={cn(
-                    "h-11 rounded-2xl px-5 font-black uppercase tracking-widest text-[10px] gap-3 transition-all sm:ml-auto",
-                    isWeekPublished ? "border-border/70 hover:bg-secondary" : "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
-                  )}
-                >
-                  {isWeekPublished ? (
-                    <><EyeOff className="w-4 h-4" /> Ocultar Semana</>
-                  ) : (
-                    <><Eye className="w-4 h-4" /> Publicar Semana</>
-                  )}
-                </Button>
               </div>
             </div>
           </div>
@@ -745,12 +900,12 @@ export function BuilderClient({
               {currentWeekDays.map((day) => {
                 const globalDIdx = days.findIndex(d => d.id === day.id)
                 return (
-                  <div key={day.id} className="flex flex-col gap-5 ios-panel p-4 md:p-5 hover:border-primary/30 transition-all group/day relative overflow-hidden">
+                  <div key={day.id} id={`day-${day.id}`} className="flex flex-col gap-5 ios-panel p-4 md:p-5 hover:border-primary/30 transition-all group/day relative overflow-hidden">
                     <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)] opacity-75" />
                     
                     {/* Day Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border/60">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
+                    <div className="flex flex-col gap-3 pb-4 border-b border-border/60">
+                      <div className="flex items-center justify-between gap-2">
                         <select
                           value={day.day_of_week}
                           onChange={(e) => {
@@ -758,32 +913,47 @@ export function BuilderClient({
                             n[globalDIdx].day_of_week = parseInt(e.target.value)
                             updateDays(n)
                           }}
-                          className="h-9 px-3 bg-primary/10 border border-primary/20 text-primary font-black rounded-2xl text-[11px] shrink-0 uppercase tracking-[0.12em] focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                          className="h-9 px-3 bg-primary/10 border border-primary/20 text-primary font-black rounded-xl text-[11px] shrink-0 uppercase tracking-[0.12em] focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
                         >
                           {['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map((name, i) => (
                             <option key={i + 1} value={i + 1} className="bg-background text-foreground normal-case">{name}</option>
                           ))}
                         </select>
-                        <div className="flex-1 space-y-1 min-w-0">
-                          <Label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40">Título visible del entrenamiento</Label>
-                          <Input 
-                            placeholder="Ej: Tren superior, WOD largo, Descanso activo..."
-                            className="bg-background/55 border-border/70 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full rounded-xl"
-                            value={day.title}
-                            onChange={(e) => {
-                              const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n);
-                            }}
-                          />
+                        <div className="flex items-center gap-1 ml-auto">
+                          <button
+                            type="button"
+                            title="Añadir bloque"
+                            onClick={() => addBlock(day.id)}
+                            className="w-7 h-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Duplicar día"
+                            onClick={() => duplicateDay(day.id)}
+                            className="w-7 h-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Eliminar día"
+                            onClick={() => { if (confirm('¿Eliminar este día?')) updateDays(days.filter(d => d.id !== day.id)) }}
+                            className="w-7 h-7 rounded-lg border border-border/60 flex items-center justify-center text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/5 transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon-sm" className="rounded-xl" onClick={() => addBlock(day.id)}>
-                          <Plus className="w-3 h-3" />
-                        </Button>
-                        <Button variant="ghost" size="icon-sm" className="rounded-xl hover:text-destructive" onClick={() => updateDays(days.filter(d => d.id !== day.id))}>
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      <Input
+                        placeholder="Ej: Tren superior, WOD largo, Descanso activo..."
+                        className="bg-background/55 border-border/70 h-10 focus:border-primary/40 font-black text-sm tracking-tight truncate w-full rounded-xl"
+                        value={day.title}
+                        onChange={(e) => {
+                          const n = [...days]; n[globalDIdx].title = e.target.value; updateDays(n)
+                        }}
+                      />
                     </div>
 
                     {/* Blocks in Day */}
@@ -1115,11 +1285,152 @@ export function BuilderClient({
                                 </div>
                               </SortableContext>
                               
-                              {/* Visual Drop Zone for Library Items */}
-                              {block.workout_movements.length === 0 && (
-                                <div className="py-6 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl pointer-events-none bg-background/25">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra ejercicios aquí</p>
+                              {/* Empty state */}
+                              {block.workout_movements.length === 0 && blockPickerOpen !== block.id && (
+                                <div className="py-5 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl bg-background/25 gap-2">
+                                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/30">Arrastra o añade ejercicios</p>
+                                  <button
+                                    onClick={() => openBlockPicker(block.id)}
+                                    className="text-[9px] font-black uppercase tracking-widest text-primary/70 hover:text-primary flex items-center gap-1 transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" /> Añadir ejercicio
+                                  </button>
                                 </div>
+                              )}
+
+                              {/* Inline exercise picker */}
+                              {blockPickerOpen === block.id ? (
+                                <div className="mt-2 mx-1 border border-primary/25 rounded-2xl p-3 space-y-2 bg-primary/5">
+                                  {/* Search bar */}
+                                  <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                                      <Input
+                                        autoFocus
+                                        placeholder="Buscar ejercicio..."
+                                        value={blockPickerSearch}
+                                        onChange={e => { setBlockPickerSearch(e.target.value); setShowCreateForm(false) }}
+                                        onKeyDown={e => { if (e.key === 'Escape') closeBlockPicker() }}
+                                        className="h-8 pl-8 text-xs rounded-xl bg-background/70 border-border/60"
+                                      />
+                                    </div>
+                                    <button onClick={closeBlockPicker} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+
+                                  {/* Exercise list with multi-select */}
+                                  {!showCreateForm && (
+                                    <div className="max-h-52 overflow-y-auto overscroll-contain space-y-0.5 [scrollbar-width:thin]">
+                                      {allExercises
+                                        .filter(ex => !blockPickerSearch || ex.name.toLowerCase().includes(blockPickerSearch.toLowerCase()) || (ex.category || '').toLowerCase().includes(blockPickerSearch.toLowerCase()))
+                                        .map(ex => {
+                                          const selected = pickerSelectedIds.has(ex.id)
+                                          return (
+                                            <button
+                                              key={ex.id}
+                                              onClick={() => togglePickerSelection(ex.id)}
+                                              className={cn(
+                                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-left transition-colors",
+                                                selected ? "bg-primary/20 text-primary" : "hover:bg-primary/10 hover:text-primary"
+                                              )}
+                                            >
+                                              <div className={cn(
+                                                "w-4 h-4 rounded-md border flex items-center justify-center shrink-0 transition-all",
+                                                selected ? "bg-primary border-primary" : "border-border/60"
+                                              )}>
+                                                {selected && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
+                                              </div>
+                                              <span className="text-xs font-semibold flex-1 truncate">{ex.name}</span>
+                                              {ex.category && <span className="text-[8px] text-muted-foreground/50 uppercase tracking-wider shrink-0">{ex.category}</span>}
+                                            </button>
+                                          )
+                                        })}
+                                      {blockPickerSearch && allExercises.filter(ex => ex.name.toLowerCase().includes(blockPickerSearch.toLowerCase()) || (ex.category || '').toLowerCase().includes(blockPickerSearch.toLowerCase())).length === 0 && (
+                                        <div className="py-3 text-center space-y-2">
+                                          <p className="text-xs text-muted-foreground">No encontrado en la biblioteca</p>
+                                          <button
+                                            onClick={() => setShowCreateForm(true)}
+                                            className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 mx-auto"
+                                          >
+                                            <Plus className="w-3 h-3" /> Crear &quot;{blockPickerSearch}&quot;
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* Inline create form */}
+                                  {showCreateForm && (
+                                    <div className="space-y-2.5 py-1">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Nuevo ejercicio</p>
+                                      <div className="grid grid-cols-2 gap-2">
+                                        <div>
+                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Tracking</label>
+                                          <select
+                                            value={createFormData.tracking_type}
+                                            onChange={e => setCreateFormData(p => ({ ...p, tracking_type: e.target.value }))}
+                                            className="w-full h-8 px-2 rounded-xl bg-background/70 border border-border/60 text-xs font-bold"
+                                          >
+                                            <option value="weight_reps">Peso + Reps</option>
+                                            <option value="reps_only">Solo Reps</option>
+                                            <option value="distance_time">Distancia/Tiempo</option>
+                                            <option value="time_only">Solo Tiempo</option>
+                                          </select>
+                                        </div>
+                                        <div>
+                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Video URL</label>
+                                          <Input
+                                            placeholder="youtube.com/..."
+                                            value={createFormData.video_url}
+                                            onChange={e => setCreateFormData(p => ({ ...p, video_url: e.target.value }))}
+                                            className="h-8 text-xs rounded-xl bg-background/70 border-border/60"
+                                          />
+                                        </div>
+                                      </div>
+                                      <Input
+                                        placeholder="Descripción / instrucciones (opcional)"
+                                        value={createFormData.description}
+                                        onChange={e => setCreateFormData(p => ({ ...p, description: e.target.value }))}
+                                        className="h-8 text-xs rounded-xl bg-background/70 border-border/60"
+                                      />
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => setShowCreateForm(false)}
+                                          className="flex-1 h-8 rounded-xl border border-border/60 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                          Cancelar
+                                        </button>
+                                        <button
+                                          onClick={() => handleQuickCreateExercise(globalDIdx, bIdx)}
+                                          disabled={creatingExercise || !blockPickerSearch.trim()}
+                                          className="flex-1 h-8 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 disabled:opacity-50 hover:bg-primary/90 transition-colors"
+                                        >
+                                          {creatingExercise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                                          Crear
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Multi-select footer */}
+                                  {pickerSelectedIds.size > 0 && !showCreateForm && (
+                                    <button
+                                      onClick={() => addSelectedExercises(globalDIdx, bIdx)}
+                                      className="w-full h-8 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-1"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      Añadir {pickerSelectedIds.size} ejercicio{pickerSelectedIds.size !== 1 ? 's' : ''}
+                                    </button>
+                                  )}
+                                </div>
+                              ) : block.workout_movements.length > 0 && (
+                                <button
+                                  onClick={() => openBlockPicker(block.id)}
+                                  className="w-full mt-1 h-7 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
+                                >
+                                  <Plus className="w-3 h-3" /> Añadir ejercicio
+                                </button>
                               )}
                             </DroppableBlock>
                           </SortableBlock>
@@ -1155,5 +1466,124 @@ export function BuilderClient({
       </div>
 
     </DndContext>
+
+    {/* ── Block Wizard Modal ── */}
+
+    {blockWizard && (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setBlockWizard(null)}>
+        <div className="w-full max-w-sm bg-card border border-border/60 rounded-[28px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)]" />
+          <div className="p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+                  {blockWizard.step === 1 ? 'Paso 1 de 2' : 'Paso 2 de 2'}
+                </p>
+                <h3 className="text-xl font-black uppercase tracking-tight">
+                  {blockWizard.step === 1 ? 'Tipo de bloque' : 'Formato de trabajo'}
+                </h3>
+              </div>
+              <button onClick={() => setBlockWizard(null)} className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {blockWizard.step === 1 && (
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del bloque (opcional)</label>
+                  <input
+                    autoFocus
+                    placeholder="Ej: WOD principal, Fuerza olímpica..."
+                    value={blockWizard.blockName}
+                    onChange={e => setBlockWizard(p => p ? { ...p, blockName: e.target.value } : p)}
+                    className="w-full h-11 px-4 rounded-2xl border border-border/70 bg-background/55 text-sm font-bold outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'warmup',     label: 'Calentamiento',  color: 'var(--warmup)' },
+                      { id: 'strength',   label: 'Fuerza',         color: 'var(--strength)' },
+                      { id: 'metcon',     label: 'Acondic. / WOD', color: 'var(--metcon)' },
+                      { id: 'gymnastics', label: 'Skills / Gimn.', color: 'var(--gymnastics)' },
+                      { id: 'wod',        label: 'Core / Técnica', color: 'var(--metcon)' },
+                      { id: 'cooldown',   label: 'Vuelta a calma', color: 'var(--cooldown)' },
+                    ].map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setBlockWizard(p => p ? { ...p, blockType: t.id } : p)}
+                        className={cn(
+                          'h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all border',
+                          blockWizard.blockType === t.id
+                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                            : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={() => setBlockWizard(p => p ? { ...p, step: 2 } : p)}
+                  className="w-full h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
+                >
+                  Siguiente →
+                </button>
+              </div>
+            )}
+
+            {blockWizard.step === 2 && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                    {['strength','wod'].includes(blockWizard.blockType) ? 'Formato de trabajo' : 'Cronómetro (opcional)'}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: null,       label: 'Sin crono / Libre' },
+                      { id: 'for_time', label: 'For Time' },
+                      { id: 'amrap',    label: 'AMRAP' },
+                      { id: 'emom',     label: 'EMOM' },
+                      { id: 'tabata',   label: 'Tabata' },
+                    ].map(t => (
+                      <button
+                        key={t.id ?? 'none'}
+                        onClick={() => setBlockWizard(p => p ? { ...p, timerType: t.id } : p)}
+                        className={cn(
+                          'h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all border',
+                          blockWizard.timerType === t.id
+                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                            : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                        )}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setBlockWizard(p => p ? { ...p, step: 1 } : p)}
+                    className="h-11 px-5 rounded-2xl border border-border/60 font-black uppercase tracking-widest text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+                  >
+                    ← Atrás
+                  </button>
+                  <button
+                    onClick={confirmBlockWizard}
+                    className="flex-1 h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
+                  >
+                    <Plus className="w-4 h-4" /> Crear bloque
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

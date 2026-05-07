@@ -99,6 +99,7 @@ export default async function AthleteDashboard() {
     .from('coach_insights')
     .select('id, type, title, body, is_pinned, created_at')
     .or(`athlete_id.eq.${user?.id},athlete_id.is.null`)
+    .neq('type', 'internal')
     .eq('is_archived', false)
     .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order('is_pinned', { ascending: false })
