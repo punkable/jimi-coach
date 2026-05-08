@@ -109,6 +109,16 @@ export function BuilderClient({
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [editingBlocks, setEditingBlocks] = useState<Record<string, boolean>>({})
+  // Track which blocks have the footer textarea open (only auto-open if block already has footer content)
+  const [showFooterInputs, setShowFooterInputs] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {}
+    initialDays.forEach((d: any) => {
+      ;(d.workout_blocks || []).forEach((b: any) => {
+        if (b.description_footer) initial[b.id] = true
+      })
+    })
+    return initial
+  })
   // Collapsed state per block. Existing blocks (loaded from DB) start collapsed,
   // newly created blocks via the wizard start expanded.
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>(() => {
@@ -196,6 +206,16 @@ export function BuilderClient({
     routineFootersRef.current = footers
     setRoutineDrafts(drafts)
     setRoutineFooters(footers)
+    // Auto-open footer textarea for blocks that already have footer content
+    setShowFooterInputs(prev => {
+      const next = { ...prev }
+      nextDays.forEach(day => {
+        day.workout_blocks.forEach(block => {
+          if (block.description_footer) next[block.id] = true
+        })
+      })
+      return next
+    })
   }
 
   const mergeRoutineDraftsIntoDays = (sourceDays: Day[]) => {
@@ -1109,57 +1129,85 @@ export function BuilderClient({
                                   </div>
                                 )}
 
-                                {((editingBlocks[block.id] ?? true) || !(routineDrafts[block.id] || block.description)) ? (
-                                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-500">
-                                    <div className="relative group">
-                                      <Textarea 
-                                        placeholder={"Ejemplo:\nAMRAP 12'\n10 [Pull Up]\n20 [Wall Ball]\n30 DU\n\nNotas: mantener ritmo sostenible y grabar última ronda si hay dudas técnicas."}
-                                        className="min-h-[180px] bg-background/55 border border-border/70 focus:border-primary/40 text-[15px] font-semibold leading-relaxed resize-y rounded-2xl p-4 transition-all"
-                                        value={routineDrafts[block.id] ?? block.description ?? ''}
-                                        onFocus={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
+                                {/* ── Description free text ───────────────────────── */}
+                                {(() => {
+                                  const draft = routineDrafts[block.id] ?? block.description ?? ''
+                                  const isEditing = editingBlocks[block.id] === true
+                                  const hasContent = draft.length > 0
+
+                                  // No content, not in edit mode → show CTA
+                                  if (!hasContent && !isEditing) {
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
+                                        className="w-full h-10 border border-dashed border-border/50 rounded-2xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/50 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" /> Añadir texto libre
+                                      </button>
+                                    )
+                                  }
+
+                                  // Has content + not editing → preview
+                                  if (hasContent && !isEditing) {
+                                    return (
+                                      <div className="group relative">
+                                        <div
+                                          className="p-4 bg-background/55 border border-border/70 rounded-2xl hover:border-primary/30 transition-all cursor-pointer"
+                                          onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}
+                                        >
+                                          <SmartRoutineText
+                                            text={draft}
+                                            exercises={library}
+                                            blockExercises={block.workout_movements.map((m: any) => m.exercise)}
+                                            onVideoClick={(url) => window.open(url, '_blank')}
+                                          />
+                                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-background/45 rounded-2xl backdrop-blur-[1px]">
+                                            <div className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl">
+                                              <Edit3 className="w-3 h-3" /> Editar texto
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+
+                                  // Editing mode (with or without content)
+                                  return (
+                                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                      <Textarea
+                                        autoFocus
+                                        placeholder={"Ejemplo:\nAMRAP 12'\n10 [Pull Up]\n20 [Wall Ball]\n30 DU\n\nNotas: mantener ritmo sostenible."}
+                                        className="min-h-[160px] bg-background/55 border border-border/70 focus:border-primary/40 text-[15px] font-semibold leading-relaxed resize-y rounded-2xl p-4 transition-all"
+                                        value={draft}
                                         onChange={(e) => updateRoutineDraft(block.id, e.target.value)}
                                       />
-                                      <div className="absolute top-4 right-4 flex gap-2">
-                                         <div className="px-2 py-1 bg-primary/10 border border-primary/20 rounded-md text-[8px] font-black text-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
-                                           Rutina libre
-                                         </div>
+                                      <div className="flex items-center justify-between gap-3 px-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            updateRoutineDraft(block.id, '')
+                                            setEditingBlocks(prev => ({ ...prev, [block.id]: false }))
+                                          }}
+                                          className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 hover:text-destructive transition-colors flex items-center gap-1"
+                                        >
+                                          <Trash2 className="w-3 h-3" /> Eliminar texto
+                                        </button>
+                                        <Button
+                                          size="sm"
+                                          variant="default"
+                                          className="h-8 rounded-xl text-[10px] font-black uppercase tracking-widest px-4 gap-1.5"
+                                          onClick={() => confirmBlockDescription(block.id, routineDraftsRef.current[block.id] ?? '')}
+                                        >
+                                          <CheckCircle2 className="w-3.5 h-3.5" /> Vista previa
+                                        </Button>
                                       </div>
                                     </div>
-                                    
-                                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 px-1">
-                                      <p className="text-[10px] text-muted-foreground font-medium italic">Puedes escribir sin confirmar. Usa vista previa solo para revisar etiquetas y videos; Guardar planificación persiste todo.</p>
-                                      <Button 
-                                        size="sm" 
-                                        variant="default" 
-                                        className="h-10 rounded-2xl text-[10px] font-black uppercase tracking-widest px-5 gap-2"
-                                        onClick={() => confirmBlockDescription(block.id, routineDraftsRef.current[block.id] ?? block.description ?? '')}
-                                      >
-                                        <CheckCircle2 className="w-4 h-4" /> Ver preview
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="group relative">
-                                    <div className="p-4 bg-background/55 border border-border/70 rounded-2xl hover:border-primary/30 transition-all cursor-pointer"
-                                         onClick={() => setEditingBlocks(prev => ({ ...prev, [block.id]: true }))}>
-                                      <SmartRoutineText 
-                                        text={routineDrafts[block.id] ?? block.description ?? ''} 
-                                        exercises={library} 
-                                        blockExercises={block.workout_movements.map((m: any) => m.exercise)}
-                                        onVideoClick={(url) => window.open(url, '_blank')}
-                                      />
-                                      
-                                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all bg-background/45 rounded-2xl backdrop-blur-[1px]">
-                                         <div className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl">
-                                            <Edit3 className="w-3 h-3" /> Editar rutina
-                                         </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
+                                  )
+                                })()}
 
                                 <p className="text-[8px] text-muted-foreground font-medium italic px-1">
-                                  Este texto es para rutinas libres y formatos variables. Los movimientos estructurados de abajo son opcionales y sirven para series, reps y cargas medibles.
+                                  Texto libre para rutinas, formatos y notas. Usa [NombreEjercicio] para vincular video técnico. Los movimientos de abajo son opcionales (series, reps, cargas).
                                 </p>
                               </div>
 
@@ -1376,24 +1424,38 @@ export function BuilderClient({
                                 </button>
                               )}
 
-                              {/* Footer free-text — notes shown AFTER movements */}
-                              <div className="mt-4 pt-4 border-t border-border/40 space-y-2">
-                                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                  <Edit3 className="w-3 h-3" /> Notas finales (opcional)
-                                </Label>
-                                <Textarea
-                                  placeholder="Notas o texto libre que aparecerá DESPUÉS de los ejercicios. Ej: estiramientos, descanso, observaciones."
-                                  className="min-h-[80px] bg-background/55 border border-border/60 focus:border-primary/40 text-sm font-medium leading-relaxed resize-y rounded-xl p-3 transition-all"
-                                  value={routineFooters[block.id] ?? ''}
-                                  onChange={(e) => updateRoutineFooter(block.id, e.target.value)}
-                                />
-                                {(routineFooters[block.id] || '').length > 0 && (
+                              {/* ── Footer free text — after movements ──────────── */}
+                              <div className="mt-4 pt-4 border-t border-border/30">
+                                {showFooterInputs[block.id] ? (
+                                  <div className="space-y-2">
+                                    <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                      <Edit3 className="w-3 h-3" /> Notas finales
+                                    </Label>
+                                    <Textarea
+                                      autoFocus={!routineFooters[block.id]}
+                                      placeholder="Aparece DESPUÉS de los ejercicios. Ej: estiramientos, observaciones, descanso recomendado."
+                                      className="min-h-[80px] bg-background/55 border border-border/60 focus:border-primary/40 text-sm font-medium leading-relaxed resize-y rounded-xl p-3 transition-all"
+                                      value={routineFooters[block.id] ?? ''}
+                                      onChange={(e) => updateRoutineFooter(block.id, e.target.value)}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        updateRoutineFooter(block.id, '')
+                                        setShowFooterInputs(prev => ({ ...prev, [block.id]: false }))
+                                      }}
+                                      className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 hover:text-destructive transition-colors flex items-center gap-1"
+                                    >
+                                      <Trash2 className="w-3 h-3" /> Eliminar notas finales
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => updateRoutineFooter(block.id, '')}
-                                    className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+                                    onClick={() => setShowFooterInputs(prev => ({ ...prev, [block.id]: true }))}
+                                    className="w-full h-9 border border-dashed border-border/40 rounded-xl flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all"
                                   >
-                                    <Trash2 className="w-3 h-3" /> Eliminar notas finales
+                                    <Plus className="w-3 h-3" /> Añadir notas finales
                                   </button>
                                 )}
                               </div>

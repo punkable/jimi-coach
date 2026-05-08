@@ -4,18 +4,18 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Target, Trophy, StickyNote, Plus, Users, Zap, Archive, Pin,
-  Activity, TrendingUp, MessageSquare, CheckCircle2
+  Activity, TrendingUp, MessageSquare, CheckCircle2, UserCheck,
 } from 'lucide-react'
 import { archiveInsight, createInsight } from '../actions'
 
 export const revalidate = 0
 
 const typeConfig: Record<string, { icon: any; label: string; color: string }> = {
-  goal:        { icon: Target,       label: 'Meta',       color: 'text-[var(--metcon)] bg-[var(--metcon)]/10 border-[var(--metcon)]/20' },
-  benchmark:   { icon: Zap,          label: 'Benchmark',  color: 'text-[var(--strength)] bg-[var(--strength)]/10 border-[var(--strength)]/20' },
-  achievement: { icon: Trophy,       label: 'Logro',      color: 'text-[var(--warmup)] bg-[var(--warmup)]/10 border-[var(--warmup)]/20' },
-  note:        { icon: StickyNote,   label: 'Nota',       color: 'text-[var(--gymnastics)] bg-[var(--gymnastics)]/10 border-[var(--gymnastics)]/20' },
-  internal:    { icon: MessageSquare,label: 'Interno',    color: 'text-muted-foreground bg-secondary/80 border-border/60' },
+  goal:        { icon: Target,        label: 'Meta',      color: 'text-[var(--metcon)] bg-[var(--metcon)]/10 border-[var(--metcon)]/20' },
+  benchmark:   { icon: Zap,           label: 'Benchmark', color: 'text-[var(--strength)] bg-[var(--strength)]/10 border-[var(--strength)]/20' },
+  achievement: { icon: Trophy,        label: 'Logro',     color: 'text-[var(--warmup)] bg-[var(--warmup)]/10 border-[var(--warmup)]/20' },
+  note:        { icon: StickyNote,    label: 'Nota',      color: 'text-[var(--gymnastics)] bg-[var(--gymnastics)]/10 border-[var(--gymnastics)]/20' },
+  internal:    { icon: MessageSquare, label: 'Interno',   color: 'text-muted-foreground bg-secondary/80 border-border/60' },
 }
 
 const inputClass = 'w-full h-12 rounded-2xl border border-border/70 bg-background/55 px-4 text-sm font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all'
@@ -27,16 +27,25 @@ export default async function InsightsPage() {
 
   const admin = getSupabaseAdmin()
 
-  // Fetch insights
-  const { data: insights } = await admin
+  // Notes created by this coach + internal notes directed at this coach
+  const { data: myInsights } = await admin
     .from('coach_insights')
-    .select('*, profiles:athlete_id(full_name)')
+    .select('*, profiles:athlete_id(full_name), staff_profile:staff_recipient_id(full_name)')
     .eq('coach_id', user!.id)
     .eq('is_archived', false)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false })
 
-  // Fetch athletes (managed by this coach)
+  // Internal notes directed at this user (created by other coaches)
+  const { data: receivedNotes } = await admin
+    .from('coach_insights')
+    .select('*, coach_profile:coach_id(full_name)')
+    .eq('staff_recipient_id', user!.id)
+    .eq('type', 'internal')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+
+  // Athletes managed by this coach
   const { data: athletes } = await admin
     .from('profiles')
     .select('id, full_name')
@@ -45,9 +54,18 @@ export default async function InsightsPage() {
     .is('deleted_at', null)
     .order('full_name')
 
+  // Coaches and staff (exclude current user) for staff recipient selector
+  const { data: staffList } = await admin
+    .from('profiles')
+    .select('id, full_name, role')
+    .in('role', ['coach', 'admin'])
+    .is('deleted_at', null)
+    .neq('id', user!.id)
+    .order('full_name')
+
   const athleteIds = athletes?.map(a => a.id) ?? []
 
-  // Fetch recent workout results for all managed athletes
+  // Workout results for managed athletes (activity monitor)
   const { data: recentResults } = athleteIds.length > 0
     ? await admin
         .from('workout_results')
@@ -58,29 +76,29 @@ export default async function InsightsPage() {
         .limit(500)
     : { data: [] }
 
-  // Build per-athlete metrics
+  // Per-athlete metrics
   const athleteMetrics = (athletes ?? []).map(athlete => {
     const athResults = (recentResults ?? []).filter(r => r.athlete_id === athlete.id)
-    const totalWorkouts = athResults.length
-    const lastWorkout = athResults[0]?.completed_at ?? null
-    const avgRpe = athResults.length > 0
-      ? Math.round(athResults.slice(0, 10).reduce((s, r) => s + (r.rpe || 0), 0) / Math.min(athResults.slice(0, 10).length, 1))
+    const daysSinceLastWorkout = athResults[0]?.completed_at
+      ? Math.floor((Date.now() - new Date(athResults[0].completed_at).getTime()) / 86400000)
       : null
-    const daysSinceLastWorkout = lastWorkout
-      ? Math.floor((Date.now() - new Date(lastWorkout).getTime()) / 86400000)
-      : null
-    return { ...athlete, totalWorkouts, lastWorkout, avgRpe, daysSinceLastWorkout }
+    return {
+      ...athlete,
+      totalWorkouts: athResults.length,
+      avgRpe: athResults.length > 0
+        ? Math.round(athResults.slice(0, 10).reduce((s, r) => s + (r.rpe || 0), 0) / Math.min(athResults.slice(0, 10).length, 1))
+        : null,
+      daysSinceLastWorkout,
+    }
   }).sort((a, b) => (b.daysSinceLastWorkout ?? 999) - (a.daysSinceLastWorkout ?? 999))
 
   const totalWorkoutsAll = (recentResults ?? []).length
-  const activeThisWeek = (recentResults ?? []).filter(r => {
-    const d = new Date(r.completed_at)
-    const now = new Date()
-    return (now.getTime() - d.getTime()) < 7 * 86400000
-  }).length
+  const activeThisWeek = (recentResults ?? []).filter(r =>
+    (Date.now() - new Date(r.completed_at).getTime()) < 7 * 86400000
+  ).length
 
-  const publicInsights = (insights ?? []).filter(i => i.type !== 'internal')
-  const internalNotes = (insights ?? []).filter(i => i.type === 'internal')
+  const publicInsights = (myInsights ?? []).filter(i => i.type !== 'internal')
+  const internalNotes  = (myInsights ?? []).filter(i => i.type === 'internal')
 
   return (
     <div className="p-4 md:p-8 xl:p-10 space-y-8 max-w-7xl mx-auto">
@@ -92,7 +110,7 @@ export default async function InsightsPage() {
           </div>
           <h1 className="text-3xl md:text-4xl font-black tracking-tight uppercase">Seguimiento & Comunicación</h1>
           <p className="text-muted-foreground text-sm font-semibold mt-2 max-w-2xl">
-            Panel de seguimiento de atletas, notas al equipo y mensajes visibles en el dashboard del alumno.
+            Seguimiento de atletas, mensajes visibles al alumno y notas internas de coordinación entre coaches.
           </p>
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -114,7 +132,7 @@ export default async function InsightsPage() {
         </div>
       </header>
 
-      {/* Athlete Activity Monitor */}
+      {/* Activity Monitor */}
       {athleteMetrics.length > 0 && (
         <section className="space-y-4">
           <div>
@@ -175,8 +193,9 @@ export default async function InsightsPage() {
         </section>
       )}
 
+      {/* ─── Create forms ─────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        {/* Create Public Insight */}
+        {/* Public message to athlete */}
         <Card className="ios-panel overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)]" />
           <CardHeader className="pb-3">
@@ -184,7 +203,7 @@ export default async function InsightsPage() {
               <MessageSquare className="w-5 h-5 text-primary" /> Mensaje a atleta
             </CardTitle>
             <p className="text-xs text-muted-foreground font-semibold">
-              Aparece en el dashboard del alumno seleccionado.
+              Aparece en el dashboard del alumno seleccionado. Los atletas no ven notas de tipo interno.
             </p>
           </CardHeader>
           <CardContent>
@@ -256,7 +275,7 @@ export default async function InsightsPage() {
           </CardContent>
         </Card>
 
-        {/* Internal Notes */}
+        {/* Internal notes (coach ↔ staff) */}
         <Card className="ios-panel overflow-hidden">
           <div className="h-1 bg-gradient-to-r from-border/60 to-border/30" />
           <CardHeader className="pb-3">
@@ -264,7 +283,7 @@ export default async function InsightsPage() {
               <StickyNote className="w-5 h-5 text-muted-foreground" /> Notas internas
             </CardTitle>
             <p className="text-xs text-muted-foreground font-semibold">
-              Solo visibles para el equipo de coaches. No aparecen para atletas.
+              Solo visibles para el equipo de coaches. Los atletas nunca ven este contenido.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -273,6 +292,7 @@ export default async function InsightsPage() {
                 'use server'
                 await createInsight({
                   athleteId: fd.get('athlete_id') as string || null,
+                  staffRecipientId: fd.get('staff_recipient_id') as string || null,
                   type: 'internal',
                   title: fd.get('title') as string,
                   body: fd.get('body') as string,
@@ -283,8 +303,23 @@ export default async function InsightsPage() {
               }}
               className="space-y-3"
             >
+              {/* Staff recipient — who this note is for */}
+              {staffList && staffList.length > 0 && (
+                <div className="space-y-1.5">
+                  <label className={labelClass + ' flex items-center gap-1.5'}>
+                    <UserCheck className="w-3 h-3" /> Para coach / staff (opcional)
+                  </label>
+                  <select name="staff_recipient_id" className={inputClass}>
+                    <option value="">Solo yo (nota personal)</option>
+                    {staffList.map(s => (
+                      <option key={s.id} value={s.id}>{s.full_name} ({s.role})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div className="space-y-1.5">
-                <label className={labelClass}>Sobre atleta (opcional)</label>
+                <label className={labelClass}>Sobre atleta (contexto, opcional)</label>
                 <select name="athlete_id" className={inputClass}>
                   <option value="">General del equipo</option>
                   {athletes?.map(a => (
@@ -309,25 +344,52 @@ export default async function InsightsPage() {
               </Button>
             </form>
 
+            {/* Notes I created */}
             {internalNotes.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-border/60">
-                {internalNotes.slice(0, 5).map((note: any) => (
-                  <div key={note.id} className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border/40">
-                    <StickyNote className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Mis notas</p>
+                {internalNotes.slice(0, 5).map((note: any) => {
+                  const staffName = note.staff_profile?.full_name
+                  const athleteName = note.profiles?.full_name
+                  return (
+                    <div key={note.id} className="flex items-start gap-3 p-3 rounded-xl bg-secondary/40 border border-border/40">
+                      <StickyNote className="w-3.5 h-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black uppercase tracking-tight truncate">{note.title}</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5">
+                          {staffName ? `Para: ${staffName}` : athleteName ? `Sobre: ${athleteName}` : 'General'}
+                        </p>
+                      </div>
+                      <form action={async () => {
+                        'use server'
+                        await archiveInsight(note.id)
+                      }}>
+                        <button type="submit" className="text-muted-foreground hover:text-destructive transition-colors">
+                          <Archive className="w-3.5 h-3.5" />
+                        </button>
+                      </form>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Notes directed at me from other coaches */}
+            {receivedNotes && receivedNotes.length > 0 && (
+              <div className="space-y-2 pt-2 border-t border-border/60">
+                <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
+                  <UserCheck className="w-3 h-3" /> Para mí
+                </p>
+                {receivedNotes.map((note: any) => (
+                  <div key={note.id} className="flex items-start gap-3 p-3 rounded-xl bg-primary/5 border border-primary/15">
+                    <StickyNote className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black uppercase tracking-tight truncate">{note.title}</p>
-                      {note.profiles?.full_name && (
-                        <p className="text-[9px] text-muted-foreground mt-0.5">{note.profiles.full_name}</p>
+                      {note.body && <p className="text-[9px] text-muted-foreground mt-0.5 truncate">{note.body}</p>}
+                      {note.coach_profile?.full_name && (
+                        <p className="text-[9px] text-primary mt-0.5">De: {note.coach_profile.full_name}</p>
                       )}
                     </div>
-                    <form action={async () => {
-                      'use server'
-                      await archiveInsight(note.id)
-                    }}>
-                      <button type="submit" className="text-muted-foreground hover:text-destructive transition-colors">
-                        <Archive className="w-3.5 h-3.5" />
-                      </button>
-                    </form>
                   </div>
                 ))}
               </div>
@@ -336,11 +398,11 @@ export default async function InsightsPage() {
         </Card>
       </div>
 
-      {/* Public Insights */}
+      {/* Public Insights list */}
       <section className="space-y-5">
         <div>
           <p className="section-title text-primary mb-1">Publicados para atletas</p>
-          <h2 className="text-2xl font-black uppercase tracking-tight">{publicInsights.length} insights activos</h2>
+          <h2 className="text-2xl font-black uppercase tracking-tight">{publicInsights.length} mensajes activos</h2>
         </div>
 
         {publicInsights.length > 0 ? (
