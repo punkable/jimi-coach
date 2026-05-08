@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Dumbbell, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { resolvePlanAnchor, planDayToLocalDate } from '@/lib/date'
 
 interface PlanDay {
   id: string
@@ -27,12 +28,6 @@ function ymd(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-function planDayToDate(weekNum: number, dayOfWeek: number, anchor: Date) {
-  const d = new Date(anchor); d.setHours(0,0,0,0)
-  d.setDate(d.getDate() + (weekNum - 1) * 7 + (dayOfWeek - 1))
-  return d
-}
-
 export function AthleteCalendar({
   planDays = [],
   startDate,
@@ -49,16 +44,10 @@ export function AthleteCalendar({
   const dateMap = useMemo(() => {
     const map = new Map<string, { dayId: string; dayOfWeek: number; weekNumber: number; title?: string | null; completed: boolean }>()
     if (!planDays.length) return map
-    const anchor = startDate ? new Date(startDate) : (() => {
-      // fallback: current ISO Monday
-      const d = new Date()
-      const iso = d.getDay() === 0 ? 7 : d.getDay()
-      d.setDate(d.getDate() - (iso - 1))
-      return d
-    })()
+    const anchor = resolvePlanAnchor(startDate ?? null)
     const completedDates = new Set(results.map(r => ymd(new Date(r.completed_at))))
     for (const day of planDays) {
-      const date = planDayToDate(day.week_number || 1, day.day_of_week, anchor)
+      const date = planDayToLocalDate(day.week_number || 1, day.day_of_week, anchor)
       const key = ymd(date)
       // Keep first if duplicate
       if (!map.has(key)) {

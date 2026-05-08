@@ -8,9 +8,9 @@ export default function PlanStatusCard({ assignedPlan }: { assignedPlan: { title
           <ClipboardList className="w-4 h-4 text-primary" />
         </div>
         <div>
-          <p className="section-title mb-0.5">Plan de entrenamiento</p>
+          <p className="section-title mb-0.5">Programación</p>
           <p className="text-sm font-black uppercase tracking-tight">
-            {assignedPlan ? 'Plan activo' : 'Sin plan asignado'}
+            {assignedPlan ? 'Programación activa' : 'Sin programación asignada'}
           </p>
         </div>
         {assignedPlan && (
@@ -32,13 +32,13 @@ export default function PlanStatusCard({ assignedPlan }: { assignedPlan: { title
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Tu coach ha configurado este plan para ti. Entrena los días indicados y registra cada sesión.
+            Tu coach diseñó esta programación para ti. Entrena los días indicados y registra cada sesión.
           </p>
         </div>
       ) : (
         <div className="p-3 bg-secondary rounded-xl">
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Aún no tienes un plan asignado. Tu coach te asignará uno pronto. Mientras tanto, puedes explorar la biblioteca técnica.
+            Tu coach todavía no te asignó una programación. Mientras tanto, puedes explorar la biblioteca técnica.
           </p>
         </div>
       )}
