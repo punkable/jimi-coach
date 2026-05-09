@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import {
   ArrowLeft, User, Phone, Ruler, Weight, Calendar, Activity,
   CheckCircle2, Clock, AlertCircle, Minus, BarChart2, ClipboardList,
+  Target, AlertTriangle, CalendarRange, MessageSquare, Award,
 } from 'lucide-react'
 import Link from 'next/link'
 import SubscriptionManager from './subscription-manager'
@@ -184,12 +185,77 @@ export default async function AthleteDetailPage({ params }: { params: Promise<{ 
               ))}
               {profile.bio && (
                 <div className="pt-2">
-                  <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-widest font-bold">Notas</span>
+                  <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-widest font-bold">Bio</span>
                   <p className="bg-secondary/20 p-3 rounded-md text-muted-foreground text-xs">{profile.bio}</p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Planning data — useful for coach to design programación */}
+          {(profile.goal || profile.experience_level || profile.injuries || profile.availability || profile.athlete_notes) ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2 uppercase tracking-widest text-[var(--metcon)]">
+                  <Target className="w-5 h-5" /> Para planificar
+                </CardTitle>
+                <CardDescription>Lo que tu alumno indicó en su perfil</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                {profile.goal && (
+                  <div className="flex items-start gap-2 pb-2 border-b border-border/40">
+                    <Award className="w-4 h-4 text-[var(--metcon)] mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Objetivo</p>
+                      <p className="text-xs leading-relaxed">{profile.goal}</p>
+                    </div>
+                  </div>
+                )}
+                {profile.experience_level && (
+                  <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nivel</span>
+                    <span className="font-bold text-xs uppercase">{profile.experience_level}</span>
+                  </div>
+                )}
+                {profile.availability && (
+                  <div className="flex items-start gap-2 pb-2 border-b border-border/40">
+                    <CalendarRange className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Disponibilidad</p>
+                      <p className="text-xs leading-relaxed">{profile.availability}</p>
+                    </div>
+                  </div>
+                )}
+                {profile.injuries && (
+                  <div className="flex items-start gap-2 pb-2 border-b border-border/40">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Lesiones / limitaciones</p>
+                      <p className="text-xs leading-relaxed bg-amber-500/5 border border-amber-500/15 p-2 rounded-lg mt-1">{profile.injuries}</p>
+                    </div>
+                  </div>
+                )}
+                {profile.athlete_notes && (
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="w-4 h-4 text-[var(--gymnastics)] mt-0.5 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Notas del alumno</p>
+                      <p className="text-xs leading-relaxed">{profile.athlete_notes}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-6 text-center">
+                <Target className="w-7 h-7 text-muted-foreground/30 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">
+                  El alumno todavía no completó sus datos de planificación (objetivo, lesiones, disponibilidad).
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right columns */}

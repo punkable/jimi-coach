@@ -8,7 +8,7 @@ import {
   PlayCircle, ChevronRight, CheckCircle2, Zap, Video, Calendar, AlertCircle, RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { parseLocalDate, planDayToLocalDate, resolvePlanAnchor } from '@/lib/date'
+import { planDayToLocalDate, resolvePlanAnchor } from '@/lib/date'
 
 const DAY_NAMES_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 const DAY_NAMES_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -31,11 +31,9 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const parsedStart = parseLocalDate(startDate ?? null)
   const anchor = resolvePlanAnchor(startDate ?? null)
   const currentPlanWeek = (() => {
-    if (!parsedStart) return weeks[0] || 1
-    const daysDiff = Math.floor((today.getTime() - parsedStart.getTime()) / 86400000)
+    const daysDiff = Math.floor((today.getTime() - anchor.getTime()) / 86400000)
     const weekIdx = Math.max(0, Math.min(Math.floor(daysDiff / 7), weeks.length - 1))
     return weeks[weekIdx] ?? weeks[0] ?? 1
   })()
@@ -53,7 +51,9 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
       const realDate = planDayToLocalDate(selectedWeek, d.day_of_week, anchor)
       return realDate.toDateString() === realToday.toDateString()
     })
-    setSelectedDayIdx(idx !== -1 ? idx : 0)
+    // -1 when today doesn't match any planned day in this week. Renders
+    // the "no training today" empty state below; user can still pick a day.
+    setSelectedDayIdx(idx)
   }, [selectedWeek, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect pending (in-progress) sessions from localStorage
@@ -303,11 +303,32 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
         </Card>
       )}
 
-      {!selectedDay && (
+      {!selectedDay && weekDays.length === 0 && (
         <div className="py-12 text-center border-2 border-dashed border-border/20 rounded-[32px]">
           <AlertCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
           <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en esta programación</p>
         </div>
+      )}
+
+      {/* No training programmed for today, but there are other days the user can browse */}
+      {!selectedDay && weekDays.length > 0 && (
+        <Card className="glass-card overflow-hidden relative border-none rounded-[32px]">
+          <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 via-transparent to-transparent opacity-40" />
+          <CardContent className="p-6 md:p-8 relative z-10 text-center space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-secondary/60 border border-border/60 flex items-center justify-center mx-auto">
+              <Calendar className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+                {DAY_NAMES_FULL[(today.getDay() === 0 ? 7 : today.getDay()) - 1]} {today.getDate()} {today.toLocaleDateString('es-ES', { month: 'short' })}
+              </p>
+              <h3 className="text-xl font-black uppercase tracking-tight">Sin entrenamiento para hoy</h3>
+              <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
+                No tienes entrenamiento programado para hoy. Puedes seleccionar otro día arriba para ver su rutina.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </section>
   )
