@@ -540,95 +540,192 @@ export function WorkoutClient({
                       </div>
                     )}
                     
-                    {/* Movements */}
-                    {!isCompleted && (
-                      <div className="space-y-3 p-3">
-                        {block.workout_movements.map((mov: any, mIdx: number) => {
-                          const hasSets = (mov.sets || 0) > 0
-                          return (
-                            <div key={mIdx} className="p-4 space-y-4 rounded-2xl border border-border/60 bg-background/40">
-                              <div className="flex gap-3">
-                                {/* Video/icon thumb */}
-                                <div className="w-12 h-12 rounded-2xl bg-secondary/50 shrink-0 flex items-center justify-center border border-border/60 relative overflow-hidden group">
-                                  {mov.exercises?.video_url ? (
-                                    <button 
-                                      onClick={() => setActiveVideo({ url: mov.exercises.video_url, name: mov.exercises.name })}
-                                      className="absolute inset-0 flex items-center justify-center bg-primary/5 hover:bg-primary/15 transition-colors">
-                                      <Play className="w-5 h-5 text-primary fill-primary/20 group-hover:scale-110 transition-transform" />
-                                    </button>
-                                  ) : (
-                                    <Dumbbell className="w-5 h-5 text-muted-foreground/30" />
-                                  )}
-                                </div>
-                                
-                                <div className="flex-1">
-                                  <h4 className="font-bold text-foreground text-sm leading-tight uppercase tracking-tight">{mov.exercises?.name || 'Movimiento'}</h4>
-                                  {mov.exercises?.instructions && (
-                                    <p className="text-[10px] text-muted-foreground leading-snug mt-1 italic">
-                                      {mov.exercises.instructions}
-                                    </p>
-                                  )}
-                                  <div className="flex flex-wrap gap-2 mt-2">
-                                    {hasSets && (
-                                      <span className="text-[10px] font-black bg-secondary/60 text-secondary-foreground px-2 py-0.5 rounded-md uppercase tracking-widest border border-border/20">
-                                        {mov.sets} x {mov.reps || '-'}
-                                      </span>
-                                    )}
-                                    {mov.weight_percentage && (
-                                      <span className="text-[10px] font-black bg-primary/15 text-primary px-2 py-0.5 rounded-md uppercase tracking-widest border border-primary/20">
-                                        {mov.weight_percentage}
-                                      </span>
-                                    )}
-                                    {mov.rest && (
-                                      <span className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-500/20 flex items-center gap-1">
-                                        <TimerIcon className="w-2.5 h-2.5" /> {mov.rest}
-                                      </span>
+                    {/* Movements — strength blocks group consecutive same-exercise rows under one header */}
+                    {!isCompleted && (() => {
+                      const isStrengthBlock = block.type === 'strength'
+                      // Group strength movements by consecutive exercise_id
+                      const groups: Array<{ exerciseId: string; exercise: any; lines: any[] }> = []
+                      if (isStrengthBlock) {
+                        block.workout_movements.forEach((mov: any) => {
+                          const exId = mov.exercise_id
+                          const last = groups[groups.length - 1]
+                          if (last && last.exerciseId === exId) {
+                            last.lines.push(mov)
+                          } else {
+                            groups.push({ exerciseId: exId, exercise: mov.exercises, lines: [mov] })
+                          }
+                        })
+                      }
+
+                      // Shared per-movement set tracker JSX so strength + non-strength reuse it
+                      const renderSetTracker = (mov: any) => {
+                        const hasSets = (mov.sets || 0) > 0
+                        if (!hasSets || viewOnly) return null
+                        return (
+                          <WorkoutSetsList
+                            movement={mov}
+                            prs={prs}
+                            initialSets={allSetsData[mov.id]}
+                            onSetChange={(sets) => {
+                              setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
+                              const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
+                              const allBlockMovements = block.workout_movements || []
+                              let blockCompleted = true
+                              allBlockMovements.forEach((m: any) => {
+                                if ((m.sets || 0) <= 0) return
+                                const mId = m.id as string
+                                const mSets = updatedAllSets[mId]
+                                if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
+                                  blockCompleted = false
+                                }
+                              })
+                              if (blockCompleted && allBlockMovements.length > 0) {
+                                setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
+                              } else if (!blockCompleted) {
+                                setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
+                              }
+                            }}
+                            onTimerStart={(secs) => setRestTimerSeconds(secs)}
+                          />
+                        )
+                      }
+
+                      if (isStrengthBlock && groups.length > 0) {
+                        // Grouped strength rendering: one card per exercise with its lines underneath
+                        return (
+                          <div className="space-y-3 p-3">
+                            {groups.map((group, gIdx) => {
+                              const ex = group.exercise
+                              return (
+                                <div key={`${group.exerciseId}-${gIdx}`} className="rounded-2xl border border-[var(--strength)]/30 bg-background/40 overflow-hidden">
+                                  {/* Exercise header */}
+                                  <div className="flex items-center gap-3 p-3 bg-[var(--strength)]/8 border-b border-[var(--strength)]/15">
+                                    <div className="w-11 h-11 rounded-2xl bg-[var(--strength)]/15 border border-[var(--strength)]/25 shrink-0 flex items-center justify-center overflow-hidden">
+                                      {ex?.video_url ? (
+                                        <button
+                                          onClick={() => setActiveVideo({ url: ex.video_url, name: ex.name })}
+                                          className="w-full h-full flex items-center justify-center hover:bg-[var(--strength)]/25 transition-colors"
+                                        >
+                                          <Play className="w-5 h-5 text-[var(--strength)] fill-[var(--strength)]/20" />
+                                        </button>
+                                      ) : (
+                                        <Dumbbell className="w-5 h-5 text-[var(--strength)]/60" />
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="font-black text-sm uppercase tracking-tight text-foreground truncate">
+                                        {ex?.name || 'Movimiento'}
+                                      </h4>
+                                      <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/60">
+                                        {group.lines.length} {group.lines.length === 1 ? 'línea' : 'líneas'} de trabajo
+                                      </p>
+                                    </div>
+                                    {prs && ex?.id && prs[ex.id] && (
+                                      <div className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg shrink-0">
+                                        <Trophy className="w-3 h-3 text-amber-500" />
+                                        <span className="text-[9px] font-bold text-amber-500">
+                                          PB {prs[ex.id].weight}×{prs[ex.id].reps}
+                                        </span>
+                                      </div>
                                     )}
                                   </div>
-                                  {prs && mov.exercises?.id && prs[mov.exercises.id] && (
-                                    <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg w-fit">
-                                      <Trophy className="w-3 h-3 text-amber-500" />
-                                      <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
-                                        PB: {prs[mov.exercises.id].weight}kg × {prs[mov.exercises.id].reps}
-                                      </span>
-                                    </div>
-                                  )}
-                                  {mov.notes && <p className="text-[10px] text-muted-foreground mt-2 border-l-2 border-primary/30 pl-2">{mov.notes}</p>}
-                                </div>
-                              </div>
 
-                                {hasSets && !viewOnly && (
-                                  <WorkoutSetsList
-                                    movement={mov}
-                                    prs={prs}
-                                    initialSets={allSetsData[mov.id]}
-                                    onSetChange={(sets) => {
-                                      setAllSetsData(prev => ({ ...prev, [mov.id]: sets }))
-                                      const updatedAllSets: Record<string, WorkoutSet[]> = { ...allSetsData, [mov.id]: sets }
-                                      const allBlockMovements = block.workout_movements || []
-                                      let blockCompleted = true
-                                      allBlockMovements.forEach((m: any) => {
-                                        if ((m.sets || 0) <= 0) return // Skip video-only movements
-                                        const mId = m.id as string
-                                        const mSets = updatedAllSets[mId]
-                                        if (!mSets || mSets.length === 0 || !mSets.every((s: any) => s.is_completed)) {
-                                          blockCompleted = false
-                                        }
-                                      })
-                                      if (blockCompleted && allBlockMovements.length > 0) {
-                                        setCompletedBlocks(prev => ({ ...prev, [block.id]: true }))
-                                      } else if (!blockCompleted) {
-                                        setCompletedBlocks(prev => ({ ...prev, [block.id]: false }))
-                                      }
-                                    }}
-                                    onTimerStart={(secs) => setRestTimerSeconds(secs)}
-                                  />
-                                )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                                  {/* Lines */}
+                                  <div className="divide-y divide-border/30">
+                                    {group.lines.map((line, lineIdx) => {
+                                      const programmed: string[] = []
+                                      if ((line.sets || 0) > 0) programmed.push(`${line.sets} × ${line.reps || '—'}`)
+                                      if (line.weight_percentage) programmed.push(line.weight_percentage)
+                                      return (
+                                        <div key={line.id} className="px-3 py-3 space-y-3">
+                                          <div className="flex items-center gap-2">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--strength)] bg-[var(--strength)]/10 border border-[var(--strength)]/20 rounded-lg px-2 py-0.5 shrink-0">
+                                              Línea {lineIdx + 1}
+                                            </span>
+                                            {programmed.length > 0 && (
+                                              <span className="text-[11px] font-black text-foreground">
+                                                {programmed.join(' · ')}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {line.notes && (
+                                            <p className="text-[10px] text-muted-foreground italic border-l-2 border-[var(--strength)]/40 pl-2">
+                                              {line.notes}
+                                            </p>
+                                          )}
+                                          {renderSetTracker(line)}
+                                        </div>
+                                      )
+                                    })}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )
+                      }
+
+                      // Default rendering (non-strength): one card per movement
+                      return (
+                        <div className="space-y-3 p-3">
+                          {block.workout_movements.map((mov: any, mIdx: number) => {
+                            const hasSets = (mov.sets || 0) > 0
+                            return (
+                              <div key={mIdx} className="p-4 space-y-4 rounded-2xl border border-border/60 bg-background/40">
+                                <div className="flex gap-3">
+                                  <div className="w-12 h-12 rounded-2xl bg-secondary/50 shrink-0 flex items-center justify-center border border-border/60 relative overflow-hidden group">
+                                    {mov.exercises?.video_url ? (
+                                      <button
+                                        onClick={() => setActiveVideo({ url: mov.exercises.video_url, name: mov.exercises.name })}
+                                        className="absolute inset-0 flex items-center justify-center bg-primary/5 hover:bg-primary/15 transition-colors">
+                                        <Play className="w-5 h-5 text-primary fill-primary/20 group-hover:scale-110 transition-transform" />
+                                      </button>
+                                    ) : (
+                                      <Dumbbell className="w-5 h-5 text-muted-foreground/30" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="font-bold text-foreground text-sm leading-tight uppercase tracking-tight">{mov.exercises?.name || 'Movimiento'}</h4>
+                                    {mov.exercises?.instructions && (
+                                      <p className="text-[10px] text-muted-foreground leading-snug mt-1 italic">
+                                        {mov.exercises.instructions}
+                                      </p>
+                                    )}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                      {hasSets && (
+                                        <span className="text-[10px] font-black bg-secondary/60 text-secondary-foreground px-2 py-0.5 rounded-md uppercase tracking-widest border border-border/20">
+                                          {mov.sets} x {mov.reps || '-'}
+                                        </span>
+                                      )}
+                                      {mov.weight_percentage && (
+                                        <span className="text-[10px] font-black bg-primary/15 text-primary px-2 py-0.5 rounded-md uppercase tracking-widest border border-primary/20">
+                                          {mov.weight_percentage}
+                                        </span>
+                                      )}
+                                      {mov.rest && (
+                                        <span className="text-[10px] font-black bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-500/20 flex items-center gap-1">
+                                          <TimerIcon className="w-2.5 h-2.5" /> {mov.rest}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {prs && mov.exercises?.id && prs[mov.exercises.id] && (
+                                      <div className="mt-2 flex items-center gap-1.5 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded-lg w-fit">
+                                        <Trophy className="w-3 h-3 text-amber-500" />
+                                        <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
+                                          PB: {prs[mov.exercises.id].weight}kg × {prs[mov.exercises.id].reps}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {mov.notes && <p className="text-[10px] text-muted-foreground mt-2 border-l-2 border-primary/30 pl-2">{mov.notes}</p>}
+                                  </div>
+                                </div>
+                                {renderSetTracker(mov)}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    })()}
 
                     {/* Footer free-text — notes after movements */}
                     {footerText && (
