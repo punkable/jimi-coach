@@ -15,7 +15,18 @@ import { WorkoutSetsList, WorkoutSet } from './workout-sets-list'
 import { SmartRoutineText } from '@/components/workout/smart-routine-text'
 import { CrossFitTimer, TimerType } from './crossfit-timer'
 
-export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly = false }: { day: any, hasReadiness?: boolean, prs?: Record<string, { weight: number, reps: number }>, allExercises?: any[], viewOnly?: boolean }) {
+export function WorkoutClient({
+  day, hasReadiness, prs, allExercises,
+  viewOnly = false, summaryMode = false, completedResult = null,
+}: {
+  day: any
+  hasReadiness?: boolean
+  prs?: Record<string, { weight: number, reps: number }>
+  allExercises?: any[]
+  viewOnly?: boolean
+  summaryMode?: boolean
+  completedResult?: { id: string; completed_at: string; rpe: number | null; notes: string | null; video_link: string | null; sets: any[] } | null
+}) {
   const [activeTab, setActiveTab] = useState<'workout' | 'tools'>('workout')
   // Never show readiness in view-only mode
   const [readinessOpen, setReadinessOpen] = useState(!hasReadiness && !viewOnly)
@@ -79,6 +90,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
 
   useEffect(() => {
     if (!day?.id || !isLoaded) return
+    // Read-only modes (summary / view) must never write to localStorage —
+    // it would create ghost pending sessions on completed/past days.
+    if (viewOnly || summaryMode) return
     try {
       const setsArr = Object.values(allSetsData).flat()
       const hasMeaningfulProgress =
@@ -267,7 +281,9 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
             <div className="min-w-0">
               <h1 className="text-sm font-black tracking-tight leading-none uppercase truncate">{day.name || day.title || 'WOD'}</h1>
               <div className="flex items-center gap-2 mt-0.5">
-                {viewOnly ? (
+                {summaryMode ? (
+                  <span className="text-[10px] text-emerald-500 font-black uppercase tracking-wider">Completado</span>
+                ) : viewOnly ? (
                   <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider">Solo lectura</span>
                 ) : (
                   <span className="text-[10px] text-primary font-black tabular-nums">
@@ -281,7 +297,11 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
             </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {viewOnly ? (
+            {summaryMode ? (
+              <span className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest mr-1 inline-flex items-center gap-1.5 bg-emerald-500/15 text-emerald-500 border border-emerald-500/25">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Completado
+              </span>
+            ) : viewOnly ? (
               <Link href={`/dashboard/athlete/workout?dayId=${day.id}`}>
                 <Button size="sm" className="h-8 px-3 rounded-xl text-[10px] font-black uppercase tracking-widest mr-1 gap-1.5">
                   <PlayCircle className="w-3.5 h-3.5" /> Iniciar
@@ -343,6 +363,50 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto p-4 md:p-5 space-y-5" style={{ paddingBottom: 'calc(6rem + env(safe-area-inset-bottom))' }}>
+        {/* Summary banner — visible only when viewing a completed session */}
+        {summaryMode && completedResult && (() => {
+          const completedAt = new Date(completedResult.completed_at)
+          const dateLabel = isNaN(completedAt.getTime())
+            ? null
+            : completedAt.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })
+          const setCount = (completedResult.sets ?? []).filter((s: any) => s.is_completed).length
+          return (
+            <div className="ios-panel p-4 md:p-5 border-emerald-500/30 bg-emerald-500/5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black uppercase tracking-tight text-emerald-500">Entrenamiento completado</p>
+                  {dateLabel && <p className="text-[11px] text-muted-foreground capitalize">{dateLabel}</p>}
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {completedResult.rpe != null && (
+                  <span className="text-[10px] font-black uppercase tracking-widest bg-secondary/60 border border-border/50 px-2.5 py-1 rounded-lg">
+                    RPE {completedResult.rpe}/10
+                  </span>
+                )}
+                {setCount > 0 && (
+                  <span className="text-[10px] font-black uppercase tracking-widest bg-secondary/60 border border-border/50 px-2.5 py-1 rounded-lg">
+                    {setCount} {setCount === 1 ? 'set registrado' : 'sets registrados'}
+                  </span>
+                )}
+                {completedResult.video_link && (
+                  <a href={completedResult.video_link} target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase tracking-widest bg-blue-500/10 border border-blue-500/25 text-blue-400 px-2.5 py-1 rounded-lg hover:bg-blue-500/20">
+                    Ver video →
+                  </a>
+                )}
+              </div>
+              {completedResult.notes && (
+                <p className="text-[11px] text-muted-foreground italic leading-relaxed border-l-2 border-emerald-500/40 pl-3">
+                  {completedResult.notes}
+                </p>
+              )}
+            </div>
+          )
+        })()}
+
         <AnimatePresence mode="wait">
           {activeTab === 'tools' ? (
             <motion.div 

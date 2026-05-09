@@ -14,13 +14,20 @@ interface PlanDay {
 
 interface PendingInfo {
   dayId: string
-  elapsed: number
+  elapsed: number | null   // seconds, null if unknown
   startedToday: boolean
-  startedDate: Date
+  startedDate: Date | null
   day?: PlanDay
 }
 
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+/** Parse an ISO/string/number into a valid Date or null. Never returns Invalid Date. */
+function safeDate(input: any): Date | null {
+  if (!input) return null
+  const d = input instanceof Date ? input : new Date(input)
+  return isNaN(d.getTime()) ? null : d
+}
 
 export function PendingWorkoutBanner({ planDays = [], startDate }: { planDays?: PlanDay[]; startDate?: string | null }) {
   const [pending, setPending] = useState<PendingInfo | null>(null)
@@ -35,25 +42,60 @@ export function PendingWorkoutBanner({ planDays = [], startDate }: { planDays?: 
         if (!key?.startsWith('wod-progress-')) continue
         const raw = localStorage.getItem(key)
         if (!raw) continue
-        const parsed = JSON.parse(raw)
-        const { timestamp, startTime, sets, blocks } = parsed
-        // Only treat as pending if there's actual progress
-        const hasProgress = (sets && Object.keys(sets).length > 0) || (blocks && Object.keys(blocks).length > 0)
-        if (!hasProgress) continue
-        const startedDate = new Date(timestamp)
-        const startedDay = new Date(startedDate); startedDay.setHours(0,0,0,0)
+
+        let parsed: any
+        try { parsed = JSON.parse(raw) } catch { continue }
+
+        // workout-client writes { sets, blocks, startTime (ISO), updatedAt (ISO) }.
+        // Older sessions may have used `timestamp`. Be tolerant of all.
+        const { startTime, updatedAt, timestamp, sets, blocks } = parsed || {}
         const dayId = key.replace('wod-progress-', '')
-        const day = planDays.find((d) => d.id === dayId)
+
+        // Bail on entries with no real progress
+        const setsArr = Object.values(sets || {}).flat() as any[]
+        const hasProgress =
+          setsArr.some((s: any) => s?.is_completed || s?.weight || s?.reps || s?.distance || s?.time_seconds) ||
+          Object.values(blocks || {}).some(Boolean)
+        if (!hasProgress) {
+          // Clean up empty/corrupt ghost sessions silently
+          try { localStorage.removeItem(key) } catch {}
+          continue
+        }
+
+        // Pick the freshest valid timestamp from any of the known fields
+        const startedDate =
+          safeDate(startTime) ??
+          safeDate(updatedAt) ??
+          safeDate(timestamp) ??
+          null
+
+        // Elapsed in seconds — only if we have a usable start
+        let elapsed: number | null = null
+        if (startedDate) {
+          const ms = Date.now() - startedDate.getTime()
+          elapsed = ms >= 0 && isFinite(ms) ? Math.floor(ms / 1000) : null
+        }
+
+        const startedDay = startedDate ? new Date(startedDate) : null
+        startedDay?.setHours(0, 0, 0, 0)
+
         candidates.push({
           dayId,
-          elapsed: Math.floor((Date.now() - (startTime || startedDate.getTime())) / 1000),
-          startedToday: startedDay.getTime() === today.getTime(),
+          elapsed,
+          startedToday: !!startedDay && startedDay.getTime() === today.getTime(),
           startedDate,
-          day,
+          day: planDays.find(d => d.id === dayId),
         })
       }
+
       // Prefer today's pending; otherwise the most recent
-      candidates.sort((a, b) => Number(b.startedToday) - Number(a.startedToday) || b.startedDate.getTime() - a.startedDate.getTime())
+      candidates.sort((a, b) => {
+        const tDiff = Number(b.startedToday) - Number(a.startedToday)
+        if (tDiff !== 0) return tDiff
+        const aT = a.startedDate?.getTime() ?? 0
+        const bT = b.startedDate?.getTime() ?? 0
+        return bT - aT
+      })
       if (candidates[0]) setPending(candidates[0])
     } catch {
       // ignore localStorage errors
@@ -62,14 +104,26 @@ export function PendingWorkoutBanner({ planDays = [], startDate }: { planDays?: 
 
   if (!pending) return null
 
-  const mm = Math.floor(pending.elapsed / 60).toString().padStart(2, '0')
-  const ss = (pending.elapsed % 60).toString().padStart(2, '0')
+  // Format elapsed safely — never render NaN:NaN
+  const elapsedLabel = (() => {
+    if (pending.elapsed == null || !isFinite(pending.elapsed) || pending.elapsed < 0) return null
+    const m = Math.floor(pending.elapsed / 60)
+    const s = pending.elapsed % 60
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  })()
 
-  // Build clear context line
+  // Format started-on date safely
+  const startedDateLabel = pending.startedDate
+    ? pending.startedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+    : null
+
   const dayName = pending.day ? DAY_NAMES[(pending.day.day_of_week - 1) % 7] : null
+
   const subtitle = pending.startedToday
-    ? `WOD de hoy en curso · ${mm}:${ss} registrados`
-    : `Iniciado ${pending.startedDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}${dayName ? ` (${dayName})` : ''} · ${mm}:${ss}`
+    ? `WOD de hoy en curso${elapsedLabel ? ` · ${elapsedLabel} registrados` : ''}`
+    : startedDateLabel
+      ? `Iniciado ${startedDateLabel}${dayName ? ` (${dayName})` : ''}${elapsedLabel ? ` · ${elapsedLabel}` : ''}`
+      : 'Sesión sin finalizar'
 
   const isStale = !pending.startedToday
 
