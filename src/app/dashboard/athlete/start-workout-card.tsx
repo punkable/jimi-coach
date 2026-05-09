@@ -8,23 +8,10 @@ import {
   PlayCircle, ChevronRight, CheckCircle2, Zap, Video, Calendar, AlertCircle, RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseLocalDate, planDayToLocalDate, resolvePlanAnchor } from '@/lib/date'
 
 const DAY_NAMES_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 const DAY_NAMES_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-
-/** Real date for a given plan week + day_of_week, anchored on plan start_date. */
-function planDayToDate(weekNum: number, dayOfWeek: number, startDate: Date | null): Date {
-  const anchor = startDate ? new Date(startDate) : (() => {
-    const d = new Date()
-    const iso = d.getDay() === 0 ? 7 : d.getDay()
-    d.setDate(d.getDate() - (iso - 1))
-    return d
-  })()
-  anchor.setHours(0, 0, 0, 0)
-  const d = new Date(anchor)
-  d.setDate(d.getDate() + (weekNum - 1) * 7 + (dayOfWeek - 1))
-  return d
-}
 
 function fmtDate(date: Date): string {
   return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
@@ -44,7 +31,8 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  const parsedStart = startDate ? (() => { const d = new Date(startDate); d.setHours(0,0,0,0); return d })() : null
+  const parsedStart = parseLocalDate(startDate ?? null)
+  const anchor = resolvePlanAnchor(startDate ?? null)
   const currentPlanWeek = (() => {
     if (!parsedStart) return weeks[0] || 1
     const daysDiff = Math.floor((today.getTime() - parsedStart.getTime()) / 86400000)
@@ -62,7 +50,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
   useEffect(() => {
     const realToday = new Date(); realToday.setHours(0,0,0,0)
     const idx = weekDays.findIndex(d => {
-      const realDate = planDayToDate(selectedWeek, d.day_of_week, parsedStart)
+      const realDate = planDayToLocalDate(selectedWeek, d.day_of_week, anchor)
       return realDate.toDateString() === realToday.toDateString()
     })
     setSelectedDayIdx(idx !== -1 ? idx : 0)
@@ -113,7 +101,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
     ? `${videoCount} ${videoCount === 1 ? 'video técnico' : 'videos técnicos'}`
     : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'}`
 
-  const dayDate = (weekNum: number, dayOfWeek: number) => planDayToDate(weekNum, dayOfWeek, parsedStart)
+  const dayDate = (weekNum: number, dayOfWeek: number) => planDayToLocalDate(weekNum, dayOfWeek, anchor)
   const isDayToday = (weekNum: number, dow: number) =>
     dayDate(weekNum, dow).toDateString() === today.toDateString()
   const isDayPast  = (weekNum: number, dow: number) => dayDate(weekNum, dow) < today
@@ -128,9 +116,9 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
     <section className="space-y-6">
       <div className="flex items-center justify-between px-1">
         <div>
-          <h2 className="text-2xl font-black uppercase tracking-tight">Mi Planificación</h2>
+          <h2 className="text-2xl font-black uppercase tracking-tight">Mi Programación</h2>
           <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
-            {plan?.title || 'Sin Plan Asignado'}
+            {plan?.title || 'Sin programación asignada'}
           </p>
         </div>
         <Calendar className="w-5 h-5 text-primary/40" />
@@ -318,7 +306,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
       {!selectedDay && (
         <div className="py-12 text-center border-2 border-dashed border-border/20 rounded-[32px]">
           <AlertCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en este plan</p>
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en esta programación</p>
         </div>
       )}
     </section>

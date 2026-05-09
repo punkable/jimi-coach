@@ -12,6 +12,7 @@ import { AthleteGreeting } from './athlete-greeting'
 import { StartWorkoutCard } from './start-workout-card'
 import { PendingWorkoutBanner } from './pending-workout-banner'
 import { AthleteCalendar } from './athlete-calendar'
+import { resolvePlanAnchor, isoWeekday, localToday } from '@/lib/date'
 
 const insightIconMap: Record<string, any> = { goal: Target, benchmark: Zap, achievement: Trophy, note: StickyNote }
 const insightColor: Record<string, { bg: string; text: string; border: string }> = {
@@ -132,9 +133,23 @@ export default async function AthleteDashboard() {
 
   const todayStr = localDateStr(new Date())
   const trainedToday = results?.some(r => localDateStr(r.completed_at) === todayStr)
-  const calendarDay = new Date().getDay()
-  const trainingDayOfWeek = calendarDay === 0 ? 7 : calendarDay
-  const todayPlanDay = planDays.find((day: any) => day.day_of_week === trainingDayOfWeek)
+  const trainingDayOfWeek = isoWeekday(localToday())
+
+  // Find the current plan week based on start_date, so multi-week plans pick
+  // the right day of week from the right week (not always week 1).
+  const planAnchor = resolvePlanAnchor(activeAssignment?.start_date ?? null)
+  const weekNumbers = Array.from(new Set(planDays.map((d: any) => d.week_number || 1))).sort((a, b) => a - b)
+  const daysSinceAnchor = Math.floor((localToday().getTime() - planAnchor.getTime()) / 86400000)
+  const currentWeekIdx = Math.max(0, Math.min(Math.floor(daysSinceAnchor / 7), weekNumbers.length - 1))
+  const currentWeekNum = weekNumbers[currentWeekIdx] ?? weekNumbers[0] ?? 1
+
+  // Only consider a day "today's training" if it belongs to the current week
+  // AND has at least one block. Empty days are not trainable.
+  const todayPlanDay = planDays.find((day: any) =>
+    day.day_of_week === trainingDayOfWeek &&
+    (day.week_number || 1) === currentWeekNum &&
+    (day.workout_blocks?.length ?? 0) > 0
+  )
   const last5 = results?.slice(0, 5) ?? []
   const avgRpe = last5.length > 0
     ? Math.round(last5.reduce((a, r) => a + (r.rpe || 0), 0) / last5.length)
@@ -151,9 +166,9 @@ export default async function AthleteDashboard() {
             <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
               <ClipboardList className="w-8 h-8 text-primary" />
             </div>
-            <h2 className="text-xl font-black uppercase tracking-tight mb-2">Sin plan asignado</h2>
+            <h2 className="text-xl font-black uppercase tracking-tight mb-2">Sin programación asignada</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Tu coach aún no te ha asignado una planificación. Será visible aquí en cuanto lo haga.
+              Tu coach aún no te ha asignado una programación. Aparecerá aquí en cuanto la cree.
             </p>
           </div>
 
@@ -164,7 +179,7 @@ export default async function AthleteDashboard() {
               </div>
               <div className="flex-1">
                 <p className="font-bold text-sm">Hablar con el coach</p>
-                <p className="text-[11px] text-muted-foreground">Coordina tu plan por WhatsApp</p>
+                <p className="text-[11px] text-muted-foreground">Coordina tu programación por WhatsApp</p>
               </div>
               <span className="text-muted-foreground/40 text-xs">→</span>
             </div>

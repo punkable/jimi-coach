@@ -205,8 +205,8 @@ export function WorkoutClient({ day, hasReadiness, prs, allExercises, viewOnly =
         </h2>
         <p className="text-muted-foreground mb-8 max-w-xs">
           {viewOnly
-            ? 'Este día no tiene ejercicios asignados.'
-            : 'No tienes ejercicios para hoy. Aprovecha para descansar o tu coach aún está construyendo este plan.'}
+            ? 'Este día no tiene ejercicios ni rutina asignada todavía.'
+            : 'Tu coach aún no ha cargado bloques para este día. Si crees que ya debería estar listo, pregúntale por WhatsApp.'}
         </p>
         <Link href="/dashboard/athlete">
           <Button variant="outline">Volver al Inicio</Button>

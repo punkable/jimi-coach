@@ -52,6 +52,7 @@ export async function createFeedback(workoutResultId: string, athleteId: string,
 
 export async function createInsight(data: {
   athleteId: string | null
+  staffRecipientId?: string | null
   type: string
   title: string
   body: string
@@ -66,6 +67,7 @@ export async function createInsight(data: {
   await supabase.from('coach_insights').insert({
     coach_id: user.id,
     athlete_id: data.athleteId || null,
+    staff_recipient_id: data.staffRecipientId || null,
     type: data.type,
     title: data.title,
     body: data.body || null,
