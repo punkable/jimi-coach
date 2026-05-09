@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useMemo } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
-  PlayCircle, ChevronRight, CheckCircle2, Zap, Video, Calendar, AlertCircle, RotateCcw,
+  PlayCircle, ChevronRight, ChevronLeft, CheckCircle2, Zap, Video, Calendar, AlertCircle, RotateCcw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { planDayToLocalDate, resolvePlanAnchor } from '@/lib/date'
+import { resolvePlanAnchor, isoWeekday, localToday } from '@/lib/date'
 
 const DAY_NAMES_SHORT = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']
 const DAY_NAMES_FULL  = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const MONTH_SHORT     = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
 
 function fmtDate(date: Date): string {
   return date.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
@@ -25,43 +25,102 @@ interface StartWorkoutCardProps {
   completedDayIds?: string[]
 }
 
+interface WeekDay {
+  date: Date
+  dow: number          // 1=Mon..7=Sun
+  weekNum: number      // plan week number (could be < 1 if before plan start)
+  inPlan: boolean      // true if (weekNum, dow) is within the plan's range AND there's a planDay
+  planDay: any | null
+}
+
 export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate, completedDayIds = [] }: StartWorkoutCardProps) {
   const completedSet = new Set(completedDayIds)
-  const weeks = Array.from(new Set(planDays.map((d: any) => d.week_number || 1))).sort((a, b) => a - b)
-  const hasMultipleWeeks = weeks.length > 1
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const today = useMemo(() => localToday(), [])
+  const anchor = useMemo(() => resolvePlanAnchor(startDate ?? null), [startDate])
 
-  const anchor = resolvePlanAnchor(startDate ?? null)
-  const currentPlanWeek = (() => {
-    const daysDiff = Math.floor((today.getTime() - anchor.getTime()) / 86400000)
-    const weekIdx = Math.max(0, Math.min(Math.floor(daysDiff / 7), Math.max(0, weeks.length - 1)))
-    return weeks[weekIdx] ?? weeks[0] ?? 1
-  })()
+  // Plan-week range: which plan weeks have any programmed day
+  const planWeekNumbers = useMemo(
+    () => Array.from(new Set(planDays.map((d: any) => d.week_number || 1))).sort((a, b) => a - b),
+    [planDays]
+  )
+  const lastPlanWeek = planWeekNumbers[planWeekNumbers.length - 1] ?? 0
 
-  const [selectedWeek, setSelectedWeek] = useState<number>(currentPlanWeek)
+  // Compute plan-week / dow for any calendar date relative to anchor.
+  // weekNum < 1 means before the plan starts.
+  const dateToPlanCoords = (d: Date): { weekNum: number; dow: number } => {
+    const days = Math.floor((d.getTime() - anchor.getTime()) / 86400000)
+    const weekNum = Math.floor(days / 7) + 1
+    const dow = ((days % 7) + 7) % 7 + 1
+    return { weekNum, dow }
+  }
+
+  // Today's calendar Monday (Mon-Sun ISO week containing today)
+  const todayMonday = useMemo(() => {
+    const d = new Date(today)
+    d.setHours(0, 0, 0, 0)
+    const iso = isoWeekday(d)
+    d.setDate(d.getDate() - (iso - 1))
+    return d
+  }, [today])
+
+  // Calendar-based week navigation. 0 = this week, -1 = last, +1 = next, etc.
+  // The plan's first week (in calendar terms) defines the lower bound for navigation,
+  // and the plan's last week defines the upper bound — but we let the user navigate
+  // 1 week beyond either side for context.
+  const planFirstMonday = anchor
+  const planLastMonday = useMemo(() => {
+    if (lastPlanWeek <= 0) return null
+    const d = new Date(anchor)
+    d.setDate(d.getDate() + (lastPlanWeek - 1) * 7)
+    return d
+  }, [anchor, lastPlanWeek])
+
+  // Compute initial offset: today's week if it intersects plan range, else snap into range
+  const initialOffset = useMemo(() => {
+    const todayCoords = dateToPlanCoords(today)
+    // Inside the plan range → show this calendar week
+    if (todayCoords.weekNum >= 1 && todayCoords.weekNum <= lastPlanWeek) return 0
+    // Before the plan starts → jump forward to plan week 1
+    if (todayCoords.weekNum < 1 && planFirstMonday) {
+      const diff = Math.round((planFirstMonday.getTime() - todayMonday.getTime()) / (7 * 86400000))
+      return diff
+    }
+    // After the plan ends → still show "this week" (will display empty plan slots)
+    return 0
+  }, [today, todayMonday, planFirstMonday, lastPlanWeek]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [weekOffset, setWeekOffset] = useState<number>(initialOffset)
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
   const [pendingDayIds, setPendingDayIds] = useState<Set<string>>(new Set())
 
-  // All 7 calendar days (Mon–Sun) for the selected week, each with optional planDay overlay
-  const allWeekDays = Array.from({ length: 7 }, (_, i) => {
-    const dow = i + 1
-    const date = planDayToLocalDate(selectedWeek, dow, anchor)
-    const planDay = planDays.find((d: any) => (d.week_number || 1) === selectedWeek && d.day_of_week === dow) ?? null
-    return { dow, date, planDay }
-  })
+  // Monday of the displayed calendar week
+  const displayedMonday = useMemo(() => {
+    const d = new Date(todayMonday)
+    d.setDate(d.getDate() + weekOffset * 7)
+    return d
+  }, [todayMonday, weekOffset])
 
-  // Auto-select today's day on week change
+  // 7 calendar dates for the displayed week, with plan-day overlay
+  const allWeekDays: WeekDay[] = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => {
+      const date = new Date(displayedMonday)
+      date.setDate(date.getDate() + i)
+      const { weekNum, dow } = dateToPlanCoords(date)
+      const planDay = (weekNum >= 1)
+        ? planDays.find((d: any) => (d.week_number || 1) === weekNum && d.day_of_week === dow) ?? null
+        : null
+      return { date, dow, weekNum, inPlan: !!planDay, planDay }
+    })
+  }, [displayedMonday, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-select today (if in displayed week) else first day with workout, else Monday
   useEffect(() => {
-    const realToday = new Date(); realToday.setHours(0, 0, 0, 0)
-    let todayIdx = -1
-    for (let i = 0; i < 7; i++) {
-      const date = planDayToLocalDate(selectedWeek, i + 1, anchor)
-      if (date.toDateString() === realToday.toDateString()) { todayIdx = i; break }
-    }
-    setSelectedDayIdx(todayIdx >= 0 ? todayIdx : 0)
-  }, [selectedWeek, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
+    const todayIdx = allWeekDays.findIndex(w => w.date.toDateString() === today.toDateString())
+    if (todayIdx >= 0) { setSelectedDayIdx(todayIdx); return }
+    const planIdx = allWeekDays.findIndex(w => w.planDay !== null)
+    setSelectedDayIdx(planIdx >= 0 ? planIdx : 0)
+  }, [weekOffset, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect pending (in-progress) sessions from localStorage
   useEffect(() => {
@@ -98,6 +157,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
   const blockTypeLabels: Record<string, string> = {
     warmup: 'Calentamiento', strength: 'Fuerza', metcon: 'Metcon',
     gymnastics: 'Gimnasia', cooldown: 'Vuelta a calma', wod: 'WOD',
+    core: 'Core', skills: 'Skills', tecnica: 'Técnica', mobility: 'Movilidad', other: 'Otro',
   }
   const focusLabel =
     selectedDay?.title ||
@@ -117,51 +177,112 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
   const isPending      = selectedDay ? pendingDayIds.has(selectedDay.id) : false
   const isSelectedDone = selectedDay ? completedSet.has(selectedDay.id) : false
 
+  // Header label: "Esta semana", "Semana pasada", "Próxima semana", or absolute date range
+  const sundayOfWeek = useMemo(() => {
+    const d = new Date(displayedMonday); d.setDate(d.getDate() + 6); return d
+  }, [displayedMonday])
+  const weekRangeLabel = `${displayedMonday.getDate()} ${MONTH_SHORT[displayedMonday.getMonth()]} – ${sundayOfWeek.getDate()} ${MONTH_SHORT[sundayOfWeek.getMonth()]}`
+  const offsetLabel =
+    weekOffset === 0 ? 'Esta semana' :
+    weekOffset === 1 ? 'Próxima semana' :
+    weekOffset === -1 ? 'Semana pasada' :
+    weekOffset > 0 ? `En ${weekOffset} semanas` :
+    `Hace ${-weekOffset} semanas`
+
+  // Plan-week label if any day in displayed week falls in the plan range
+  const inPlanWeekNum = useMemo(() => {
+    const inRange = allWeekDays.find(w => w.weekNum >= 1 && w.weekNum <= lastPlanWeek)
+    return inRange?.weekNum ?? null
+  }, [allWeekDays, lastPlanWeek])
+
+  // Disable "previous" if before plan start by 2+ weeks; "next" if 2+ after plan end
+  const minOffset = (planFirstMonday && lastPlanWeek > 0)
+    ? Math.round((planFirstMonday.getTime() - todayMonday.getTime()) / (7 * 86400000)) - 1
+    : -1
+  const maxOffset = (planLastMonday && lastPlanWeek > 0)
+    ? Math.round((planLastMonday.getTime() - todayMonday.getTime()) / (7 * 86400000)) + 1
+    : 1
+  const canGoPrev = weekOffset > minOffset
+  const canGoNext = weekOffset < maxOffset
+
   return (
-    <section className="space-y-6">
+    <section className="space-y-4">
       <div className="flex items-center justify-between px-1">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-2xl font-black uppercase tracking-tight">Mi Programación</h2>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5 truncate">
             {plan?.title || 'Sin programación asignada'}
           </p>
         </div>
-        <Calendar className="w-5 h-5 text-primary/40" />
+        <Calendar className="w-5 h-5 text-primary/40 shrink-0" />
       </div>
 
-      {/* Week Selector */}
-      {hasMultipleWeeks && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
-          {weeks.map((w) => (
-            <button
-              key={w}
-              onClick={() => setSelectedWeek(w)}
-              className={cn(
-                'shrink-0 h-9 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border',
-                selectedWeek === w
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'bg-card/40 border-border/40 text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Semana {w}
-            </button>
-          ))}
+      {/* Week navigation header */}
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-primary leading-none">
+            {offsetLabel}
+            {inPlanWeekNum && (
+              <span className="text-muted-foreground/60 ml-2">· Semana {inPlanWeekNum} del plan</span>
+            )}
+          </p>
+          <p className="text-sm font-black uppercase tracking-tight mt-1 truncate">
+            {weekRangeLabel}
+          </p>
         </div>
-      )}
+        <div className="flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => canGoPrev && setWeekOffset(o => o - 1)}
+            disabled={!canGoPrev}
+            title="Semana anterior"
+            className={cn(
+              'w-9 h-9 rounded-xl flex items-center justify-center transition-colors',
+              canGoPrev ? 'bg-secondary hover:bg-secondary/70' : 'bg-secondary/30 text-muted-foreground/30 cursor-not-allowed'
+            )}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          {weekOffset !== 0 && (
+            <button
+              type="button"
+              onClick={() => setWeekOffset(0)}
+              title="Volver a esta semana"
+              className="h-9 px-3 rounded-xl bg-secondary hover:bg-secondary/70 text-[10px] font-black uppercase tracking-widest transition-colors"
+            >
+              Hoy
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => canGoNext && setWeekOffset(o => o + 1)}
+            disabled={!canGoNext}
+            title="Semana siguiente"
+            className={cn(
+              'w-9 h-9 rounded-xl flex items-center justify-center transition-colors',
+              canGoNext ? 'bg-secondary hover:bg-secondary/70' : 'bg-secondary/30 text-muted-foreground/30 cursor-not-allowed'
+            )}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
 
-      {/* Day Selector — all 7 days always visible */}
+      {/* Day Selector — 7 calendar days of the displayed week */}
       <div className="bg-card/40 backdrop-blur-xl rounded-[28px] p-2 border border-border/10 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
         <div className="flex gap-1 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
-          {allWeekDays.map(({ dow, date, planDay }, idx) => {
+          {allWeekDays.map((wd, idx) => {
             const isSelected = selectedDayIdx === idx
-            const isToday    = date.toDateString() === today.toDateString()
-            const hasPending = planDay ? pendingDayIds.has(planDay.id) : false
-            const hasWorkout = planDay !== null
+            const isToday    = wd.date.toDateString() === today.toDateString()
+            const hasPending = wd.planDay ? pendingDayIds.has(wd.planDay.id) : false
+            const hasWorkout = wd.planDay !== null
+            const isCompleted = wd.planDay ? completedSet.has(wd.planDay.id) : false
+            const isPast      = wd.date < today
 
             return (
               <button
-                key={dow}
+                key={`${wd.date.toISOString()}-${idx}`}
                 onClick={() => setSelectedDayIdx(idx)}
                 className={cn(
                   'shrink-0 w-[46px] sm:w-[52px] py-3 rounded-[18px] flex flex-col items-center gap-1 transition-all duration-300 relative group snap-start',
@@ -179,14 +300,17 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
                   'text-[8px] font-black tracking-[0.15em] uppercase',
                   isSelected ? 'text-primary-foreground/80' : isToday ? 'text-primary' : 'text-muted-foreground/50'
                 )}>
-                  {DAY_NAMES_SHORT[dow - 1]}
+                  {DAY_NAMES_SHORT[wd.dow - 1]}
                 </span>
-                <span className="text-base font-black leading-none tracking-tighter">{date.getDate()}</span>
-                {/* Indicator dot */}
+                <span className="text-base font-black leading-none tracking-tighter">{wd.date.getDate()}</span>
+                {/* Indicator dot — priority: pending → completed → today → has-workout → empty */}
                 {hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
-                {isToday && !isSelected && !hasPending && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                {hasWorkout && !isToday && !hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white/25" />}
-                {!hasWorkout && !isToday && !hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-transparent" />}
+                {!hasPending && isCompleted && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+                {!hasPending && !isCompleted && isToday && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                {!hasPending && !isCompleted && !isToday && hasWorkout && !isSelected && (
+                  <span className={cn('w-1.5 h-1.5 rounded-full', isPast ? 'bg-muted-foreground/40' : 'bg-primary/60')} />
+                )}
+                {!hasPending && !isCompleted && !isToday && !hasWorkout && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-transparent" />}
                 {isSelected && <div className="absolute -bottom-1 w-4 h-1 bg-white/40 rounded-full" />}
               </button>
             )
@@ -339,7 +463,11 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
               </h3>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
                 {isSelectedToday
-                  ? 'No tienes entrenamiento programado para hoy. Puedes seleccionar otro día arriba para ver su rutina.'
+                  ? 'No tienes entrenamiento programado para hoy. Selecciona otro día arriba o navega a otra semana.'
+                  : selected.weekNum < 1
+                  ? 'Esta fecha es anterior al inicio de tu programación.'
+                  : selected.weekNum > lastPlanWeek
+                  ? 'Esta fecha está después del fin de tu programación. Pregúntale a tu coach por la próxima.'
                   : 'No hay entrenamiento programado para este día.'}
               </p>
             </div>
