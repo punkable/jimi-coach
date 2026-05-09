@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound, redirect } from 'next/navigation'
 import { WorkoutClient } from './workout-client'
+import { WorkoutSummary } from './workout-summary'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { ArrowLeft, PlayCircle, Eye } from 'lucide-react'
@@ -171,6 +172,20 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
     completedResult = { ...pastResult, sets: setRows ?? [] }
   }
 
+  // Summary mode renders a dedicated, fully read-only history screen.
+  // All editing/training UI is reused only in non-summary modes.
+  if (summaryMode && completedResult) {
+    return (
+      <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
+        <WorkoutSummary
+          day={todayData}
+          result={completedResult}
+          allExercises={allExercises ?? []}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <WorkoutClient
@@ -179,8 +194,6 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
         prs={prs}
         allExercises={allExercises ?? []}
         viewOnly={viewOnly}
-        summaryMode={summaryMode && !!completedResult}
-        completedResult={completedResult}
       />
     </div>
   )
