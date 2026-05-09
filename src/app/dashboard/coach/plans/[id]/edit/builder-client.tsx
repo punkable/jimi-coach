@@ -435,10 +435,15 @@ export function BuilderClient({
     // New blocks default to expanded so the coach can immediately edit them
     setCollapsedBlocks(prev => ({ ...prev, [newBlockId]: false }))
     if (openPickerAfter) {
-      // Smooth scroll + auto-open exercise picker for the newly created block
       setTimeout(() => {
         document.getElementById(`day-${dayId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        openBlockPicker(newBlockId)
+        // Strength blocks: open the exercise picker so coach picks the first movement.
+        // Non-strength blocks: enable the routine textarea so coach writes the routine.
+        if (isStrengthType(blockType)) {
+          openBlockPicker(newBlockId)
+        } else {
+          setEditingBlocks(prev => ({ ...prev, [newBlockId]: true }))
+        }
       }, 100)
     }
   }
@@ -1419,7 +1424,54 @@ export function BuilderClient({
                                 )
                               })()}
 
-                              {!isStrengthType(block.type) && (
+                              {/* Legacy compatibility: non-strength blocks with old workout_movement rows
+                                  (created before the type-aware refactor) get a compact list with a delete
+                                  button per row. New non-strength blocks should use only routine free-text +
+                                  video tags — series/reps/% no longer appear here. */}
+                              {!isStrengthType(block.type) && block.workout_movements.length > 0 && (
+                                <div className="mt-3 rounded-2xl border border-amber-500/25 bg-amber-500/5 p-3 space-y-2">
+                                  <div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Movimientos heredados</p>
+                                    <p className="text-[10px] text-muted-foreground/80 mt-0.5 leading-relaxed">
+                                      Bloque con movimientos del modelo anterior. En bloques no-fuerza el formato recomendado es la rutina libre + etiquetas con video.
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    {block.workout_movements.map((mov, mIdx) => (
+                                      <div key={mov.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-card/50 border border-border/40">
+                                        <span className="text-[11px] font-bold text-foreground flex-1 min-w-0 truncate">
+                                          {mov.exercise?.name || 'Movimiento'}
+                                          {mov.sets && mov.sets > 0 && (
+                                            <span className="text-muted-foreground/60 font-medium ml-1.5">
+                                              {mov.sets}×{mov.reps || '-'}{mov.weight_percentage ? ` @ ${mov.weight_percentage}` : ''}
+                                            </span>
+                                          )}
+                                        </span>
+                                        <button
+                                          type="button"
+                                          title="Eliminar movimiento heredado"
+                                          onClick={() => {
+                                            updateDays((prev: Day[]) => {
+                                              const n = JSON.parse(JSON.stringify(prev))
+                                              const dIdx = n.findIndex((d: Day) => d.id === day.id)
+                                              const bIdx = n[dIdx].workout_blocks.findIndex((b: any) => b.id === block.id)
+                                              if (dIdx !== -1 && bIdx !== -1) {
+                                                n[dIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1)
+                                              }
+                                              return n
+                                            })
+                                          }}
+                                          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {false && (
                               <>
                               <div className="border-t border-border/60 pt-4 mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos estructurados</Label>
@@ -1498,7 +1550,11 @@ export function BuilderClient({
                               </>
                               )}
 
-                              {/* Inline exercise picker */}
+                              {/* Inline exercise picker — strength only.
+                                  Non-strength blocks insert exercises as video tags via the routine free-text panel,
+                                  so they don't need this picker (which creates structured workout_movement rows). */}
+                              {isStrengthType(block.type) && (
+                              <>
                               {blockPickerOpen === block.id ? (
                                 <div className="mt-2 mx-1 border border-primary/25 rounded-2xl p-3 space-y-2 bg-primary/5">
                                   {/* Search bar */}
@@ -1632,8 +1688,10 @@ export function BuilderClient({
                                   onClick={() => openBlockPicker(block.id)}
                                   className="w-full mt-1 h-7 flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-colors rounded-xl hover:bg-primary/5"
                                 >
-                                  <Plus className="w-3 h-3" /> Añadir ejercicio
+                                  <Plus className="w-3 h-3" /> Añadir movimiento
                                 </button>
+                              )}
+                              </>
                               )}
 
                               {/* ── Footer free text — after movements ──────────── */}
