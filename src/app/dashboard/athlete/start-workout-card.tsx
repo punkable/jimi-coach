@@ -22,9 +22,11 @@ interface StartWorkoutCardProps {
   planDays: any[]
   trainedToday: boolean
   startDate?: string | null
+  completedDayIds?: string[]
 }
 
-export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate }: StartWorkoutCardProps) {
+export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate, completedDayIds = [] }: StartWorkoutCardProps) {
+  const completedSet = new Set(completedDayIds)
   const weeks = Array.from(new Set(planDays.map((d: any) => d.week_number || 1))).sort((a, b) => a - b)
   const hasMultipleWeeks = weeks.length > 1
 
@@ -110,7 +112,8 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
   const isSelectedToday = selectedDay ? isDayToday(selectedWeek, selectedDay.day_of_week) : false
   const isSelectedPast  = selectedDay ? isDayPast(selectedWeek, selectedDay.day_of_week) : false
 
-  const isPending = selectedDay ? pendingDayIds.has(selectedDay.id) : false
+  const isPending      = selectedDay ? pendingDayIds.has(selectedDay.id) : false
+  const isSelectedDone = selectedDay ? completedSet.has(selectedDay.id) : false
 
   return (
     <section className="space-y-6">
@@ -215,9 +218,11 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
                     </span>
                     <div className="h-1 w-1 rounded-full bg-white/20 shrink-0" />
                     <span className="text-white/40 font-bold uppercase tracking-widest text-[9px] shrink-0">
-                      {isSelectedToday
-                        ? (trainedToday ? 'Completado hoy' : isPending ? 'En progreso' : 'Pendiente')
-                        : isSelectedPast ? 'Día pasado' : 'Próximo'}
+                      {isSelectedDone
+                        ? 'Completado'
+                        : isSelectedToday
+                          ? (isPending ? 'En progreso' : 'Pendiente')
+                          : isSelectedPast ? 'Día pasado' : 'Próximo'}
                     </span>
                   </div>
                 </div>
@@ -241,11 +246,16 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
                 </div>
               </div>
 
-              {/* CTA */}
+              {/* CTA — completed > pending > today > past > future */}
               <div className="flex flex-col gap-2">
                 <Button
                   onClick={(e) => {
-                    if (isSelectedToday) {
+                    if (isSelectedDone) {
+                      window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}&mode=summary`
+                      return
+                    }
+                    // Only the "active training" path checks for stale localStorage on other days
+                    if (isSelectedToday && !isSelectedDone) {
                       try {
                         for (let i = 0; i < localStorage.length; i++) {
                           const key = localStorage.key(i)
@@ -264,16 +274,21 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate 
                         }
                       } catch {}
                     }
-                    window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}${isSelectedToday ? '' : '&mode=view'}`
+                    const mode = isSelectedToday ? '' : '&mode=view'
+                    window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}${mode}`
                   }}
                   className={cn(
                     "h-16 w-full px-10 rounded-[24px] text-primary-foreground hover:scale-[1.02] active:scale-95 transition-all font-black uppercase tracking-widest text-sm flex items-center gap-4 group/btn border-none justify-center",
-                    isPending
+                    isSelectedDone
+                      ? "bg-emerald-500 hover:bg-emerald-600 shadow-[0_20px_50px_rgba(16,185,129,0.25)]"
+                      : isPending
                       ? "bg-amber-500 hover:bg-amber-600 shadow-[0_20px_50px_rgba(245,158,11,0.25)]"
                       : "bg-primary shadow-[0_20px_50px_rgba(204,255,0,0.25)]"
                   )}
                 >
-                  {isPending ? (
+                  {isSelectedDone ? (
+                    <><CheckCircle2 className="w-5 h-5" /> Ver resumen</>
+                  ) : isPending ? (
                     <><RotateCcw className="w-5 h-5" /> Reanudar</>
                   ) : isSelectedToday ? (
                     <>Entrenar Ahora</>

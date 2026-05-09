@@ -10,7 +10,8 @@ export const revalidate = 0
 
 export default async function WorkoutPage(props: { searchParams: Promise<{ dayId?: string; mode?: string }> }) {
   const searchParams = await props.searchParams
-  const viewOnly = searchParams.mode === 'view'
+  const summaryMode = searchParams.mode === 'summary'
+  const viewOnly = summaryMode || searchParams.mode === 'view'
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -149,6 +150,27 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
     .eq('is_archived', false)
     .order('name', { ascending: true })
 
+  // Most recent completed workout_result for this athlete + day (used in summary mode)
+  let completedResult: any = null
+  const { data: pastResult } = await supabase
+    .from('workout_results')
+    .select('id, completed_at, rpe, notes, video_link, completed')
+    .eq('athlete_id', user.id)
+    .eq('workout_day_id', todayData.id)
+    .eq('completed', true)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (pastResult?.id) {
+    const { data: setRows } = await supabase
+      .from('workout_set_results')
+      .select('movement_id, set_number, weight, reps, distance, time_seconds, is_completed')
+      .eq('workout_result_id', pastResult.id)
+      .order('set_number', { ascending: true })
+    completedResult = { ...pastResult, sets: setRows ?? [] }
+  }
+
   return (
     <div className="h-[100dvh] flex flex-col bg-background relative overflow-hidden">
       <WorkoutClient
@@ -157,6 +179,8 @@ export default async function WorkoutPage(props: { searchParams: Promise<{ dayId
         prs={prs}
         allExercises={allExercises ?? []}
         viewOnly={viewOnly}
+        summaryMode={summaryMode && !!completedResult}
+        completedResult={completedResult}
       />
     </div>
   )

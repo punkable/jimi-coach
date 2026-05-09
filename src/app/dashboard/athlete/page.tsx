@@ -89,11 +89,13 @@ export default async function AthleteDashboard() {
   // ── Workout history ──────────────────────────────────────────
   const { data: results } = await supabase
     .from('workout_results')
-    .select('completed_at, rpe')
+    .select('completed_at, rpe, workout_day_id')
     .eq('athlete_id', user?.id)
     .eq('completed', true)
     .order('completed_at', { ascending: false })
     .limit(100)
+
+  const completedDayIds = Array.from(new Set((results ?? []).map((r: any) => r.workout_day_id).filter(Boolean)))
 
   // ── Coach insights ───────────────────────────────────────────
   const { data: insights } = await supabase
@@ -258,7 +260,7 @@ export default async function AthleteDashboard() {
         {/* Main: Workout card + stats */}
         <div className="lg:col-span-2 space-y-4">
           <PendingWorkoutBanner planDays={planDays as any} startDate={activeAssignment?.start_date} />
-          <StartWorkoutCard plan={plan} planDays={planDays} trainedToday={!!trainedToday} startDate={activeAssignment?.start_date} />
+          <StartWorkoutCard plan={plan} planDays={planDays} trainedToday={!!trainedToday} startDate={activeAssignment?.start_date} completedDayIds={completedDayIds} />
           <AthleteCalendar planDays={planDays as any} startDate={activeAssignment?.start_date} results={(results || []) as any} />
 
           {/* Mini stats */}
