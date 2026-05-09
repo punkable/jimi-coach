@@ -44,15 +44,22 @@ export function isoWeekday(d: Date = new Date()): number {
 
 /**
  * Resolve the anchor (Monday of week 1) for a plan.
- * If startDate is provided, parse it as local. Otherwise use the current local Monday.
+ *
+ * Plans store days as `day_of_week` (1=Mon..7=Sun). Calendar dates are computed
+ * as `anchor + (week-1)*7 + (dow-1)`. For the math to align with the real
+ * calendar, the anchor MUST be a Monday — otherwise day_of_week=3 (Wed) ends up
+ * on whatever day is 2 after start_date.
+ *
+ * Coaches frequently set start_date to a non-Monday (e.g. the first session day
+ * itself). We normalize here by snapping to the Monday of start_date's week, so
+ * that day_of_week=N always corresponds to that day of the calendar week.
  */
 export function resolvePlanAnchor(startDate: string | Date | null | undefined): Date {
   const parsed = parseLocalDate(startDate)
-  if (parsed) return parsed
-  const today = localToday()
-  const iso = isoWeekday(today)
-  today.setDate(today.getDate() - (iso - 1))
-  return today
+  const base = parsed ?? localToday()
+  const iso = isoWeekday(base)
+  base.setDate(base.getDate() - (iso - 1))
+  return base
 }
 
 /** Compute the actual local date for a (week, dayOfWeek) pair anchored on a plan start date. */
