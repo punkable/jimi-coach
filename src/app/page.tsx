@@ -169,20 +169,20 @@ export default function LandingPage() {
             ))}
           </div>
 
-          {/* CTAs */}
+          {/* CTAs — WhatsApp primary (new visitors), login secondary (existing users) */}
           <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            <Link href="/login" className="w-full sm:w-auto">
+            <a href={whatsappUrl} className="w-full sm:w-auto">
               <Button className="w-full sm:w-auto h-14 px-8 text-sm font-black uppercase tracking-widest rounded-2xl gap-3 shadow-[0_16px_40px_rgba(155,219,0,0.3)] hover:shadow-[0_20px_48px_rgba(155,219,0,0.4)] active:scale-95 transition-all">
-                Entrar a mi cuenta
+                <MessageCircle className="w-5 h-5" />
+                Quiero empezar
+              </Button>
+            </a>
+            <Link href="/login" className="w-full sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto h-14 px-8 text-sm font-bold uppercase tracking-widest rounded-2xl bg-card/60 backdrop-blur-xl gap-3 hover:bg-card/80 transition-all">
+                Ya tengo cuenta
                 <ArrowRight className="w-5 h-5" />
               </Button>
             </Link>
-            <a href={whatsappUrl} className="w-full sm:w-auto">
-              <Button variant="outline" className="w-full sm:w-auto h-14 px-8 text-sm font-bold uppercase tracking-widest rounded-2xl bg-card/60 backdrop-blur-xl gap-3 hover:bg-card/80 transition-all">
-                <MessageCircle className="w-5 h-5 text-[#25D366]" />
-                Pedir información
-              </Button>
-            </a>
           </div>
 
           {/* 4 hero stat chips */}
@@ -380,6 +380,71 @@ export default function LandingPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ── ATHLETE IN ACTION ────────────────────────────────── */}
+      <section className="px-5 md:px-10 py-20 bg-card/20 border-y border-border/30 overflow-hidden">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-14 items-center">
+            {/* Images */}
+            <div className="grid grid-cols-2 gap-3 md:gap-4 relative">
+              <div className="relative rounded-[24px] overflow-hidden aspect-[3/4]">
+                <Image
+                  src="https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?w=600&q=80&auto=format&fit=crop"
+                  alt="Atleta haciendo peso muerto"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width:768px) 45vw, 280px"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              </div>
+              <div className="relative rounded-[24px] overflow-hidden aspect-[3/4] mt-8">
+                <Image
+                  src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80&auto=format&fit=crop"
+                  alt="Atleta CrossFit en box"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width:768px) 45vw, 280px"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              </div>
+              {/* Floating badge */}
+              <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground rounded-2xl px-4 py-2.5 shadow-[0_8px_32px_rgba(126,196,0,0.4)] text-center whitespace-nowrap">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-80">Registra</p>
+                <p className="text-sm font-black uppercase tracking-tight leading-tight">Tu progreso real</p>
+              </div>
+            </div>
+
+            {/* Copy */}
+            <div className="mt-8 md:mt-0">
+              <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 border border-border/50 bg-card/50">
+                <Dumbbell className="w-3 h-3 text-primary" />
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">Para el atleta</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black uppercase tracking-tight leading-none mb-6">
+                Entra.
+                <span className="block text-primary">Muévete.</span>
+                <span className="block">Registra.</span>
+              </h2>
+              <p className="text-muted-foreground text-sm md:text-base font-semibold leading-relaxed mb-8">
+                Sin mensajes de WhatsApp a las 6am, sin PDFs confusos. Abres la app, ves exactamente qué toca hoy, activas el timer y registras todo al terminar.
+              </p>
+              <ul className="space-y-3">
+                {[
+                  { dot: 'var(--strength)', text: 'WOD del día listo cuando llegas al box' },
+                  { dot: 'var(--gymnastics)', text: 'Videos técnicos integrados por ejercicio' },
+                  { dot: 'var(--metcon)', text: 'Timer AMRAP, EMOM, For Time y Tabata' },
+                  { dot: 'var(--warmup)', text: 'Registro de carga, reps, RPE y notas' },
+                ].map(item => (
+                  <li key={item.text} className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.dot }} />
+                    <span className="text-sm font-bold text-foreground/80">{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
       </section>
