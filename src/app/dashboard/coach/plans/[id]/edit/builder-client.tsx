@@ -1513,33 +1513,50 @@ export function BuilderClient({
 
     </DndContext>
 
-    {/* ── Block Wizard Modal ── */}
-
+    {/* ── Block Wizard Modal (mobile: bottom-sheet above nav, desktop: centered dialog) ── */}
     {blockWizard && (
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setBlockWizard(null)}>
-        <div className="w-full max-w-sm bg-card border border-border/60 rounded-[28px] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-          <div className="h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)]" />
-          <div className="p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-                  {blockWizard.step === 1
-                    ? (getBlockCategory(blockWizard.blockType) === 'simple' ? 'Paso 1 de 1' : 'Paso 1 de 2')
-                    : 'Paso 2 de 2'}
-                </p>
-                <h3 className="text-xl font-black uppercase tracking-tight">
-                  {blockWizard.step === 1 ? 'Nuevo bloque' : (
-                    getBlockCategory(blockWizard.blockType) === 'conditioning'
-                      ? 'Tipo de crono'
-                      : 'Formato de trabajo'
-                  )}
-                </h3>
-              </div>
-              <button onClick={() => setBlockWizard(null)} className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      <div
+        className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm"
+        onClick={() => setBlockWizard(null)}
+      >
+        {/* Sheet — full-width rounded-top on mobile, centered card on sm+ */}
+        <div
+          className="w-full sm:max-w-sm bg-card border border-border/60 rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: 'min(85dvh, calc(100dvh - 3rem))' }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Accent bar */}
+          <div className="h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)] shrink-0" />
 
+          {/* Fixed header — always visible, close button never hidden */}
+          <div className="px-6 pt-5 flex items-start justify-between gap-3 shrink-0">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">
+                {blockWizard.step === 1
+                  ? (getBlockCategory(blockWizard.blockType) === 'simple' ? 'Paso 1 de 1' : 'Paso 1 de 2')
+                  : 'Paso 2 de 2'}
+              </p>
+              <h3 className="text-xl font-black uppercase tracking-tight">
+                {blockWizard.step === 1 ? 'Nuevo bloque' : (
+                  getBlockCategory(blockWizard.blockType) === 'conditioning'
+                    ? 'Tipo de crono'
+                    : 'Formato de trabajo'
+                )}
+              </h3>
+            </div>
+            <button
+              onClick={() => setBlockWizard(null)}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0 mt-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Scrollable body — safe-area bottom padding for home indicator */}
+          <div
+            className="overflow-y-auto overscroll-contain flex-1 px-6 pt-4 space-y-4"
+            style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}
+          >
             {blockWizard.step === 1 && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
@@ -1625,9 +1642,9 @@ export function BuilderClient({
                       <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cronómetro (opcional)</label>
                       <div className="grid grid-cols-3 gap-1.5">
                         {[
-                          { id: null,       label: 'Sin crono' },
-                          { id: 'emom',     label: 'EMOM' },
-                          { id: 'tabata',   label: 'Tabata' },
+                          { id: null,     label: 'Sin crono' },
+                          { id: 'emom',   label: 'EMOM' },
+                          { id: 'tabata', label: 'Tabata' },
                         ].map(t => (
                           <button
                             key={t.id ?? 'none'}
