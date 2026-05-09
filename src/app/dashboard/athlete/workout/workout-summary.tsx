@@ -274,89 +274,186 @@ export function WorkoutSummary({ day, result, allExercises = [] }: Props) {
                     </div>
                   )}
 
-                  {/* Movements */}
-                  {movements.length > 0 && (
-                    <div className="divide-y divide-border/30">
-                      {movements.map((mov: any) => {
-                        const recorded = setsByMovement.get(mov.id) ?? []
-                        const tracking = mov.exercises?.tracking_type ?? 'weight_reps'
-                        const programmed: string[] = []
-                        if (mov.sets && mov.sets > 0) programmed.push(`${mov.sets} × ${mov.reps || '-'}`)
-                        if (mov.weight_percentage) programmed.push(mov.weight_percentage)
-                        if (mov.rest) programmed.push(`R: ${mov.rest}`)
+                  {/* Movements — strength blocks group consecutive same-exercise rows */}
+                  {movements.length > 0 && (() => {
+                    const isStrengthBlock = block.type === 'strength'
+                    // Build groups of consecutive same-exercise movements for strength
+                    const groups: Array<{ exerciseId: string; exercise: any; lines: any[] }> = []
+                    movements.forEach((mov: any) => {
+                      if (isStrengthBlock) {
+                        const last = groups[groups.length - 1]
+                        if (last && last.exerciseId === mov.exercise_id) {
+                          last.lines.push(mov)
+                        } else {
+                          groups.push({ exerciseId: mov.exercise_id, exercise: mov.exercises, lines: [mov] })
+                        }
+                      } else {
+                        // For non-strength, each movement is its own group of 1
+                        groups.push({ exerciseId: mov.exercise_id, exercise: mov.exercises, lines: [mov] })
+                      }
+                    })
 
-                        return (
-                          <div key={mov.id} className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:gap-4">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              {mov.exercises?.video_url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveVideo({ url: mov.exercises.video_url, name: mov.exercises.name })}
-                                  className="shrink-0 w-10 h-10 rounded-xl bg-primary/5 hover:bg-primary/15 border border-border/50 flex items-center justify-center"
-                                  title="Ver video técnico"
-                                >
-                                  <Play className="w-4 h-4 text-primary fill-primary/20" />
-                                </button>
-                              ) : (
-                                <div className="shrink-0 w-10 h-10 rounded-xl bg-secondary/40 border border-border/50 flex items-center justify-center">
-                                  <Dumbbell className="w-4 h-4 text-muted-foreground/40" />
+                    return (
+                      <div className="divide-y divide-border/30">
+                        {groups.map((group, gIdx) => {
+                          const ex = group.exercise
+                          const tracking = ex?.tracking_type ?? 'weight_reps'
+                          // For grouped strength: show one header + multiple lines
+                          if (isStrengthBlock && group.lines.length > 1) {
+                            return (
+                              <div key={`${group.exerciseId}-${gIdx}`} className="px-4 py-3 space-y-2">
+                                <div className="flex items-start gap-3">
+                                  {ex?.video_url ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveVideo({ url: ex.video_url, name: ex.name })}
+                                      className="shrink-0 w-10 h-10 rounded-xl bg-primary/5 hover:bg-primary/15 border border-border/50 flex items-center justify-center"
+                                      title="Ver video técnico"
+                                    >
+                                      <Play className="w-4 h-4 text-primary fill-primary/20" />
+                                    </button>
+                                  ) : (
+                                    <div className="shrink-0 w-10 h-10 rounded-xl bg-secondary/40 border border-border/50 flex items-center justify-center">
+                                      <Dumbbell className="w-4 h-4 text-muted-foreground/40" />
+                                    </div>
+                                  )}
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-black uppercase tracking-tight truncate">
+                                      {ex?.name || 'Movimiento'}
+                                    </p>
+                                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
+                                      {group.lines.length} líneas de fuerza
+                                    </p>
+                                  </div>
                                 </div>
-                              )}
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-black uppercase tracking-tight truncate">
-                                  {mov.exercises?.name || 'Movimiento'}
-                                </p>
-                                {programmed.length > 0 && (
-                                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                                    Programado: {programmed.join(' · ')}
-                                  </p>
+                                {/* Lines table */}
+                                <div className="space-y-1.5 ml-13 sm:ml-0">
+                                  {group.lines.map((line: any, lineIdx: number) => {
+                                    const recorded = setsByMovement.get(line.id) ?? []
+                                    const programmed: string[] = []
+                                    if (line.sets && line.sets > 0) programmed.push(`${line.sets} × ${line.reps || '—'}`)
+                                    if (line.weight_percentage) programmed.push(line.weight_percentage)
+                                    return (
+                                      <div key={line.id} className="rounded-xl border border-border/40 bg-card/40 px-3 py-2 space-y-1.5">
+                                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                                          <span className="text-[10px] font-black text-foreground">
+                                            <span className="text-[var(--strength)] mr-1.5">L{lineIdx + 1}</span>
+                                            {programmed.join(' · ') || '—'}
+                                          </span>
+                                          {recorded.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                              {recorded.map((s, i) => {
+                                                const label = setDisplay(s, tracking)
+                                                const ok = s.is_completed
+                                                return (
+                                                  <span
+                                                    key={i}
+                                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-black tabular-nums border ${
+                                                      ok
+                                                        ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500'
+                                                        : 'bg-secondary/40 border-border/40 text-muted-foreground'
+                                                    }`}
+                                                  >
+                                                    <span className="opacity-60">#{s.set_number ?? i + 1}</span>
+                                                    <span>{label ?? '—'}</span>
+                                                  </span>
+                                                )
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                        {line.notes && (
+                                          <p className="text-[9px] text-muted-foreground italic border-l-2 border-[var(--strength)]/30 pl-2">
+                                            {line.notes}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )
+                          }
+
+                          // Single-line group: render as a normal movement row
+                          const mov = group.lines[0]
+                          const recorded = setsByMovement.get(mov.id) ?? []
+                          const programmed: string[] = []
+                          if (mov.sets && mov.sets > 0) programmed.push(`${mov.sets} × ${mov.reps || '-'}`)
+                          if (mov.weight_percentage) programmed.push(mov.weight_percentage)
+                          if (mov.rest) programmed.push(`R: ${mov.rest}`)
+
+                          return (
+                            <div key={mov.id} className="px-4 py-3 flex flex-col gap-3 sm:flex-row sm:gap-4">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                {ex?.video_url ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveVideo({ url: ex.video_url, name: ex.name })}
+                                    className="shrink-0 w-10 h-10 rounded-xl bg-primary/5 hover:bg-primary/15 border border-border/50 flex items-center justify-center"
+                                    title="Ver video técnico"
+                                  >
+                                    <Play className="w-4 h-4 text-primary fill-primary/20" />
+                                  </button>
+                                ) : (
+                                  <div className="shrink-0 w-10 h-10 rounded-xl bg-secondary/40 border border-border/50 flex items-center justify-center">
+                                    <Dumbbell className="w-4 h-4 text-muted-foreground/40" />
+                                  </div>
                                 )}
-                                {mov.notes && (
-                                  <p className="text-[10px] text-muted-foreground italic mt-1 leading-relaxed border-l-2 border-primary/30 pl-2">
-                                    {mov.notes}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-black uppercase tracking-tight truncate">
+                                    {ex?.name || 'Movimiento'}
+                                  </p>
+                                  {programmed.length > 0 && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                                      Programado: {programmed.join(' · ')}
+                                    </p>
+                                  )}
+                                  {mov.notes && (
+                                    <p className="text-[10px] text-muted-foreground italic mt-1 leading-relaxed border-l-2 border-primary/30 pl-2">
+                                      {mov.notes}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="sm:w-[40%] sm:max-w-[260px] shrink-0">
+                                {recorded.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-emerald-500/80">
+                                      Registrado
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {recorded.map((s, i) => {
+                                        const label = setDisplay(s, tracking)
+                                        const ok = s.is_completed
+                                        return (
+                                          <span
+                                            key={i}
+                                            className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black tabular-nums border ${
+                                              ok
+                                                ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500'
+                                                : 'bg-secondary/40 border-border/40 text-muted-foreground'
+                                            }`}
+                                          >
+                                            <span className="opacity-60">#{s.set_number ?? i + 1}</span>
+                                            <span>{label ?? '—'}</span>
+                                          </span>
+                                        )
+                                      })}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-[10px] text-muted-foreground/60 italic">
+                                    Sin sets registrados
                                   </p>
                                 )}
                               </div>
                             </div>
-
-                            {/* Recorded sets */}
-                            <div className="sm:w-[40%] sm:max-w-[260px] shrink-0">
-                              {recorded.length > 0 ? (
-                                <div className="space-y-1.5">
-                                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-emerald-500/80">
-                                    Registrado
-                                  </p>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {recorded.map((s, i) => {
-                                      const label = setDisplay(s, tracking)
-                                      const ok = s.is_completed
-                                      return (
-                                        <span
-                                          key={i}
-                                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black tabular-nums border ${
-                                            ok
-                                              ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500'
-                                              : 'bg-secondary/40 border-border/40 text-muted-foreground'
-                                          }`}
-                                        >
-                                          <span className="opacity-60">#{s.set_number ?? i + 1}</span>
-                                          <span>{label ?? '—'}</span>
-                                        </span>
-                                      )
-                                    })}
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-[10px] text-muted-foreground/60 italic">
-                                  Sin sets registrados
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
 
                   {/* Footer free text */}
                   {footer && (

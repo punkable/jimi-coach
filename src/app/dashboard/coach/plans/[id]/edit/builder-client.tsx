@@ -141,30 +141,29 @@ export function BuilderClient({
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [createFormData, setCreateFormData] = useState({ tracking_type: 'weight_reps', video_url: '', description: '' })
 
-  // Block wizard state — null = closed, else stores { dayId, step, blockData }
+  // Block wizard state — null = closed. Single-step: pick type + optional name → create.
+  // Timer/format is configured inline on the block after creation (existing Popover).
   const [blockWizard, setBlockWizard] = useState<{
     dayId: string
-    step: 1 | 2
     blockType: string
     blockName: string
-    timerType: string | null
   } | null>(null)
 
-  // Block type category: 'conditioning' shows timer picker in step 2,
-  // 'strength' shows format hint, 'simple' skips step 2
+  // Block type definitions. `flavor` controls the block body UI:
+  //   'strength' → grouped multi-line editor (movement + series/reps/% por línea)
+  //   'routine'  → free-text routine + insert-exercise-with-video (default UI)
   const BLOCK_TYPES = [
-    { id: 'warmup',    label: 'Calentamiento', category: 'simple' as const },
-    { id: 'strength',  label: 'Fuerza',        category: 'strength' as const },
-    { id: 'metcon',    label: 'Acondicionamiento', category: 'conditioning' as const },
-    { id: 'core',      label: 'Core',          category: 'strength' as const },
-    { id: 'skills',    label: 'Skills',        category: 'strength' as const },
-    { id: 'tecnica',   label: 'Técnica',       category: 'strength' as const },
-    { id: 'mobility',  label: 'Movilidad',     category: 'simple' as const },
-    { id: 'other',     label: 'Otro',          category: 'simple' as const },
+    { id: 'strength',  label: 'Fuerza',            flavor: 'strength' as const },
+    { id: 'metcon',    label: 'Acondicionamiento', flavor: 'routine'  as const },
+    { id: 'core',      label: 'Core',              flavor: 'routine'  as const },
+    { id: 'skills',    label: 'Skills',            flavor: 'routine'  as const },
+    { id: 'tecnica',   label: 'Técnica',           flavor: 'routine'  as const },
+    { id: 'mobility',  label: 'Movilidad',         flavor: 'routine'  as const },
+    { id: 'warmup',    label: 'Calentamiento',     flavor: 'routine'  as const },
+    { id: 'other',     label: 'Otro',              flavor: 'routine'  as const },
   ]
 
-  const getBlockCategory = (typeId: string) =>
-    BLOCK_TYPES.find(t => t.id === typeId)?.category ?? 'simple'
+  const isStrengthType = (typeId: string | undefined | null) => typeId === 'strength'
 
   useEffect(() => {
     routineDraftsRef.current = routineDrafts
@@ -404,20 +403,14 @@ export function BuilderClient({
   }
 
   const openBlockWizard = (dayId: string) => {
-    setBlockWizard({ dayId, step: 1, blockType: 'strength', blockName: '', timerType: null })
-  }
-
-  const defaultTimerConfig = (timerType: string | null) => {
-    if (timerType === 'amrap') return { minutes: 15 }
-    if (timerType === 'emom') return { rounds: 10 }
-    if (timerType === 'tabata') return { rounds: 8, work: 20, rest: 10 }
-    if (timerType === 'intervals') return { intervals: 5, work: 40, rest: 20 }
-    return {}
+    // Default to 'strength' selected — it's the most structured flow and the
+    // user's primary use case. Coach can change in the wizard before creating.
+    setBlockWizard({ dayId, blockType: 'strength', blockName: '' })
   }
 
   const confirmBlockWizard = (openPickerAfter: boolean = true) => {
     if (!blockWizard) return
-    const { dayId, blockType, blockName, timerType } = blockWizard
+    const { dayId, blockType, blockName } = blockWizard
     const blockTypeLabel = BLOCK_TYPES.find(t => t.id === blockType)?.label || blockType
     const newBlockId = genId()
     updateDays((prev: Day[]) => {
@@ -430,8 +423,9 @@ export function BuilderClient({
         id: newBlockId,
         name: defaultName,
         type: blockType,
-        timer_type: timerType ?? undefined,
-        timer_config: defaultTimerConfig(timerType),
+        // Timer is set inline on the block via the existing Popover. Wizard no longer asks.
+        timer_type: undefined,
+        timer_config: {},
         description: '',
         workout_movements: [],
       })
@@ -449,21 +443,52 @@ export function BuilderClient({
     }
   }
 
-  const advanceWizardStep = () => {
-    if (!blockWizard) return
-    const category = getBlockCategory(blockWizard.blockType)
-    if (category === 'simple') {
-      // Skip step 2 — create immediately
-      confirmBlockWizard()
-    } else {
-      // Go to step 2 with sensible default timer
-      const defaultTimer = category === 'conditioning' ? 'for_time' : null
-      setBlockWizard(p => p ? { ...p, step: 2, timerType: defaultTimer } : p)
-    }
-  }
-
   // kept for internal programmatic use (duplicate, etc.)
   const addBlock = (dayId: string) => openBlockWizard(dayId)
+
+  // ── Strength block helpers ────────────────────────────────────────────
+  // Strength blocks may have multiple workout_movement rows for the SAME exercise,
+  // each row representing one "line" of work (e.g. 1×5 @60%, 1×5 @70%, 3×3 @80%).
+  // We group consecutive rows with the same exercise_id so the editor shows them
+  // as a single exercise with multiple lines.
+  type StrengthGroup = { key: string; exerciseId: string; exercise?: Exercise; lines: { mov: Movement; mIdx: number }[] }
+  const groupStrengthMovements = (movements: Movement[]): StrengthGroup[] => {
+    const groups: StrengthGroup[] = []
+    movements.forEach((mov, mIdx) => {
+      const last = groups[groups.length - 1]
+      if (last && last.exerciseId === mov.exercise_id) {
+        last.lines.push({ mov, mIdx })
+      } else {
+        groups.push({
+          key: `${mov.exercise_id}-${mIdx}`,
+          exerciseId: mov.exercise_id,
+          exercise: mov.exercise,
+          lines: [{ mov, mIdx }],
+        })
+      }
+    })
+    return groups
+  }
+
+  // Insert a new strength line right after the last line of the same exercise group.
+  // Inherits exercise + sensible defaults so the coach only needs to type new values.
+  const addStrengthLine = (dIdx: number, bIdx: number, group: StrengthGroup) => {
+    if (!group.exercise) return
+    const lastLine = group.lines[group.lines.length - 1]
+    const insertAt = lastLine.mIdx + 1
+    addMovement(dIdx, bIdx, group.exercise, insertAt, 1)
+  }
+
+  // Remove every movement row that belongs to a strength group (deletes the whole exercise).
+  const removeStrengthGroup = (dIdx: number, bIdx: number, group: StrengthGroup) => {
+    const idsToRemove = new Set(group.lines.map(l => l.mov.id))
+    updateDays((prev: Day[]) => {
+      const n = JSON.parse(JSON.stringify(prev))
+      n[dIdx].workout_blocks[bIdx].workout_movements =
+        n[dIdx].workout_blocks[bIdx].workout_movements.filter((m: Movement) => !idsToRemove.has(m.id))
+      return n
+    })
+  }
 
   const addMovement = (dIdx: number, bIdx: number, exercise: Exercise, atIdx?: number, sets: number = 3) => {
     updateDays((prev: Day[]) => {
@@ -513,18 +538,22 @@ export function BuilderClient({
     })
   }
 
-  const addSelectedExercises = (dIdx: number, bIdx: number) => {
+  const addSelectedExercises = (dIdx: number, bIdx: number, blockType?: string) => {
+    // Strength blocks start with sets=1 so the first line reads "1 × ? @ ?".
+    // Non-strength keeps sets=3 default for traditional sets×reps format.
+    const defaultSets = blockType === 'strength' ? 1 : 3
     pickerSelectedIds.forEach(id => {
       const ex = allExercises.find(e => e.id === id)
-      if (ex) addMovement(dIdx, bIdx, ex)
+      if (ex) addMovement(dIdx, bIdx, ex, undefined, defaultSets)
     })
     closeBlockPicker()
   }
 
-  const handleQuickCreateExercise = async (dIdx: number, bIdx: number) => {
+  const handleQuickCreateExercise = async (dIdx: number, bIdx: number, blockType?: string) => {
     const name = blockPickerSearch.trim()
     if (!name) return
     setCreatingExercise(true)
+    const defaultSets = blockType === 'strength' ? 1 : 3
     try {
       const result = await createExerciseQuick(name, 'General', {
         tracking_type: createFormData.tracking_type,
@@ -533,7 +562,7 @@ export function BuilderClient({
       })
       if (result.exercise) {
         setLocalExercises(prev => [...prev, result.exercise!])
-        addMovement(dIdx, bIdx, result.exercise!)
+        addMovement(dIdx, bIdx, result.exercise!, undefined, defaultSets)
         closeBlockPicker()
       } else {
         alert(result.error || 'Error al crear ejercicio')
@@ -897,7 +926,8 @@ export function BuilderClient({
                             }}
                           >
                             <div className="min-h-[60px] p-1 md:p-2">
-                              {/* Routine Description Area */}
+                              {/* Routine Description Area — hidden for strength blocks (use structured editor instead) */}
+                              {!isStrengthType(block.type) && (
                               <div className="mb-4 space-y-3 rounded-2xl border border-[var(--gymnastics)]/20 bg-[var(--gymnastics)]/5 p-3 md:p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                                   <div>
@@ -1210,7 +1240,187 @@ export function BuilderClient({
                                   Texto libre para rutinas, formatos y notas. Usa [NombreEjercicio] para vincular video técnico. Los movimientos de abajo son opcionales (series, reps, cargas).
                                 </p>
                               </div>
+                              )}
 
+                              {/* ── Strength editor: grouped multi-line per exercise ── */}
+                              {isStrengthType(block.type) && (() => {
+                                const strengthGroups = groupStrengthMovements(block.workout_movements)
+                                if (strengthGroups.length === 0) {
+                                  return (
+                                    <div className="py-6 flex flex-col items-center justify-center border border-dashed border-[var(--strength)]/40 rounded-2xl bg-[var(--strength)]/5 gap-2 mb-4">
+                                      <p className="text-[10px] font-black uppercase tracking-widest text-[var(--strength)]">
+                                        Bloque de fuerza vacío
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground text-center max-w-xs">
+                                        Añade un movimiento (Back Squat, Deadlift, etc.) y luego carga las líneas de series × reps × % de carga.
+                                      </p>
+                                      {blockPickerOpen !== block.id && (
+                                        <button
+                                          onClick={() => openBlockPicker(block.id)}
+                                          className="mt-1 h-9 px-4 rounded-xl bg-[var(--strength)] text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 hover:bg-[var(--strength)]/90 transition-colors"
+                                        >
+                                          <Plus className="w-3.5 h-3.5" /> Elegir movimiento
+                                        </button>
+                                      )}
+                                    </div>
+                                  )
+                                }
+                                return (
+                                  <div className="space-y-3 mb-4">
+                                    {strengthGroups.map((group) => (
+                                      <div
+                                        key={group.key}
+                                        className="rounded-2xl border border-[var(--strength)]/25 bg-[var(--strength)]/5 overflow-hidden"
+                                      >
+                                        {/* Exercise header */}
+                                        <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-[var(--strength)]/10 border-b border-[var(--strength)]/15">
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {group.exercise?.video_url ? (
+                                              <a
+                                                href={group.exercise.video_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                title="Ver video del ejercicio"
+                                                className="w-7 h-7 rounded-lg bg-[var(--strength)]/15 border border-[var(--strength)]/25 flex items-center justify-center shrink-0 text-[var(--strength)] hover:bg-[var(--strength)]/25 transition-colors"
+                                              >
+                                                <Video className="w-3.5 h-3.5" />
+                                              </a>
+                                            ) : (
+                                              <div className="w-7 h-7 rounded-lg bg-secondary/40 border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground/40">
+                                                <Video className="w-3.5 h-3.5" />
+                                              </div>
+                                            )}
+                                            <span className="font-black text-[12px] uppercase tracking-tight truncate">
+                                              {group.exercise?.name || 'Movimiento'}
+                                            </span>
+                                            <span className="text-[9px] font-bold text-muted-foreground/60 shrink-0">
+                                              · {group.lines.length} {group.lines.length === 1 ? 'línea' : 'líneas'}
+                                            </span>
+                                          </div>
+                                          <button
+                                            type="button"
+                                            title="Eliminar movimiento"
+                                            onClick={() => removeStrengthGroup(globalDIdx, bIdx, group)}
+                                            className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
+                                          >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                          </button>
+                                        </div>
+
+                                        {/* Lines */}
+                                        <div className="divide-y divide-border/30">
+                                          {group.lines.map(({ mov, mIdx }, lineIdx) => (
+                                            <div key={mov.id} className="px-3 py-2.5">
+                                              <div className="flex items-center gap-2">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/50 w-7 shrink-0">
+                                                  #{lineIdx + 1}
+                                                </span>
+                                                <div className="flex-1 grid grid-cols-3 gap-1.5">
+                                                  <Input
+                                                    placeholder="Series"
+                                                    inputMode="numeric"
+                                                    value={mov.sets || ''}
+                                                    onChange={(e) => {
+                                                      updateDays((prev: Day[]) => {
+                                                        const n = JSON.parse(JSON.stringify(prev))
+                                                        n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].sets = parseInt(e.target.value) || 0
+                                                        return n
+                                                      })
+                                                    }}
+                                                    className="h-9 text-[11px] font-bold rounded-xl bg-background/70 border-border/60 text-center"
+                                                  />
+                                                  <Input
+                                                    placeholder="Reps"
+                                                    value={mov.reps || ''}
+                                                    onChange={(e) => {
+                                                      updateDays((prev: Day[]) => {
+                                                        const n = JSON.parse(JSON.stringify(prev))
+                                                        n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].reps = e.target.value
+                                                        return n
+                                                      })
+                                                    }}
+                                                    className="h-9 text-[11px] font-bold rounded-xl bg-background/70 border-border/60 text-center"
+                                                  />
+                                                  <Input
+                                                    placeholder="60% / 80kg"
+                                                    value={mov.weight_percentage || ''}
+                                                    onChange={(e) => {
+                                                      updateDays((prev: Day[]) => {
+                                                        const n = JSON.parse(JSON.stringify(prev))
+                                                        n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].weight_percentage = e.target.value
+                                                        return n
+                                                      })
+                                                    }}
+                                                    className="h-9 text-[11px] font-bold rounded-xl bg-background/70 border-border/60 text-center"
+                                                  />
+                                                </div>
+                                                {group.lines.length > 1 && (
+                                                  <button
+                                                    type="button"
+                                                    title="Eliminar línea"
+                                                    onClick={() => {
+                                                      updateDays((prev: Day[]) => {
+                                                        const n = JSON.parse(JSON.stringify(prev))
+                                                        n[globalDIdx].workout_blocks[bIdx].workout_movements.splice(mIdx, 1)
+                                                        return n
+                                                      })
+                                                    }}
+                                                    className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-all shrink-0"
+                                                  >
+                                                    <X className="w-3.5 h-3.5" />
+                                                  </button>
+                                                )}
+                                              </div>
+                                              {/* Optional notes per line — collapsible textarea (shown only if has content) */}
+                                              {mov.notes !== undefined && mov.notes !== null && mov.notes !== '' && (
+                                                <Input
+                                                  placeholder="Notas / descanso (ej: 2 min, técnica lenta)"
+                                                  value={mov.notes}
+                                                  onChange={(e) => {
+                                                    updateDays((prev: Day[]) => {
+                                                      const n = JSON.parse(JSON.stringify(prev))
+                                                      n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].notes = e.target.value
+                                                      return n
+                                                    })
+                                                  }}
+                                                  className="mt-2 h-8 text-[10px] rounded-lg bg-background/50 border-border/40"
+                                                />
+                                              )}
+                                              {(mov.notes === undefined || mov.notes === null || mov.notes === '') && (
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    updateDays((prev: Day[]) => {
+                                                      const n = JSON.parse(JSON.stringify(prev))
+                                                      n[globalDIdx].workout_blocks[bIdx].workout_movements[mIdx].notes = ' '
+                                                      return n
+                                                    })
+                                                  }}
+                                                  className="mt-1.5 ml-9 text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40 hover:text-primary transition-colors"
+                                                >
+                                                  + Notas / descanso
+                                                </button>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        {/* Add line CTA */}
+                                        <button
+                                          type="button"
+                                          onClick={() => addStrengthLine(globalDIdx, bIdx, group)}
+                                          className="w-full h-9 border-t border-[var(--strength)]/15 text-[9px] font-black uppercase tracking-widest text-[var(--strength)]/80 hover:text-[var(--strength)] hover:bg-[var(--strength)]/10 transition-colors flex items-center justify-center gap-1.5"
+                                        >
+                                          <Plus className="w-3 h-3" /> Añadir línea
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )
+                              })()}
+
+                              {!isStrengthType(block.type) && (
+                              <>
                               <div className="border-t border-border/60 pt-4 mb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                                 <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Movimientos estructurados</Label>
                                 <span className="text-[8px] font-medium text-muted-foreground/30 italic">(Opcional: Series/Reps)</span>
@@ -1272,7 +1482,7 @@ export function BuilderClient({
                                   ))}
                                 </div>
                               </SortableContext>
-                              
+
                               {/* Empty state */}
                               {block.workout_movements.length === 0 && blockPickerOpen !== block.id && (
                                 <div className="py-5 flex flex-col items-center justify-center border border-dashed border-border/60 m-2 rounded-2xl bg-background/25 gap-2">
@@ -1284,6 +1494,8 @@ export function BuilderClient({
                                     <Plus className="w-3 h-3" /> Añadir ejercicio
                                   </button>
                                 </div>
+                              )}
+                              </>
                               )}
 
                               {/* Inline exercise picker */}
@@ -1393,7 +1605,7 @@ export function BuilderClient({
                                           Cancelar
                                         </button>
                                         <button
-                                          onClick={() => handleQuickCreateExercise(globalDIdx, bIdx)}
+                                          onClick={() => handleQuickCreateExercise(globalDIdx, bIdx, block.type)}
                                           disabled={creatingExercise || !blockPickerSearch.trim()}
                                           className="flex-1 h-8 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 disabled:opacity-50 hover:bg-primary/90 transition-colors"
                                         >
@@ -1407,7 +1619,7 @@ export function BuilderClient({
                                   {/* Multi-select footer */}
                                   {pickerSelectedIds.size > 0 && !showCreateForm && (
                                     <button
-                                      onClick={() => addSelectedExercises(globalDIdx, bIdx)}
+                                      onClick={() => addSelectedExercises(globalDIdx, bIdx, block.type)}
                                       className="w-full h-8 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-1"
                                     >
                                       <Plus className="w-3.5 h-3.5" />
@@ -1513,36 +1725,29 @@ export function BuilderClient({
 
     </DndContext>
 
-    {/* ── Block Wizard Modal (mobile: bottom-sheet above nav, desktop: centered dialog) ── */}
-    {blockWizard && (
+    {/* ── Block Wizard Modal — single step, type-first ── */}
+    {blockWizard && (() => {
+      const selectedType = BLOCK_TYPES.find(t => t.id === blockWizard.blockType)
+      const isStrength = selectedType?.flavor === 'strength'
+      return (
       <div
         className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4 bg-black/60 backdrop-blur-sm"
         onClick={() => setBlockWizard(null)}
       >
         {/* Sheet — full-width rounded-top on mobile, centered card on sm+ */}
         <div
-          className="w-full sm:max-w-sm bg-card border border-border/60 rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+          className="w-full sm:max-w-md bg-card border border-border/60 rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
           style={{ maxHeight: 'min(85dvh, calc(100dvh - 3rem))' }}
           onClick={e => e.stopPropagation()}
         >
           {/* Accent bar */}
           <div className="h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)] shrink-0" />
 
-          {/* Fixed header — always visible, close button never hidden */}
+          {/* Fixed header */}
           <div className="px-6 pt-5 flex items-start justify-between gap-3 shrink-0">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-primary">
-                {blockWizard.step === 1
-                  ? (getBlockCategory(blockWizard.blockType) === 'simple' ? 'Paso 1 de 1' : 'Paso 1 de 2')
-                  : 'Paso 2 de 2'}
-              </p>
-              <h3 className="text-xl font-black uppercase tracking-tight">
-                {blockWizard.step === 1 ? 'Nuevo bloque' : (
-                  getBlockCategory(blockWizard.blockType) === 'conditioning'
-                    ? 'Tipo de crono'
-                    : 'Formato de trabajo'
-                )}
-              </h3>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">¿Qué se va a hacer?</p>
+              <h3 className="text-xl font-black uppercase tracking-tight">Nuevo bloque</h3>
             </div>
             <button
               onClick={() => setBlockWizard(null)}
@@ -1552,137 +1757,66 @@ export function BuilderClient({
             </button>
           </div>
 
-          {/* Scrollable body — safe-area bottom padding for home indicator */}
+          {/* Scrollable body */}
           <div
             className="overflow-y-auto overscroll-contain flex-1 px-6 pt-4 space-y-4"
             style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}
           >
-            {blockWizard.step === 1 && (
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del bloque (opcional)</label>
-                  <input
-                    autoFocus
-                    placeholder="Ej: WOD principal, Fuerza olímpica..."
-                    value={blockWizard.blockName}
-                    onChange={e => setBlockWizard(p => p ? { ...p, blockName: e.target.value } : p)}
-                    onKeyDown={e => { if (e.key === 'Enter') advanceWizardStep() }}
-                    className="w-full h-11 px-4 rounded-2xl border border-border/70 bg-background/55 text-sm font-bold outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {BLOCK_TYPES.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => setBlockWizard(p => p ? { ...p, blockType: t.id } : p)}
-                        className={cn(
-                          'h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all border',
-                          blockWizard.blockType === t.id
-                            ? 'bg-primary text-primary-foreground border-primary shadow-lg'
-                            : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                        )}
-                      >
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={advanceWizardStep}
-                  className="w-full h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
-                >
-                  {getBlockCategory(blockWizard.blockType) === 'simple'
-                    ? <><Plus className="w-4 h-4" /> Crear bloque</>
-                    : 'Siguiente →'}
-                </button>
+            {/* Type picker — primary action */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de bloque</label>
+              <div className="grid grid-cols-2 gap-2">
+                {BLOCK_TYPES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setBlockWizard(p => p ? { ...p, blockType: t.id } : p)}
+                    className={cn(
+                      'h-11 rounded-xl text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center',
+                      blockWizard.blockType === t.id
+                        ? 'bg-primary text-primary-foreground border-primary shadow-lg'
+                        : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                    )}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
-            )}
+              {/* Contextual hint based on selected type */}
+              <div className="rounded-xl bg-primary/5 border border-primary/20 p-3 mt-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">
+                  {isStrength ? 'Editor estructurado' : 'Rutina libre'}
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  {isStrength
+                    ? 'Elegirás un movimiento y cargarás líneas de series × reps × carga (ej: Back Squat 1×5 @60%, 1×5 @70%, 3×2 @85%).'
+                    : 'Escribirás la rutina en texto libre y podrás insertar ejercicios con video. Ideal para WODs, core, técnica, etc.'}
+                </p>
+              </div>
+            </div>
 
-            {blockWizard.step === 2 && (
-              <div className="space-y-4">
-                {getBlockCategory(blockWizard.blockType) === 'conditioning' ? (
-                  /* Conditioning: pick timer type */
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Formato del WOD</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'for_time', label: 'For Time' },
-                        { id: 'amrap',    label: 'AMRAP' },
-                        { id: 'emom',     label: 'EMOM' },
-                        { id: 'tabata',   label: 'Tabata' },
-                        { id: 'intervals',label: 'Intervalos' },
-                        { id: null,       label: 'Libre' },
-                      ].map(t => (
-                        <button
-                          key={t.id ?? 'none'}
-                          onClick={() => setBlockWizard(p => p ? { ...p, timerType: t.id } : p)}
-                          className={cn(
-                            'h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all border flex items-center justify-center gap-1.5',
-                            blockWizard.timerType === t.id
-                              ? 'bg-primary text-primary-foreground border-primary shadow-lg'
-                              : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                          )}
-                        >
-                          {t.id && <Zap className="w-3 h-3" />}
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  /* Strength/Skills: format hint + optional timer */
-                  <div className="space-y-3">
-                    <div className="p-3 rounded-2xl bg-primary/5 border border-primary/20">
-                      <p className="text-[11px] font-black uppercase tracking-widest text-primary mb-1">Series × Reps × Carga</p>
-                      <p className="text-[10px] text-muted-foreground">Añade movimientos estructurados al bloque. Cada movimiento tendrá sets, reps y % de carga.</p>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Cronómetro (opcional)</label>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {[
-                          { id: null,     label: 'Sin crono' },
-                          { id: 'emom',   label: 'EMOM' },
-                          { id: 'tabata', label: 'Tabata' },
-                        ].map(t => (
-                          <button
-                            key={t.id ?? 'none'}
-                            onClick={() => setBlockWizard(p => p ? { ...p, timerType: t.id } : p)}
-                            className={cn(
-                              'h-9 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border',
-                              blockWizard.timerType === t.id
-                                ? 'bg-primary text-primary-foreground border-primary shadow-lg'
-                                : 'border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground'
-                            )}
-                          >
-                            {t.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setBlockWizard(p => p ? { ...p, step: 1 } : p)}
-                    className="h-11 px-5 rounded-2xl border border-border/60 font-black uppercase tracking-widest text-xs text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-                  >
-                    ← Atrás
-                  </button>
-                  <button
-                    onClick={() => confirmBlockWizard(true)}
-                    className="flex-1 h-11 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all"
-                  >
-                    <Plus className="w-4 h-4" /> Crear y añadir ejercicios
-                  </button>
-                </div>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del bloque (opcional)</label>
+              <input
+                placeholder={isStrength ? 'Ej: Fuerza olímpica, Day de pierna...' : 'Ej: WOD principal, Core, Skills...'}
+                value={blockWizard.blockName}
+                onChange={e => setBlockWizard(p => p ? { ...p, blockName: e.target.value } : p)}
+                onKeyDown={e => { if (e.key === 'Enter') confirmBlockWizard(true) }}
+                className="w-full h-11 px-4 rounded-2xl border border-border/70 bg-background/55 text-sm font-bold outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
+            <button
+              onClick={() => confirmBlockWizard(true)}
+              className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-[0_8px_24px_rgba(126,196,0,0.25)]"
+            >
+              <Plus className="w-4 h-4" />
+              {isStrength ? 'Crear y elegir movimiento' : 'Crear y añadir ejercicios'}
+            </button>
           </div>
         </div>
       </div>
-    )}
+      )
+    })()}
     </>
   )
 }
