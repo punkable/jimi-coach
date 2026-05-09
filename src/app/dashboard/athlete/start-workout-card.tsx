@@ -36,7 +36,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
   const anchor = resolvePlanAnchor(startDate ?? null)
   const currentPlanWeek = (() => {
     const daysDiff = Math.floor((today.getTime() - anchor.getTime()) / 86400000)
-    const weekIdx = Math.max(0, Math.min(Math.floor(daysDiff / 7), weeks.length - 1))
+    const weekIdx = Math.max(0, Math.min(Math.floor(daysDiff / 7), Math.max(0, weeks.length - 1)))
     return weeks[weekIdx] ?? weeks[0] ?? 1
   })()
 
@@ -44,18 +44,23 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
   const [selectedDayIdx, setSelectedDayIdx] = useState<number>(0)
   const [pendingDayIds, setPendingDayIds] = useState<Set<string>>(new Set())
 
-  const weekDays = planDays.filter((d: any) => (d.week_number || 1) === selectedWeek)
+  // All 7 calendar days (Mon–Sun) for the selected week, each with optional planDay overlay
+  const allWeekDays = Array.from({ length: 7 }, (_, i) => {
+    const dow = i + 1
+    const date = planDayToLocalDate(selectedWeek, dow, anchor)
+    const planDay = planDays.find((d: any) => (d.week_number || 1) === selectedWeek && d.day_of_week === dow) ?? null
+    return { dow, date, planDay }
+  })
 
-  // Auto-select today's workout day on week change
+  // Auto-select today's day on week change
   useEffect(() => {
-    const realToday = new Date(); realToday.setHours(0,0,0,0)
-    const idx = weekDays.findIndex(d => {
-      const realDate = planDayToLocalDate(selectedWeek, d.day_of_week, anchor)
-      return realDate.toDateString() === realToday.toDateString()
-    })
-    // -1 when today doesn't match any planned day in this week. Renders
-    // the "no training today" empty state below; user can still pick a day.
-    setSelectedDayIdx(idx)
+    const realToday = new Date(); realToday.setHours(0, 0, 0, 0)
+    let todayIdx = -1
+    for (let i = 0; i < 7; i++) {
+      const date = planDayToLocalDate(selectedWeek, i + 1, anchor)
+      if (date.toDateString() === realToday.toDateString()) { todayIdx = i; break }
+    }
+    setSelectedDayIdx(todayIdx >= 0 ? todayIdx : 0)
   }, [selectedWeek, planDays]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Detect pending (in-progress) sessions from localStorage
@@ -81,7 +86,9 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
     setPendingDayIds(pending)
   }, [planDays])
 
-  const selectedDay = weekDays[selectedDayIdx]
+  const selected    = allWeekDays[selectedDayIdx] ?? null
+  const selectedDay = selected?.planDay ?? null
+
   const selectedBlocks    = selectedDay?.workout_blocks ?? []
   const selectedMovements = selectedBlocks.flatMap((b: any) => b.workout_movements ?? [])
   const videoCount        = selectedMovements.filter((m: any) => m.exercises?.video_url || m.exercise?.video_url).length
@@ -103,14 +110,9 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
     ? `${videoCount} ${videoCount === 1 ? 'video técnico' : 'videos técnicos'}`
     : `${selectedMovements.length} ${selectedMovements.length === 1 ? 'ejercicio' : 'ejercicios'}`
 
-  const dayDate = (weekNum: number, dayOfWeek: number) => planDayToLocalDate(weekNum, dayOfWeek, anchor)
-  const isDayToday = (weekNum: number, dow: number) =>
-    dayDate(weekNum, dow).toDateString() === today.toDateString()
-  const isDayPast  = (weekNum: number, dow: number) => dayDate(weekNum, dow) < today
-
-  const selectedDate    = selectedDay ? dayDate(selectedWeek, selectedDay.day_of_week) : null
-  const isSelectedToday = selectedDay ? isDayToday(selectedWeek, selectedDay.day_of_week) : false
-  const isSelectedPast  = selectedDay ? isDayPast(selectedWeek, selectedDay.day_of_week) : false
+  const isSelectedToday = selected ? selected.date.toDateString() === today.toDateString() : false
+  const isSelectedPast  = selected ? selected.date < today : false
+  const selectedDate    = selected?.date ?? null
 
   const isPending      = selectedDay ? pendingDayIds.has(selectedDay.id) : false
   const isSelectedDone = selectedDay ? completedSet.has(selectedDay.id) : false
@@ -147,22 +149,22 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
         </div>
       )}
 
-      {/* Day Selector */}
+      {/* Day Selector — all 7 days always visible */}
       <div className="bg-card/40 backdrop-blur-xl rounded-[28px] p-2 border border-border/10 shadow-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent pointer-events-none" />
-        <div className="flex gap-2 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
-          {weekDays.map((day, idx) => {
+        <div className="flex gap-1 overflow-x-auto no-scrollbar px-1 relative z-10 snap-x snap-mandatory">
+          {allWeekDays.map(({ dow, date, planDay }, idx) => {
             const isSelected = selectedDayIdx === idx
-            const isToday    = isDayToday(selectedWeek, day.day_of_week)
-            const date       = dayDate(selectedWeek, day.day_of_week)
-            const hasPending = pendingDayIds.has(day.id)
+            const isToday    = date.toDateString() === today.toDateString()
+            const hasPending = planDay ? pendingDayIds.has(planDay.id) : false
+            const hasWorkout = planDay !== null
 
             return (
               <button
-                key={day.id}
+                key={dow}
                 onClick={() => setSelectedDayIdx(idx)}
                 className={cn(
-                  'shrink-0 w-[72px] py-4 rounded-[22px] flex flex-col items-center gap-1 transition-all duration-300 relative group snap-start',
+                  'shrink-0 w-[46px] sm:w-[52px] py-3 rounded-[18px] flex flex-col items-center gap-1 transition-all duration-300 relative group snap-start',
                   isSelected
                     ? 'bg-primary text-primary-foreground shadow-[0_0_30px_rgba(204,255,0,0.3)]'
                     : isToday
@@ -171,25 +173,28 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
                 )}
               >
                 {isSelected && (
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-[22px] pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent rounded-[18px] pointer-events-none" />
                 )}
                 <span className={cn(
-                  'text-[9px] font-black tracking-[0.2em] uppercase',
+                  'text-[8px] font-black tracking-[0.15em] uppercase',
                   isSelected ? 'text-primary-foreground/80' : isToday ? 'text-primary' : 'text-muted-foreground/50'
                 )}>
-                  {DAY_NAMES_SHORT[(day.day_of_week - 1) % 7]}
+                  {DAY_NAMES_SHORT[dow - 1]}
                 </span>
-                <span className="text-xl font-black leading-none tracking-tighter">{date.getDate()}</span>
+                <span className="text-base font-black leading-none tracking-tighter">{date.getDate()}</span>
+                {/* Indicator dot */}
                 {hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />}
                 {isToday && !isSelected && !hasPending && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
-                {isSelected && <div className="absolute -bottom-1 w-6 h-1 bg-white/40 rounded-full" />}
+                {hasWorkout && !isToday && !hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white/25" />}
+                {!hasWorkout && !isToday && !hasPending && !isSelected && <span className="w-1.5 h-1.5 rounded-full bg-transparent" />}
+                {isSelected && <div className="absolute -bottom-1 w-4 h-1 bg-white/40 rounded-full" />}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* Selected Day Preview */}
+      {/* Selected Day — has workout */}
       {selectedDay && (
         <Card className="glass-card overflow-hidden relative group border-none rounded-[32px]">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
@@ -207,7 +212,7 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-xl font-black uppercase tracking-tight text-white leading-none">
-                    {DAY_NAMES_FULL[(selectedDay.day_of_week - 1) % 7]}
+                    {DAY_NAMES_FULL[selectedDay.day_of_week - 1]}
                     {selectedDate && (
                       <span className="ml-2 text-sm font-bold text-white/40">{fmtDate(selectedDate)}</span>
                     )}
@@ -254,7 +259,6 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
                       window.location.href = `/dashboard/athlete/workout?dayId=${selectedDay.id}&mode=summary`
                       return
                     }
-                    // Only the "active training" path checks for stale localStorage on other days
                     if (isSelectedToday && !isSelectedDone) {
                       try {
                         for (let i = 0; i < localStorage.length; i++) {
@@ -318,15 +322,8 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
         </Card>
       )}
 
-      {!selectedDay && weekDays.length === 0 && (
-        <div className="py-12 text-center border-2 border-dashed border-border/20 rounded-[32px]">
-          <AlertCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en esta programación</p>
-        </div>
-      )}
-
-      {/* No training programmed for today, but there are other days the user can browse */}
-      {!selectedDay && weekDays.length > 0 && (
+      {/* Selected day has no workout */}
+      {selected && !selectedDay && (
         <Card className="glass-card overflow-hidden relative border-none rounded-[32px]">
           <div className="absolute inset-0 bg-gradient-to-br from-secondary/40 via-transparent to-transparent opacity-40" />
           <CardContent className="p-6 md:p-8 relative z-10 text-center space-y-4">
@@ -335,15 +332,27 @@ export function StartWorkoutCard({ plan, planDays = [], trainedToday, startDate,
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
-                {DAY_NAMES_FULL[(today.getDay() === 0 ? 7 : today.getDay()) - 1]} {today.getDate()} {today.toLocaleDateString('es-ES', { month: 'short' })}
+                {DAY_NAMES_FULL[selected.dow - 1]} {selected.date.getDate()} {selected.date.toLocaleDateString('es-ES', { month: 'short' })}
               </p>
-              <h3 className="text-xl font-black uppercase tracking-tight">Sin entrenamiento para hoy</h3>
+              <h3 className="text-xl font-black uppercase tracking-tight">
+                {isSelectedToday ? 'Sin entrenamiento hoy' : 'Sin entrenamiento'}
+              </h3>
               <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">
-                No tienes entrenamiento programado para hoy. Puedes seleccionar otro día arriba para ver su rutina.
+                {isSelectedToday
+                  ? 'No tienes entrenamiento programado para hoy. Puedes seleccionar otro día arriba para ver su rutina.'
+                  : 'No hay entrenamiento programado para este día.'}
               </p>
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* No plan configured at all */}
+      {planDays.length === 0 && (
+        <div className="py-12 text-center border-2 border-dashed border-border/20 rounded-[32px]">
+          <AlertCircle className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Sin días configurados en esta programación</p>
+        </div>
       )}
     </section>
   )
