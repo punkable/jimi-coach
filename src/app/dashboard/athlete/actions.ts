@@ -86,7 +86,12 @@ export async function updateProfile(data: {
   snatchRm: number | null,
   shirtSize: string,
   birthDate: string | null,
-  emoji?: string
+  emoji?: string,
+  goal?: string,
+  experienceLevel?: string,
+  injuries?: string,
+  availability?: string,
+  athleteNotes?: string,
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -94,7 +99,7 @@ export async function updateProfile(data: {
 
   const { error } = await supabase
     .from('profiles')
-    .update({ 
+    .update({
       full_name: data.fullName,
       phone_number: data.phone,
       bio: data.bio,
@@ -103,7 +108,12 @@ export async function updateProfile(data: {
       snatch_rm: data.snatchRm,
       shirt_size: data.shirtSize,
       birth_date: data.birthDate,
-      emoji: data.emoji
+      emoji: data.emoji,
+      goal: data.goal ?? null,
+      experience_level: data.experienceLevel ?? null,
+      injuries: data.injuries ?? null,
+      availability: data.availability ?? null,
+      athlete_notes: data.athleteNotes ?? null,
     })
     .eq('id', user.id)
 
@@ -116,3 +126,50 @@ export async function updateProfile(data: {
   revalidatePath('/dashboard/athlete/ranking')
   return { success: true }
 }
+
+
+// ─── Personal records ──────────────────────────────────────────────
+export async function createPersonalRecord(data: {
+  exerciseId: string
+  weight: number
+  reps?: number | null
+  notes?: string | null
+  achievedAt?: string | null
+  workoutResultId?: string | null
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+  if (!data.exerciseId || !data.weight || data.weight <= 0) {
+    return { error: "Faltan datos del PR" }
+  }
+
+  const { error } = await supabase.from("personal_records").insert({
+    athlete_id: user.id,
+    exercise_id: data.exerciseId,
+    max_weight: data.weight,
+    reps: data.reps ?? null,
+    notes: data.notes ?? null,
+    achieved_at: data.achievedAt || new Date().toISOString(),
+    workout_result_id: data.workoutResultId ?? null,
+  })
+
+  if (error) {
+    console.error("createPersonalRecord:", error)
+    return { error: error.message }
+  }
+
+  revalidatePath("/dashboard/athlete/progress")
+  return { success: true }
+}
+
+export async function deletePersonalRecord(recordId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: "Not authenticated" }
+  const { error } = await supabase.from("personal_records").delete().eq("id", recordId).eq("athlete_id", user.id)
+  if (error) return { error: error.message }
+  revalidatePath("/dashboard/athlete/progress")
+  return { success: true }
+}
+
