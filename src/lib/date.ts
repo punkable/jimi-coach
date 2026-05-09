@@ -43,22 +43,30 @@ export function isoWeekday(d: Date = new Date()): number {
 }
 
 /**
- * Resolve the anchor (Monday of week 1) for a plan.
+ * Resolve the anchor (Monday of plan week 1) for a plan.
  *
- * Plans store days as `day_of_week` (1=Mon..7=Sun). Calendar dates are computed
- * as `anchor + (week-1)*7 + (dow-1)`. For the math to align with the real
- * calendar, the anchor MUST be a Monday — otherwise day_of_week=3 (Wed) ends up
- * on whatever day is 2 after start_date.
+ * Plans store days as `day_of_week` (1=Mon..7=Sun) within numbered weeks.
+ * Calendar dates are computed as `anchor + (week-1)*7 + (dow-1)`. The anchor
+ * MUST be a Monday for day_of_week=N to align with that real weekday.
  *
- * Coaches frequently set start_date to a non-Monday (e.g. the first session day
- * itself). We normalize here by snapping to the Monday of start_date's week, so
- * that day_of_week=N always corresponds to that day of the calendar week.
+ * Snap policy: the anchor is the **first Monday on or after start_date**.
+ *
+ * Why "on or after" rather than "of the same week":
+ *   When a coach assigns a plan with start_date = Sat May 9 and programs
+ *   day_of_week=1 (Monday), they almost always mean "the upcoming Monday"
+ *   (May 11), not the Monday five days BEFORE the start (May 4). Snapping
+ *   backward placed all programmed days before the start_date, which is
+ *   incoherent. Snapping forward keeps the entire plan on or after start_date.
+ *
+ * If start_date is already a Monday, the anchor is start_date itself (no shift).
  */
 export function resolvePlanAnchor(startDate: string | Date | null | undefined): Date {
   const parsed = parseLocalDate(startDate)
   const base = parsed ?? localToday()
   const iso = isoWeekday(base)
-  base.setDate(base.getDate() - (iso - 1))
+  if (iso !== 1) {
+    base.setDate(base.getDate() + (8 - iso))
+  }
   return base
 }
 
