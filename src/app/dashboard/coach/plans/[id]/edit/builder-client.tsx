@@ -138,8 +138,23 @@ export function BuilderClient({
   const [localExercises, setLocalExercises] = useState<Exercise[]>([])
   const [creatingExercise, setCreatingExercise] = useState(false)
   const [pickerSelectedIds, setPickerSelectedIds] = useState<Set<string>>(new Set())
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [createFormData, setCreateFormData] = useState({ tracking_type: 'weight_reps', video_url: '', description: '' })
+
+  // Create-exercise modal — opened from strength picker OR non-strength tag panel
+  const [createExModal, setCreateExModal] = useState<{
+    dIdx: number
+    bIdx: number
+    blockId: string
+    blockType: string
+    fromTagPanel: boolean
+  } | null>(null)
+  const [createExForm, setCreateExForm] = useState({
+    name: '',
+    category: 'General',
+    tracking_type: 'weight_reps',
+    video_url: '',
+    notes: '',
+  })
+  const [createExDuplicate, setCreateExDuplicate] = useState<Exercise | null>(null)
 
   // Block wizard state — null = closed. Single-step: pick type + optional name → create.
   // Timer/format is configured inline on the block after creation (existing Popover).
@@ -523,8 +538,6 @@ export function BuilderClient({
     setBlockPickerSearch('')
     setCreatingExercise(false)
     setPickerSelectedIds(new Set())
-    setShowCreateForm(false)
-    setCreateFormData({ tracking_type: 'weight_reps', video_url: '', description: '' })
   }
 
   const closeBlockPicker = () => {
@@ -532,7 +545,6 @@ export function BuilderClient({
     setBlockPickerSearch('')
     setCreatingExercise(false)
     setPickerSelectedIds(new Set())
-    setShowCreateForm(false)
   }
 
   const togglePickerSelection = (id: string) => {
@@ -554,27 +566,9 @@ export function BuilderClient({
     closeBlockPicker()
   }
 
-  const handleQuickCreateExercise = async (dIdx: number, bIdx: number, blockType?: string) => {
-    const name = blockPickerSearch.trim()
-    if (!name) return
-    setCreatingExercise(true)
-    const defaultSets = blockType === 'strength' ? 1 : 3
-    try {
-      const result = await createExerciseQuick(name, 'General', {
-        tracking_type: createFormData.tracking_type,
-        video_url: createFormData.video_url || undefined,
-        description: createFormData.description || undefined,
-      })
-      if (result.exercise) {
-        setLocalExercises(prev => [...prev, result.exercise!])
-        addMovement(dIdx, bIdx, result.exercise!, undefined, defaultSets)
-        closeBlockPicker()
-      } else {
-        alert(result.error || 'Error al crear ejercicio')
-      }
-    } finally {
-      setCreatingExercise(false)
-    }
+  // Kept for reference but functionality moved to openCreateExModal + submitCreateExercise
+  const handleQuickCreateExercise = (dIdx: number, bIdx: number, block: Block) => {
+    openCreateExModal(dIdx, bIdx, block, blockPickerSearch.trim(), false)
   }
 
   const removeBlock = (dayId: string, bIdx: number) => {
@@ -620,6 +614,72 @@ export function BuilderClient({
     ex.name.toLowerCase().includes(tagSearch.toLowerCase()) ||
     (ex.category || '').toLowerCase().includes(tagSearch.toLowerCase())
   )
+
+  const suggestTrackingType = (name: string): string => {
+    const n = name.toLowerCase()
+    if (/squat|deadlift|press|pull|row|snatch|clean|jerk|bench|curl|extension|lunge|hip thrust|rdl/.test(n)) return 'weight_reps'
+    if (/run|remo|ski|bike|swim|meter|km|sprint|carrera|nadar/.test(n)) return 'distance_time'
+    if (/plank|hold|isometric|hollow|hang|plancha|aguantar/.test(n)) return 'time_only'
+    if (/calorie|cal|assault|echo/.test(n)) return 'calories'
+    if (/round|amrap|emom|rondas/.test(n)) return 'rounds'
+    return 'weight_reps'
+  }
+
+  const findDuplicate = (name: string, videoUrl: string): Exercise | null => {
+    const nameLower = name.toLowerCase().trim()
+    const url = videoUrl.trim()
+    return allExercises.find(ex => {
+      if (url && ex.video_url && ex.video_url.trim() === url) return true
+      if (ex.name.toLowerCase().trim() === nameLower) return true
+      return false
+    }) ?? null
+  }
+
+  const openCreateExModal = (dIdx: number, bIdx: number, block: Block, initialName: string, fromTagPanel: boolean) => {
+    const suggested = suggestTrackingType(initialName)
+    setCreateExForm({ name: initialName, category: 'General', tracking_type: suggested, video_url: '', notes: '' })
+    setCreateExDuplicate(null)
+    setCreateExModal({ dIdx, bIdx, blockId: block.id, blockType: block.type, fromTagPanel })
+  }
+
+  const submitCreateExercise = async () => {
+    if (!createExModal) return
+    const { name, category, tracking_type, video_url, notes } = createExForm
+    if (!name.trim()) return
+    const dup = findDuplicate(name, video_url)
+    if (dup && !createExDuplicate) {
+      setCreateExDuplicate(dup)
+      return
+    }
+    setCreatingExercise(true)
+    try {
+      const result = await createExerciseQuick(name.trim(), category, {
+        tracking_type,
+        video_url: video_url.trim() || undefined,
+        description: notes.trim() || undefined,
+      })
+      if (result.exercise) {
+        setLocalExercises(prev => [...prev, result.exercise!])
+        if (createExModal.fromTagPanel) {
+          const tagName = `[${result.exercise.name}]`
+          const current = routineDraftsRef.current[createExModal.blockId] ?? ''
+          updateRoutineDraft(createExModal.blockId, current + (current ? '\n' : '') + tagName)
+          setEditingBlocks(prev => ({ ...prev, [createExModal.blockId]: true }))
+          setOpenPopoverId(null)
+        } else {
+          const defaultSets = createExModal.blockType === 'strength' ? 1 : 3
+          addMovement(createExModal.dIdx, createExModal.bIdx, result.exercise, undefined, defaultSets)
+          closeBlockPicker()
+        }
+        setCreateExModal(null)
+        setCreateExDuplicate(null)
+      } else {
+        alert(result.error || 'Error al crear ejercicio')
+      }
+    } finally {
+      setCreatingExercise(false)
+    }
+  }
 
   const confirmBlockDescription = async (blockId: string, description: string) => {
     setEditingBlocks(prev => ({ ...prev, [blockId]: false }))
@@ -1134,8 +1194,15 @@ export function BuilderClient({
                                     <div className="max-h-60 overflow-y-auto overscroll-contain [scrollbar-width:thin] -mx-1 px-1">
                                       <div className="space-y-0.5">
                                         {filteredTags.length === 0 ? (
-                                          <div className="py-6 text-center">
-                                            <p className="text-[10px] text-muted-foreground italic">Sin resultados</p>
+                                          <div className="py-4 text-center space-y-2">
+                                            <p className="text-[10px] text-muted-foreground italic">Sin resultados en la biblioteca</p>
+                                            <button
+                                              type="button"
+                                              onClick={() => openCreateExModal(globalDIdx, bIdx, block, tagSearch.trim(), true)}
+                                              className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 mx-auto"
+                                            >
+                                              <Plus className="w-3 h-3" /> Crear &quot;{tagSearch || 'nuevo ejercicio'}&quot;
+                                            </button>
                                           </div>
                                         ) : filteredTags.map(ex => (
                                           <button
@@ -1565,7 +1632,7 @@ export function BuilderClient({
                                         autoFocus
                                         placeholder="Buscar ejercicio..."
                                         value={blockPickerSearch}
-                                        onChange={e => { setBlockPickerSearch(e.target.value); setShowCreateForm(false) }}
+                                        onChange={e => { setBlockPickerSearch(e.target.value) }}
                                         onKeyDown={e => { if (e.key === 'Escape') closeBlockPicker() }}
                                         className="h-8 pl-8 text-xs rounded-xl bg-background/70 border-border/60"
                                       />
@@ -1576,7 +1643,7 @@ export function BuilderClient({
                                   </div>
 
                                   {/* Exercise list with multi-select */}
-                                  {!showCreateForm && (
+                                  {(
                                     <div className="max-h-52 overflow-y-auto overscroll-contain space-y-0.5 [scrollbar-width:thin]">
                                       {allExercises
                                         .filter(ex => !blockPickerSearch || ex.name.toLowerCase().includes(blockPickerSearch.toLowerCase()) || (ex.category || '').toLowerCase().includes(blockPickerSearch.toLowerCase()))
@@ -1606,7 +1673,7 @@ export function BuilderClient({
                                         <div className="py-3 text-center space-y-2">
                                           <p className="text-xs text-muted-foreground">No encontrado en la biblioteca</p>
                                           <button
-                                            onClick={() => setShowCreateForm(true)}
+                                            onClick={() => handleQuickCreateExercise(globalDIdx, bIdx, block)}
                                             className="text-[10px] font-black uppercase tracking-widest text-primary hover:underline flex items-center gap-1.5 mx-auto"
                                           >
                                             <Plus className="w-3 h-3" /> Crear &quot;{blockPickerSearch}&quot;
@@ -1616,64 +1683,8 @@ export function BuilderClient({
                                     </div>
                                   )}
 
-                                  {/* Inline create form */}
-                                  {showCreateForm && (
-                                    <div className="space-y-2.5 py-1">
-                                      <p className="text-[10px] font-black uppercase tracking-widest text-primary">Nuevo ejercicio</p>
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Tipo de registro</label>
-                                          <select
-                                            value={createFormData.tracking_type}
-                                            onChange={e => setCreateFormData(p => ({ ...p, tracking_type: e.target.value }))}
-                                            className="w-full h-8 px-2 rounded-xl bg-background/70 border border-border/60 text-xs font-bold"
-                                          >
-                                            <option value="weight_reps">Peso + Reps</option>
-                                            <option value="reps_only">Solo Reps</option>
-                                            <option value="distance_time">Distancia / Tiempo</option>
-                                            <option value="time_only">Solo Tiempo</option>
-                                            <option value="calories">Calorías</option>
-                                            <option value="rounds">Rondas</option>
-                                            <option value="custom">Personalizado</option>
-                                          </select>
-                                        </div>
-                                        <div>
-                                          <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground block mb-1">Video URL</label>
-                                          <Input
-                                            placeholder="youtube.com/..."
-                                            value={createFormData.video_url}
-                                            onChange={e => setCreateFormData(p => ({ ...p, video_url: e.target.value }))}
-                                            className="h-8 text-xs rounded-xl bg-background/70 border-border/60"
-                                          />
-                                        </div>
-                                      </div>
-                                      <Input
-                                        placeholder="Descripción / instrucciones (opcional)"
-                                        value={createFormData.description}
-                                        onChange={e => setCreateFormData(p => ({ ...p, description: e.target.value }))}
-                                        className="h-8 text-xs rounded-xl bg-background/70 border-border/60"
-                                      />
-                                      <div className="flex gap-2">
-                                        <button
-                                          onClick={() => setShowCreateForm(false)}
-                                          className="flex-1 h-8 rounded-xl border border-border/60 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
-                                        >
-                                          Cancelar
-                                        </button>
-                                        <button
-                                          onClick={() => handleQuickCreateExercise(globalDIdx, bIdx, block.type)}
-                                          disabled={creatingExercise || !blockPickerSearch.trim()}
-                                          className="flex-1 h-8 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 disabled:opacity-50 hover:bg-primary/90 transition-colors"
-                                        >
-                                          {creatingExercise ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                                          Crear
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-
                                   {/* Multi-select footer */}
-                                  {pickerSelectedIds.size > 0 && !showCreateForm && (
+                                  {pickerSelectedIds.size > 0 && (
                                     <button
                                       onClick={() => addSelectedExercises(globalDIdx, bIdx, block.type)}
                                       className="w-full h-8 rounded-xl bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors mt-1"
@@ -1782,6 +1793,183 @@ export function BuilderClient({
       </div>
 
     </DndContext>
+
+    {/* ── Create Exercise Modal ── */}
+    {createExModal && (
+      <div
+        className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center sm:p-4 bg-black/70 backdrop-blur-sm"
+        onClick={() => setCreateExModal(null)}
+      >
+        <div
+          className="w-full sm:max-w-md bg-card border border-border/60 rounded-t-[28px] sm:rounded-[28px] shadow-2xl flex flex-col overflow-hidden"
+          style={{ maxHeight: 'min(88dvh, calc(100dvh - 2rem))' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="h-1 bg-gradient-to-r from-primary via-[var(--gymnastics)] to-[var(--metcon)] shrink-0" />
+
+          <div className="px-6 pt-5 pb-2 flex items-start justify-between gap-3 shrink-0">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Nueva entrada en la biblioteca</p>
+              <h3 className="text-xl font-black uppercase tracking-tight">Crear ejercicio</h3>
+            </div>
+            <button
+              onClick={() => setCreateExModal(null)}
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary transition-all shrink-0 mt-0.5"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div
+            className="overflow-y-auto overscroll-contain flex-1 px-6 pt-3 space-y-4"
+            style={{ paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom) + 1.5rem))' }}
+          >
+            {/* Duplicate warning */}
+            {createExDuplicate && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">Posible duplicado</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Ya existe <span className="font-bold text-foreground">{createExDuplicate.name}</span> en la biblioteca
+                  {createExDuplicate.category ? ` (${createExDuplicate.category})` : ''}.
+                  ¿Quieres usar el existente o crear uno nuevo igualmente?
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      // Use existing: add to block
+                      if (createExModal.fromTagPanel) {
+                        const tagName = `[${createExDuplicate.name}]`
+                        const current = routineDraftsRef.current[createExModal.blockId] ?? ''
+                        updateRoutineDraft(createExModal.blockId, current + (current ? '\n' : '') + tagName)
+                        setEditingBlocks(prev => ({ ...prev, [createExModal.blockId]: true }))
+                        setOpenPopoverId(null)
+                      } else {
+                        const defaultSets = createExModal.blockType === 'strength' ? 1 : 3
+                        addMovement(createExModal.dIdx, createExModal.bIdx, createExDuplicate, undefined, defaultSets)
+                        closeBlockPicker()
+                      }
+                      setCreateExModal(null)
+                      setCreateExDuplicate(null)
+                    }}
+                    className="flex-1 h-9 rounded-xl border border-amber-500/40 text-[10px] font-black uppercase tracking-widest text-amber-600 hover:bg-amber-500/10 transition-colors"
+                  >
+                    Usar existente
+                  </button>
+                  <button
+                    onClick={() => { setCreateExDuplicate(null); submitCreateExercise() }}
+                    className="flex-1 h-9 rounded-xl bg-secondary text-[10px] font-black uppercase tracking-widest hover:bg-secondary/70 transition-colors"
+                  >
+                    Crear nuevo
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Name */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre del ejercicio *</label>
+              <input
+                autoFocus
+                placeholder="Ej: Back Squat, Rope Climbs, AMRAP 20..."
+                value={createExForm.name}
+                onChange={e => {
+                  const n = e.target.value
+                  setCreateExForm(p => ({
+                    ...p,
+                    name: n,
+                    tracking_type: n ? suggestTrackingType(n) : p.tracking_type,
+                  }))
+                  setCreateExDuplicate(null)
+                }}
+                onKeyDown={e => { if (e.key === 'Enter') submitCreateExercise() }}
+                className="w-full h-11 px-4 rounded-2xl border border-border/70 bg-background/55 text-sm font-bold outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/20 transition-all"
+              />
+            </div>
+
+            {/* Category + tracking type */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Categoría</label>
+                <select
+                  value={createExForm.category}
+                  onChange={e => setCreateExForm(p => ({ ...p, category: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl border border-border/70 bg-background/55 text-xs font-bold outline-none focus:border-primary/60 transition-all"
+                >
+                  <option value="General">General</option>
+                  <option value="Fuerza">Fuerza</option>
+                  <option value="Cardio">Cardio</option>
+                  <option value="Gimnasia">Gimnasia</option>
+                  <option value="Core">Core</option>
+                  <option value="Movilidad">Movilidad</option>
+                  <option value="Técnica">Técnica</option>
+                  <option value="Olímpico">Olímpico</option>
+                  <option value="Otro">Otro</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Tipo de registro</label>
+                <select
+                  value={createExForm.tracking_type}
+                  onChange={e => setCreateExForm(p => ({ ...p, tracking_type: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl border border-border/70 bg-background/55 text-xs font-bold outline-none focus:border-primary/60 transition-all"
+                >
+                  <option value="weight_reps">Peso + Reps</option>
+                  <option value="reps_only">Solo Reps</option>
+                  <option value="distance_time">Distancia/Tiempo</option>
+                  <option value="time_only">Solo Tiempo</option>
+                  <option value="calories">Calorías</option>
+                  <option value="rounds">Rondas</option>
+                  <option value="custom">Personalizado</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Video URL */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Video URL (opcional)</label>
+              <div className="relative">
+                <Video className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="youtube.com/watch?v=..."
+                  value={createExForm.video_url}
+                  onChange={e => { setCreateExForm(p => ({ ...p, video_url: e.target.value })); setCreateExDuplicate(null) }}
+                  className="h-10 pl-9 text-xs rounded-xl bg-background/55 border-border/70"
+                />
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Instrucciones / notas (opcional)</label>
+              <Textarea
+                placeholder="Puntos clave de técnica, instrucciones de ejecución..."
+                value={createExForm.notes}
+                onChange={e => setCreateExForm(p => ({ ...p, notes: e.target.value }))}
+                className="min-h-[72px] text-xs rounded-xl bg-background/55 border-border/70 resize-none"
+              />
+            </div>
+
+            {/* Context hint */}
+            <div className="rounded-xl bg-secondary/50 p-3">
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                {createExModal.fromTagPanel
+                  ? 'El ejercicio se guardará en la biblioteca y se insertará como etiqueta con video en la rutina.'
+                  : 'El ejercicio se guardará en la biblioteca y se añadirá directamente a este bloque.'}
+              </p>
+            </div>
+
+            <button
+              onClick={submitCreateExercise}
+              disabled={creatingExercise || !createExForm.name.trim()}
+              className="w-full h-12 rounded-2xl bg-primary text-primary-foreground font-black uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-[0_8px_24px_rgba(126,196,0,0.25)] disabled:opacity-50 disabled:shadow-none"
+            >
+              {creatingExercise ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              Guardar y añadir
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ── Block Wizard Modal — single step, type-first ── */}
     {blockWizard && (() => {
