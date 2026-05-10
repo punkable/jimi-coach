@@ -252,6 +252,103 @@ export function BuilderClient({
     setHasUnsavedChanges(true)
   }
 
+  // Per-block textarea registry + last-known cursor selection. Used to insert
+  // exercise tags exactly where the cursor was, instead of appending to the end.
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
+  const lastSelectionRef = useRef<Record<string, { start: number; end: number }>>({})
+  const rememberSelection = (blockId: string, el: HTMLTextAreaElement | null) => {
+    if (!el) return
+    lastSelectionRef.current[blockId] = { start: el.selectionStart, end: el.selectionEnd }
+  }
+
+  /**
+   * Insert text at the textarea's last-known cursor position for a given block.
+   * - If a range was selected, replaces the selection.
+   * - Falls back to appending only if no textarea is registered yet.
+   * - Restores focus + places the cursor right after the inserted text.
+   */
+  const insertTagAtCursor = (blockId: string, tagText: string) => {
+    const el = textareaRefs.current[blockId]
+    const draft = routineDraftsRef.current[blockId] ?? ''
+    if (!el) {
+      // No active textarea: append on a new line as a safe fallback.
+      const next = draft + (draft && !draft.endsWith('\n') ? '\n' : '') + tagText
+      updateRoutineDraft(blockId, next)
+      return
+    }
+    const sel = lastSelectionRef.current[blockId] ?? { start: el.selectionStart, end: el.selectionEnd }
+    const start = Math.min(sel.start, draft.length)
+    const end = Math.min(sel.end, draft.length)
+    const before = draft.slice(0, start)
+    const after = draft.slice(end)
+    const next = before + tagText + after
+    updateRoutineDraft(blockId, next)
+    const newPos = start + tagText.length
+    lastSelectionRef.current[blockId] = { start: newPos, end: newPos }
+    // Defer to next tick so React re-renders the new value before we move the cursor.
+    requestAnimationFrame(() => {
+      const t = textareaRefs.current[blockId]
+      if (!t) return
+      t.focus()
+      try { t.setSelectionRange(newPos, newPos) } catch {}
+    })
+  }
+
+  // ── @-mention autocomplete ───────────────────────────────────────
+  // Tracks an active "@query" being typed inside a routine textarea.
+  // null = no active mention.
+  const [mention, setMention] = useState<{ blockId: string; query: string; start: number } | null>(null)
+  const mentionRef = useRef(mention)
+  useEffect(() => { mentionRef.current = mention }, [mention])
+
+  // Detect if the cursor is inside a "@token" sequence and, if so, update mention state.
+  const detectMention = (blockId: string, value: string, caret: number) => {
+    // Walk back from caret to find @ (no spaces/newlines/[/])
+    let i = caret - 1
+    let stop = false
+    while (i >= 0 && !stop) {
+      const ch = value[i]
+      if (ch === '@') break
+      if (/[\s\[\]\n]/.test(ch)) { stop = true; break }
+      i--
+    }
+    if (stop || i < 0 || value[i] !== '@') {
+      if (mentionRef.current?.blockId === blockId) setMention(null)
+      return
+    }
+    // Ensure @ is at start-of-text or preceded by whitespace/punctuation
+    const prev = i > 0 ? value[i - 1] : ''
+    if (prev && !/[\s\[\]\(\)\.,;:]/.test(prev)) {
+      if (mentionRef.current?.blockId === blockId) setMention(null)
+      return
+    }
+    const query = value.slice(i + 1, caret)
+    setMention({ blockId, query, start: i })
+  }
+
+  const closeMention = () => setMention(null)
+
+  // Replace the "@query" with [Name] and put cursor after it.
+  const acceptMention = (exName: string) => {
+    const m = mentionRef.current
+    if (!m) return
+    const draft = routineDraftsRef.current[m.blockId] ?? ''
+    const tag = `[${exName}]`
+    const before = draft.slice(0, m.start)
+    const after = draft.slice(m.start + 1 + m.query.length)
+    const next = before + tag + after
+    updateRoutineDraft(m.blockId, next)
+    const newPos = before.length + tag.length
+    lastSelectionRef.current[m.blockId] = { start: newPos, end: newPos }
+    setMention(null)
+    requestAnimationFrame(() => {
+      const t = textareaRefs.current[m.blockId]
+      if (!t) return
+      t.focus()
+      try { t.setSelectionRange(newPos, newPos) } catch {}
+    })
+  }
+
   const updateRoutineFooter = (blockId: string, value: string) => {
     const nextFooters = { ...routineFootersRef.current, [blockId]: value }
     routineFootersRef.current = nextFooters
@@ -661,11 +758,19 @@ export function BuilderClient({
       if (result.exercise) {
         setLocalExercises(prev => [...prev, result.exercise!])
         if (createExModal.fromTagPanel) {
-          const tagName = `[${result.exercise.name}]`
-          const current = routineDraftsRef.current[createExModal.blockId] ?? ''
-          updateRoutineDraft(createExModal.blockId, current + (current ? '\n' : '') + tagName)
-          setEditingBlocks(prev => ({ ...prev, [createExModal.blockId]: true }))
+          const blockId = createExModal.blockId
+          if (routineDraftsRef.current[blockId] === undefined) {
+            updateRoutineDraft(blockId, '')
+          }
+          setEditingBlocks(prev => ({ ...prev, [blockId]: true }))
           setOpenPopoverId(null)
+          // If an active @-mention triggered creation, replace the @query; otherwise insert at cursor.
+          const m = mentionRef.current
+          if (m && m.blockId === blockId) {
+            acceptMention(result.exercise.name)
+          } else {
+            requestAnimationFrame(() => insertTagAtCursor(blockId, `[${result.exercise!.name}]`))
+          }
         } else {
           const defaultSets = createExModal.blockType === 'strength' ? 1 : 3
           addMovement(createExModal.dIdx, createExModal.bIdx, result.exercise, undefined, defaultSets)
@@ -1210,11 +1315,16 @@ export function BuilderClient({
                                             type="button"
                                             className="w-full text-left px-3 py-2.5 text-[11px] font-bold hover:bg-[var(--gymnastics)]/10 rounded-xl transition-all flex items-center justify-between gap-3 group"
                                             onClick={() => {
-                                              const tagName = `[${ex.name}]`
-                                              const currentDesc = routineDraftsRef.current[block.id] ?? block.description ?? ''
-                                              updateRoutineDraft(block.id, currentDesc + (currentDesc ? '\n' : '') + tagName)
-                                              setOpenPopoverId(null)
+                                              // Make sure the textarea is mounted and we have a draft initialized
+                                              // before inserting at the cursor (or fallback append on a new line).
+                                              const draft = routineDraftsRef.current[block.id] ?? block.description ?? ''
+                                              if (routineDraftsRef.current[block.id] === undefined) {
+                                                updateRoutineDraft(block.id, draft)
+                                              }
                                               setEditingBlocks(prev => ({ ...prev, [block.id]: true }))
+                                              setOpenPopoverId(null)
+                                              // Defer to allow textarea to mount + register its ref
+                                              requestAnimationFrame(() => insertTagAtCursor(block.id, `[${ex.name}]`))
                                             }}
                                           >
                                             <div className="min-w-0 flex-1">
@@ -1275,15 +1385,112 @@ export function BuilderClient({
                                   }
 
                                   // Editing mode (with or without content)
+                                  // Filter exercises for the @-mention dropdown when active for this block.
+                                  const activeMention = mention && mention.blockId === block.id ? mention : null
+                                  const mentionMatches = activeMention
+                                    ? allExercises
+                                        .filter(ex =>
+                                          !activeMention.query ||
+                                          ex.name.toLowerCase().includes(activeMention.query.toLowerCase()) ||
+                                          (ex.category || '').toLowerCase().includes(activeMention.query.toLowerCase())
+                                        )
+                                        .slice(0, 8)
+                                    : []
                                   return (
                                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                                      <Textarea
-                                        autoFocus
-                                        placeholder={"Ejemplo:\nAMRAP 12'\n10 [Pull Up]\n20 [Wall Ball]\n30 DU\n\nNotas: mantener ritmo sostenible."}
-                                        className="min-h-[160px] bg-background/55 border border-border/70 focus:border-primary/40 text-[15px] font-semibold leading-relaxed resize-y rounded-2xl p-4 transition-all"
-                                        value={draft}
-                                        onChange={(e) => updateRoutineDraft(block.id, e.target.value)}
-                                      />
+                                      <div className="relative">
+                                        <Textarea
+                                          autoFocus
+                                          ref={(el) => { textareaRefs.current[block.id] = el }}
+                                          placeholder={"Ejemplo:\nAMRAP 12'\n10 [Pull Up]\n20 [Wall Ball]\n30 DU\n\nEscribe @ para insertar un ejercicio donde está el cursor."}
+                                          className="min-h-[160px] bg-background/55 border border-border/70 focus:border-primary/40 text-[15px] font-semibold leading-relaxed resize-y rounded-2xl p-4 transition-all"
+                                          value={draft}
+                                          onChange={(e) => {
+                                            updateRoutineDraft(block.id, e.target.value)
+                                            const caret = e.target.selectionStart
+                                            rememberSelection(block.id, e.target)
+                                            detectMention(block.id, e.target.value, caret)
+                                          }}
+                                          onSelect={(e) => rememberSelection(block.id, e.currentTarget)}
+                                          onClick={(e) => {
+                                            rememberSelection(block.id, e.currentTarget)
+                                            detectMention(block.id, e.currentTarget.value, e.currentTarget.selectionStart)
+                                          }}
+                                          onKeyUp={(e) => {
+                                            rememberSelection(block.id, e.currentTarget)
+                                            // Re-evaluate mention on arrow keys / typing-edit
+                                            if (e.key.startsWith('Arrow') || e.key === 'Backspace' || e.key === 'Home' || e.key === 'End') {
+                                              detectMention(block.id, e.currentTarget.value, e.currentTarget.selectionStart)
+                                            }
+                                          }}
+                                          onKeyDown={(e) => {
+                                            if (!activeMention) return
+                                            if (e.key === 'Escape') { e.preventDefault(); closeMention() }
+                                            else if (e.key === 'Enter' && mentionMatches.length > 0) {
+                                              e.preventDefault()
+                                              acceptMention(mentionMatches[0].name)
+                                            }
+                                          }}
+                                          onBlur={(e) => {
+                                            rememberSelection(block.id, e.currentTarget)
+                                            // Delay so a click on a mention item still fires
+                                            setTimeout(() => {
+                                              if (mentionRef.current?.blockId === block.id) closeMention()
+                                            }, 150)
+                                          }}
+                                        />
+                                        {activeMention && (
+                                          <div className="absolute left-2 right-2 top-full mt-1 z-30 rounded-2xl border border-[var(--gymnastics)]/30 bg-card shadow-2xl overflow-hidden">
+                                            <div className="px-3 py-2 border-b border-border/40 flex items-center justify-between gap-2">
+                                              <span className="text-[9px] font-black uppercase tracking-widest text-[var(--gymnastics)]">
+                                                {activeMention.query ? `Buscar: @${activeMention.query}` : 'Insertar ejercicio'}
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onMouseDown={(e) => { e.preventDefault(); closeMention() }}
+                                                className="text-[9px] text-muted-foreground hover:text-foreground"
+                                              >
+                                                ESC
+                                              </button>
+                                            </div>
+                                            <div className="max-h-56 overflow-y-auto overscroll-contain">
+                                              {mentionMatches.length === 0 ? (
+                                                <div className="p-3 space-y-2">
+                                                  <p className="text-[10px] text-muted-foreground italic text-center">Sin resultados en la biblioteca</p>
+                                                  <button
+                                                    type="button"
+                                                    onMouseDown={(e) => {
+                                                      e.preventDefault()
+                                                      openCreateExModal(globalDIdx, bIdx, block, activeMention.query.trim(), true)
+                                                    }}
+                                                    className="w-full h-8 rounded-xl bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/20 transition-colors flex items-center justify-center gap-1.5"
+                                                  >
+                                                    <Plus className="w-3 h-3" /> Crear &quot;{activeMention.query || 'nuevo'}&quot;
+                                                  </button>
+                                                </div>
+                                              ) : (
+                                                mentionMatches.map((ex, idx) => (
+                                                  <button
+                                                    key={ex.id}
+                                                    type="button"
+                                                    onMouseDown={(e) => { e.preventDefault(); acceptMention(ex.name) }}
+                                                    className={cn(
+                                                      'w-full text-left px-3 py-2 hover:bg-[var(--gymnastics)]/10 transition-colors flex items-center justify-between gap-2',
+                                                      idx === 0 && 'bg-[var(--gymnastics)]/5'
+                                                    )}
+                                                  >
+                                                    <div className="min-w-0 flex-1">
+                                                      <span className="block text-[11px] font-bold text-foreground truncate">{ex.name}</span>
+                                                      <span className="block text-[8px] text-muted-foreground/60 font-black uppercase tracking-widest">{ex.category || 'General'}{idx === 0 ? ' · ⏎' : ''}</span>
+                                                    </div>
+                                                    <Plus className="w-3 h-3 text-[var(--gymnastics)] shrink-0" />
+                                                  </button>
+                                                ))
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
                                       <div className="flex items-center justify-between gap-3 px-1">
                                         <button
                                           type="button"
@@ -1309,7 +1516,7 @@ export function BuilderClient({
                                 })()}
 
                                 <p className="text-[8px] text-muted-foreground font-medium italic px-1">
-                                  Texto libre para rutinas, formatos y notas. Usa [NombreEjercicio] para vincular video técnico. Los movimientos de abajo son opcionales (series, reps, cargas).
+                                  Escribe @ para insertar un ejercicio donde está el cursor. También puedes usar [NombreEjercicio] manualmente. Los movimientos de abajo son opcionales (series, reps, cargas).
                                 </p>
                               </div>
                               )}
@@ -1838,11 +2045,18 @@ export function BuilderClient({
                     onClick={() => {
                       // Use existing: add to block
                       if (createExModal.fromTagPanel) {
-                        const tagName = `[${createExDuplicate.name}]`
-                        const current = routineDraftsRef.current[createExModal.blockId] ?? ''
-                        updateRoutineDraft(createExModal.blockId, current + (current ? '\n' : '') + tagName)
-                        setEditingBlocks(prev => ({ ...prev, [createExModal.blockId]: true }))
+                        const blockId = createExModal.blockId
+                        if (routineDraftsRef.current[blockId] === undefined) {
+                          updateRoutineDraft(blockId, '')
+                        }
+                        setEditingBlocks(prev => ({ ...prev, [blockId]: true }))
                         setOpenPopoverId(null)
+                        const m = mentionRef.current
+                        if (m && m.blockId === blockId) {
+                          acceptMention(createExDuplicate.name)
+                        } else {
+                          requestAnimationFrame(() => insertTagAtCursor(blockId, `[${createExDuplicate.name}]`))
+                        }
                       } else {
                         const defaultSets = createExModal.blockType === 'strength' ? 1 : 3
                         addMovement(createExModal.dIdx, createExModal.bIdx, createExDuplicate, undefined, defaultSets)
