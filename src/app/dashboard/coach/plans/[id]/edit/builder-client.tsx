@@ -8,7 +8,7 @@ import {
   Search, Layout, Edit3,
   Video,
   Eye, EyeOff, CheckCircle2, Timer as TimerIcon,
-  Copy, Zap
+  Copy, Zap, ChevronLeft
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { savePlanStructure, toggleWeekStatus, updateBlockDescription, createExerciseQuick } from '../../actions'
@@ -105,6 +105,10 @@ export function BuilderClient({
   })
   
   const [activeWeek, setActiveWeek] = useState<string>('1')
+  // 'board' = 7-column weekly overview (default on desktop); 'list' = original linear view
+  const [builderView, setBuilderView] = useState<'board' | 'list'>('board')
+  // In board mode, set to a day.id to open that day's full edit panel
+  const [selectedDayId, setSelectedDayId] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -179,6 +183,21 @@ export function BuilderClient({
   ]
 
   const isStrengthType = (typeId: string | undefined | null) => typeId === 'strength'
+
+  // Board-view compact card: label + color per block type
+  const BLOCK_TYPE_META: Record<string, { label: string; color: string }> = {
+    strength:      { label: 'Fuerza',           color: 'bg-primary/15 text-primary border-primary/25' },
+    weightlifting: { label: 'Weightlifting',     color: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/25' },
+    metcon:        { label: 'Acondicionamiento', color: 'bg-orange-500/15 text-orange-400 border-orange-500/25' },
+    core:          { label: 'Core',              color: 'bg-blue-500/15 text-blue-400 border-blue-500/25' },
+    skills:        { label: 'Skills',            color: 'bg-purple-500/15 text-purple-400 border-purple-500/25' },
+    tecnica:       { label: 'Técnica',           color: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/25' },
+    mobility:      { label: 'Movilidad',         color: 'bg-teal-500/15 text-teal-400 border-teal-500/25' },
+    warmup:        { label: 'Calentamiento',     color: 'bg-yellow-500/15 text-yellow-500 border-yellow-500/25' },
+    other:         { label: 'Otro',              color: 'bg-secondary/70 text-muted-foreground border-border/50' },
+  }
+  const DAY_SHORT = ['LUN','MAR','MIÉ','JUE','VIE','SÁB','DOM']
+  const DAY_LONG  = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
 
   useEffect(() => {
     routineDraftsRef.current = routineDrafts
@@ -452,6 +471,20 @@ export function BuilderClient({
       workout_blocks: [] 
     }
     updateDays([...days, newDay])
+  }
+
+  // Create a day for a specific day-of-week and open it in board detail mode.
+  const addDayForDow = (weekNum: number, dow: number) => {
+    const newDay: Day = {
+      id: genId(),
+      week_number: weekNum,
+      day_of_week: dow,
+      title: DAY_LONG[dow - 1],
+      is_published: true,
+      workout_blocks: [],
+    }
+    updateDays(prev => [...prev, newDay])
+    setSelectedDayId(newDay.id)
   }
 
   const addWeek = () => {
@@ -916,6 +949,26 @@ export function BuilderClient({
                 <Plus className="w-3 h-3" />
               </button>
 
+              {/* View toggle: Board / List */}
+              <div className="flex items-center rounded-lg border border-border/60 overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => { setBuilderView('board'); setSelectedDayId(null) }}
+                  className={cn('h-8 px-3 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all',
+                    builderView === 'board' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  <Layout className="w-3 h-3" /> Tablero
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBuilderView('list')}
+                  className={cn('h-8 px-3 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all border-l border-border/60',
+                    builderView === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground')}
+                >
+                  <Edit3 className="w-3 h-3" /> Lista
+                </button>
+              </div>
+
               {/* Active week — visibility + actions */}
               <div className="ml-auto flex items-center gap-1.5">
                 <Button
@@ -952,10 +1005,145 @@ export function BuilderClient({
             </div>
           </div>
 
-          {/* Days Grid */}
+          {/* ── BOARD VIEW: 7-column weekly overview ── */}
+          {builderView === 'board' && !selectedDayId && (
+            <div className="pb-24">
+              {/* Horizontal scroll on mobile; 7 equal cols on desktop */}
+              <div className="overflow-x-auto pb-2 -mx-4 px-4 md:overflow-visible md:mx-0 md:px-0">
+                <div className="grid gap-2 min-w-[700px] md:min-w-0" style={{ gridTemplateColumns: 'repeat(7, minmax(0, 1fr))' }}>
+                  {Array.from({ length: 7 }, (_, i) => {
+                    const dow = i + 1
+                    const day = currentWeekDays.find(d => d.day_of_week === dow) ?? null
+                    const isToday = false // could derive from startDate, skipped for now
+                    return (
+                      <div key={dow} className={cn(
+                        'flex flex-col rounded-2xl border transition-all min-h-[220px]',
+                        day ? 'border-border/50 bg-card/60 hover:border-primary/30' : 'border-dashed border-border/40 bg-background/30'
+                      )}>
+                        {/* Column header */}
+                        <div className={cn(
+                          'px-2.5 py-2 rounded-t-2xl border-b border-border/40 flex items-center justify-between gap-1',
+                          day ? 'bg-card/80' : 'bg-transparent'
+                        )}>
+                          <div>
+                            <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground/60">{DAY_SHORT[i]}</p>
+                            {day && <p className="text-[10px] font-bold text-foreground/80 truncate leading-tight">{day.title || DAY_LONG[i]}</p>}
+                          </div>
+                          {day && (
+                            <button
+                              type="button"
+                              title="Editar día"
+                              onClick={() => setSelectedDayId(day.id)}
+                              className="w-6 h-6 rounded-lg flex items-center justify-center text-muted-foreground/50 hover:text-primary hover:bg-primary/10 transition-all shrink-0"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Compact block cards */}
+                        <div className="flex-1 flex flex-col gap-1.5 p-2 overflow-hidden">
+                          {day?.workout_blocks.map(block => {
+                            const meta = BLOCK_TYPE_META[block.type] ?? BLOCK_TYPE_META.other
+                            const desc = routineDrafts[block.id] ?? block.description ?? ''
+                            const hasMovements = block.workout_movements.length > 0
+                            const hasText = !!desc
+                            return (
+                              <button
+                                key={block.id}
+                                type="button"
+                                onClick={() => setSelectedDayId(day!.id)}
+                                className="w-full text-left rounded-xl border bg-card/40 hover:bg-card/80 transition-all p-2 space-y-1"
+                              >
+                                {/* Type badge + name */}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={cn('px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest border', meta.color)}>
+                                    {meta.label}
+                                  </span>
+                                  {block.timer_type && (
+                                    <span className="px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest bg-primary/10 text-primary border border-primary/20">
+                                      {block.timer_type.replace(/_/g,' ')}
+                                    </span>
+                                  )}
+                                </div>
+                                {block.name && (
+                                  <p className="text-[10px] font-bold text-foreground truncate">{block.name}</p>
+                                )}
+                                {/* Content preview */}
+                                <div className="flex items-center gap-1.5">
+                                  {hasMovements && (
+                                    <span className="text-[8px] text-muted-foreground/70 font-bold">{block.workout_movements.length} mov</span>
+                                  )}
+                                  {hasText && (
+                                    <span className="text-[8px] text-[var(--gymnastics)]/80 font-bold">📝</span>
+                                  )}
+                                  {block.workout_movements.some(m => m.exercise?.video_url) && (
+                                    <span className="text-[8px] text-muted-foreground/70 font-bold">▶</span>
+                                  )}
+                                </div>
+                              </button>
+                            )
+                          })}
+
+                          {/* Empty slot or add block */}
+                          {day ? (
+                            <button
+                              type="button"
+                              onClick={() => { setSelectedDayId(day.id); setTimeout(() => addBlock(day.id), 50) }}
+                              className="w-full h-8 rounded-xl border border-dashed border-border/40 text-[8px] font-black uppercase tracking-widest text-muted-foreground/40 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center gap-1"
+                            >
+                              <Plus className="w-2.5 h-2.5" /> Bloque
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => addDayForDow(parseInt(activeWeek), dow)}
+                              className="flex-1 flex flex-col items-center justify-center gap-1.5 text-muted-foreground/30 hover:text-primary hover:bg-primary/5 transition-all rounded-xl p-3"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span className="text-[8px] font-black uppercase tracking-widest">Añadir</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Day footer: edit CTA */}
+                        {day && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDayId(day.id)}
+                            className="px-2.5 py-2 border-t border-border/30 rounded-b-2xl text-[8px] font-black uppercase tracking-widest text-muted-foreground/50 hover:text-primary hover:bg-primary/5 transition-all text-center"
+                          >
+                            Editar día →
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── BOARD DETAIL or LIST VIEW: full day edit ── */}
+          {(builderView === 'list' || (builderView === 'board' && selectedDayId)) && (
           <div className="overflow-visible pr-1 xl:pr-2">
+            {/* Board detail: back button + single day */}
+            {builderView === 'board' && selectedDayId && (
+              <div className="max-w-5xl mx-auto mb-4">
+                <button
+                  type="button"
+                  onClick={() => setSelectedDayId(null)}
+                  className="flex items-center gap-2 h-9 px-4 rounded-xl border border-border/60 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary hover:border-primary/40 transition-all"
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" /> Tablero semanal
+                </button>
+              </div>
+            )}
             <div className="flex flex-col gap-4 pb-24 max-w-5xl mx-auto">
-              {currentWeekDays.map((day) => {
+              {(builderView === 'board' && selectedDayId
+                ? currentWeekDays.filter(d => d.id === selectedDayId)
+                : currentWeekDays
+              ).map((day) => {
                 const globalDIdx = days.findIndex(d => d.id === day.id)
                 return (
                   <div key={day.id} id={`day-${day.id}`} className="flex flex-col gap-5 ios-panel p-4 md:p-5 hover:border-primary/30 transition-all group/day relative overflow-hidden">
@@ -1965,37 +2153,40 @@ export function BuilderClient({
                 )
               })}
               
-              {/* Add Day Button / Empty state */}
-              {currentWeekDays.length === 0 ? (
-                <div className="col-span-full flex flex-col items-center justify-center gap-6 py-16 px-8 ios-panel border border-dashed border-border/60 rounded-[28px]">
-                  <div className="w-16 h-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <Layout className="w-8 h-8 text-primary" />
+              {/* Add Day Button — only in list view or board detail */}
+              {builderView === 'list' && (
+                currentWeekDays.length === 0 ? (
+                  <div className="col-span-full flex flex-col items-center justify-center gap-6 py-16 px-8 ios-panel border border-dashed border-border/60 rounded-[28px]">
+                    <div className="w-16 h-16 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                      <Layout className="w-8 h-8 text-primary" />
+                    </div>
+                    <div className="text-center space-y-2 max-w-xs">
+                      <h3 className="text-lg font-black uppercase tracking-tight">Semana vacía</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">Añade el primer día de entrenamiento para empezar a construir la programación.</p>
+                    </div>
+                    <Button
+                      onClick={() => addDay(parseInt(activeWeek))}
+                      className="h-12 px-8 rounded-2xl font-black uppercase tracking-[0.16em] text-[11px] gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Añadir primer día
+                    </Button>
                   </div>
-                  <div className="text-center space-y-2 max-w-xs">
-                    <h3 className="text-lg font-black uppercase tracking-tight">Semana vacía</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">Añade el primer día de entrenamiento para empezar a construir la programación.</p>
-                  </div>
+                ) : (
                   <Button
+                    variant="ghost"
+                    className="h-[180px] border border-dashed border-border/70 rounded-[28px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all ios-panel"
                     onClick={() => addDay(parseInt(activeWeek))}
-                    className="h-12 px-8 rounded-2xl font-black uppercase tracking-[0.16em] text-[11px] gap-2"
                   >
-                    <Plus className="w-4 h-4" /> Añadir primer día
+                    <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
+                      <Plus className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-primary">Añadir Día {currentWeekDays.length + 1}</span>
                   </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  className="h-[180px] border border-dashed border-border/70 rounded-[28px] hover:bg-primary/5 hover:text-primary hover:border-primary/30 group flex flex-col gap-3 transition-all ios-panel"
-                  onClick={() => addDay(parseInt(activeWeek))}
-                >
-                  <div className="w-10 h-10 rounded-full bg-secondary/50 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all">
-                    <Plus className="w-5 h-5" />
-                  </div>
-                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-primary">Añadir Día {currentWeekDays.length + 1}</span>
-                </Button>
+                )
               )}
             </div>
           </div>
+          )}
         </main>
       </div>
 
