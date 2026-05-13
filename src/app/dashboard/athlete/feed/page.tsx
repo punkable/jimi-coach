@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { toggleFistBump } from './actions'
+import Image from 'next/image'
 
 const typeEmoji: Record<string, string> = {
   workout_done: '🏋️',
@@ -82,7 +83,7 @@ export default async function FeedPage() {
                   <div className="relative">
                     <div className="w-10 h-10 rounded-full bg-secondary/50 border border-border/30 flex items-center justify-center shrink-0 overflow-hidden">
                       {entry.profiles?.avatar_url ? (
-                        <img src={entry.profiles.avatar_url} alt="" className="w-full h-full object-cover" />
+                        <Image src={entry.profiles.avatar_url} alt="" width={40} height={40} className="w-full h-full object-cover" />
                       ) : (
                         <span className="text-lg font-black text-muted-foreground leading-none">
                           {entry.profiles?.full_name?.[0]?.toUpperCase() || '?'}

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Video, ExternalLink, MessageSquare, CheckCircle, Clock, Dumbbell, User, Archive, StickyNote } from 'lucide-react'
+import Image from 'next/image'
 import { updateReviewStatus, createFeedback } from '../actions'
 
 type StatusFilter = 'pending' | 'done' | 'archived'
@@ -103,7 +104,7 @@ export default async function ReviewsPage({
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-[var(--athlete)]/10 flex items-center justify-center border border-[var(--athlete)]/20">
                         {result.profiles?.avatar_url ? (
-                          <img src={result.profiles.avatar_url} alt="" className="w-full h-full object-cover rounded-full" />
+                          <Image src={result.profiles.avatar_url} alt="" width={40} height={40} className="w-full h-full object-cover rounded-full" />
                         ) : (
                           <User className="w-5 h-5 text-muted-foreground" />
                         )}

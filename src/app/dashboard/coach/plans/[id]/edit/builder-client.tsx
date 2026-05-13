@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -737,13 +737,13 @@ export function BuilderClient({
     }
   }
 
-  const allExercises = [...library, ...localExercises]
+  const allExercises = useMemo(() => [...library, ...localExercises], [library, localExercises])
   const [tagSearch, setTagSearch] = useState('')
-  const filteredTags = allExercises.filter(ex =>
+  const filteredTags = useMemo(() => allExercises.filter(ex =>
     !tagSearch ||
     ex.name.toLowerCase().includes(tagSearch.toLowerCase()) ||
     (ex.category || '').toLowerCase().includes(tagSearch.toLowerCase())
-  )
+  ), [allExercises, tagSearch])
 
   const suggestTrackingType = (name: string): string => {
     const n = name.toLowerCase()
@@ -838,9 +838,9 @@ export function BuilderClient({
     }
   }
 
-  const currentWeekDays = days.filter(d => d.week_number === parseInt(activeWeek))
-  const isWeekPublished = currentWeekDays.every(d => d.is_published)
-  const totalWeeks = Array.from(new Set(days.map(d => d.week_number || 1))).sort((a,b) => a-b)
+  const currentWeekDays = useMemo(() => days.filter(d => d.week_number === parseInt(activeWeek)), [days, activeWeek])
+  const isWeekPublished = useMemo(() => currentWeekDays.every(d => d.is_published), [currentWeekDays])
+  const totalWeeks = useMemo(() => Array.from(new Set(days.map(d => d.week_number || 1))).sort((a,b) => a-b), [days])
 
   const handleToggleWeekPublish = async () => {
     const newStatus = !isWeekPublished
